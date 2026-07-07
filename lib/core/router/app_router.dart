@@ -2,6 +2,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/auth/signup_screen.dart';
 import '../../features/auth/location_screen.dart';
+import '../../features/home/home_screen.dart';
 import '../../features/home/home_shell.dart';
 import '../../features/home/placeholder_tab.dart';
 import '../../features/onboarding/splash_screen.dart';
@@ -23,7 +24,7 @@ GoRouter buildRouter({String initialLocation = Routes.splash}) {
         builder: (_, _, shell) => HomeShell(navigationShell: shell),
         branches: [
           StatefulShellBranch(routes: [
-            GoRoute(path: Routes.home, builder: (_, _) => const PlaceholderTab(title: 'Home')),
+            GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: Routes.discover, builder: (_, _) => const PlaceholderTab(title: 'Discover')),
