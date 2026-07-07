@@ -29,8 +29,11 @@ class PgField extends StatelessWidget {
           ),
           child: Row(children: [
             if (icon != null) ...[Icon(icon, size: 16, color: c.muted), const SizedBox(width: 11)],
-            Text(obscure ? '••••••••' : value,
-                style: PgText.inter(14.5, FontWeight.w500, color: c.text)),
+            Expanded(
+              child: Text(obscure ? '••••••••' : value,
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: PgText.inter(14.5, FontWeight.w500, color: c.text)),
+            ),
           ]),
         ),
       ],

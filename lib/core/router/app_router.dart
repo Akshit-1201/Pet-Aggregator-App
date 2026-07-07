@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../features/auth/welcome_screen.dart';
+import '../../features/auth/signup_screen.dart';
+import '../../features/auth/location_screen.dart';
 import '../../features/home/home_shell.dart';
 import '../../features/home/placeholder_tab.dart';
 import '../../features/onboarding/splash_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
+import '../../features/pets/create_pet_screen.dart';
 import 'routes.dart';
-
-// Temporary stub until the remaining auth screens land (Tasks 12-15).
-Widget _stub(String name) => Scaffold(body: Center(child: Text(name)));
 
 GoRouter buildRouter({String initialLocation = Routes.splash}) {
   return GoRouter(
@@ -15,10 +15,10 @@ GoRouter buildRouter({String initialLocation = Routes.splash}) {
     routes: [
       GoRoute(path: Routes.splash, builder: (_, _) => const SplashScreen()),
       GoRoute(path: Routes.onboarding, builder: (_, _) => const OnboardingScreen()),
-      GoRoute(path: Routes.welcome, builder: (_, _) => _stub('Welcome')),
-      GoRoute(path: Routes.signup, builder: (_, _) => _stub('Signup')),
-      GoRoute(path: Routes.location, builder: (_, _) => _stub('Location')),
-      GoRoute(path: Routes.createPet, builder: (_, _) => _stub('Create Pet')),
+      GoRoute(path: Routes.welcome, builder: (_, _) => const WelcomeScreen()),
+      GoRoute(path: Routes.signup, builder: (_, _) => const SignupScreen()),
+      GoRoute(path: Routes.location, builder: (_, _) => const LocationScreen()),
+      GoRoute(path: Routes.createPet, builder: (_, _) => const CreatePetScreen()),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(navigationShell: shell),
         branches: [
