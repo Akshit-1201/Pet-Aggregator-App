@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "280616341211",
+    "project_id": "pet-aggregator-app",
+    "storage_bucket": "pet-aggregator-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:280616341211:android:622cf4f2956d2c258a46fe",
+        "android_client_info": {
+          "package_name": "com.example.pet_aggregator_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA8d66Zvu9SJyxClcu6azn9gzz1_saYwHQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
