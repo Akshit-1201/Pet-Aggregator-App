@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,19 +13,26 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
+  Timer? _timer;
+
   @override
   void initState() {
     super.initState();
-    _decideRoute();
+    // Minimum brand-visible delay, then route on the real auth state. Stored
+    // so dispose() can cancel it and never leave a dangling timer.
+    _timer = Timer(const Duration(milliseconds: 1400), _decideRoute);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   Future<void> _decideRoute() async {
-    // Start resolving the first auth value, then wait a minimum brand-visible
-    // delay so the two overlap. Uses the stream's `.first` (reliable) rather
-    // than the StreamProvider `.future`.
-    final authFuture = ref.read(authRepositoryProvider).authStateChanges().first;
-    await Future<void>.delayed(const Duration(milliseconds: 1400));
-    final user = await authFuture.catchError((_) => null);
+    // Uses the stream's `.first` (reliable) rather than the StreamProvider `.future`.
+    final user =
+        await ref.read(authRepositoryProvider).authStateChanges().first.catchError((_) => null);
     if (!mounted) return;
     context.go(user != null ? Routes.home : Routes.onboarding);
   }
