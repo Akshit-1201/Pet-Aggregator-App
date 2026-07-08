@@ -1,23 +1,30 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
-import 'package:pet_aggregator_app/core/theme/app_theme.dart';
-import 'package:pet_aggregator_app/features/onboarding/splash_screen.dart';
+import 'package:pet_aggregator_app/core/router/routes.dart';
+import 'package:pet_aggregator_app/data/repositories/providers.dart';
+import '../support/fakes.dart';
+import '../support/pump.dart';
 
 void main() {
-  testWidgets('SplashScreen shows brand name and tagline, then advances', (tester) async {
-    // SplashScreen auto-navigates via context.go, so give it a real router.
-    final router = GoRouter(routes: [
-      GoRoute(path: '/', builder: (_, _) => const SplashScreen()),
-      GoRoute(path: '/onboarding', builder: (_, _) => const Scaffold(body: Text('onboarding'))),
-    ]);
-    await tester.pumpWidget(MaterialApp.router(theme: PgTheme.light(), routerConfig: router));
-
+  testWidgets('signed-out splash advances to Onboarding', (tester) async {
+    await pumpPgApp(tester,
+        overrides: [authRepositoryProvider.overrideWithValue(FakeAuthRepository())],
+        initialLocation: Routes.splash);
     expect(find.text('Pawgo'), findsOneWidget);
-    expect(find.text("Your pet's whole world, nearby"), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1600)); // brand delay + auth
+    await tester.pumpAndSettle();
+    expect(find.text('Find playmates just around the corner'), findsOneWidget);
+  });
 
-    await tester.pump(const Duration(milliseconds: 1700)); // fire the 1600ms timer
-    await tester.pumpAndSettle(); // settle the navigation transition
-    expect(find.text('onboarding'), findsOneWidget);
+  testWidgets('signed-in splash advances to Home', (tester) async {
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    await pumpPgApp(tester, overrides: [
+      authRepositoryProvider.overrideWithValue(auth),
+      petRepositoryProvider.overrideWithValue(InMemoryPetRepository()),
+      userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
+    ], initialLocation: Routes.splash);
+    await tester.pump(const Duration(milliseconds: 1600));
+    await tester.pumpAndSettle();
+    expect(find.text('Home'), findsWidgets); // bottom nav
   });
 }
