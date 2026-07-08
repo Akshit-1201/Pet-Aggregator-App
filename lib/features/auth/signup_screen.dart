@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
@@ -6,17 +7,25 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_app_bar.dart';
 import '../../core/widgets/pg_buttons.dart';
 import '../../core/widgets/pg_choice_card.dart';
-import '../../core/widgets/pg_field.dart';
+import '../../core/widgets/pg_text_field.dart';
 import '../../data/models/role.dart';
+import '../../data/models/user_profile.dart';
+import '../../data/repositories/auth_repository.dart';
+import '../../data/repositories/providers.dart';
 
-class SignupScreen extends StatefulWidget {
+class SignupScreen extends ConsumerStatefulWidget {
   const SignupScreen({super.key});
   @override
-  State<SignupScreen> createState() => _SignupScreenState();
+  ConsumerState<SignupScreen> createState() => _SignupScreenState();
 }
 
-class _SignupScreenState extends State<SignupScreen> {
+class _SignupScreenState extends ConsumerState<SignupScreen> {
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
   Role _role = Role.petParent;
+  bool _loading = false;
+  String? _error;
 
   static const _subtitles = {
     Role.petParent: 'Discover, book, board & chat',
@@ -26,6 +35,34 @@ class _SignupScreenState extends State<SignupScreen> {
   static const _emojis = {
     Role.petParent: '🐾', Role.servicePro: '🎒', Role.homestayHost: '🏡',
   };
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (_name.text.trim().isEmpty || _email.text.trim().isEmpty || _password.text.isEmpty) {
+      setState(() => _error = 'Please fill in all fields.');
+      return;
+    }
+    setState(() { _loading = true; _error = null; });
+    try {
+      final user = await ref.read(authRepositoryProvider)
+          .signUp(email: _email.text.trim(), password: _password.text);
+      await ref.read(userRepositoryProvider).createUser(UserProfile(
+            uid: user.uid, name: _name.text.trim(), email: _email.text.trim(),
+            area: '', role: _role));
+      if (mounted) context.go(Routes.location);
+    } on AuthFailure catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,11 +79,13 @@ class _SignupScreenState extends State<SignupScreen> {
                 Text('Just a few details to get you and your pet started.',
                     style: PgText.inter(14, FontWeight.w400, color: c.muted, height: 1.5)),
                 const SizedBox(height: 13),
-                const PgField(label: 'Full name', value: 'Radhika Nair'),
+                PgTextField(label: 'Full name', controller: _name, hint: 'Radhika Nair'),
                 const SizedBox(height: 13),
-                const PgField(label: 'Mobile number', value: '+91 98200 41122'),
+                PgTextField(label: 'Email', controller: _email,
+                    keyboardType: TextInputType.emailAddress, hint: 'you@example.com'),
                 const SizedBox(height: 13),
-                const PgField(label: 'Password', value: '', obscure: true),
+                PgTextField(label: 'Password', controller: _password, obscure: true,
+                    hint: 'At least 6 characters'),
                 const SizedBox(height: 16),
                 Text("I'M JOINING AS", style: PgText.inter(12.5, FontWeight.w700, color: c.muted)),
                 const SizedBox(height: 10),
@@ -56,15 +95,17 @@ class _SignupScreenState extends State<SignupScreen> {
                     selected: _role == r, onTap: () => setState(() => _role = r)),
                   const SizedBox(height: 10),
                 ],
+                if (_error != null)
+                  Text(_error!, style: PgText.inter(13, FontWeight.w600, color: c.heart)),
               ],
             ),
           ),
           Container(
-            decoration: BoxDecoration(
-              color: c.surface,
-              border: Border(top: BorderSide(color: c.border))),
+            decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
             padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
-            child: PgPrimaryButton(label: 'Continue', onPressed: () => context.go(Routes.location)),
+            child: PgPrimaryButton(
+              label: _loading ? 'Creating…' : 'Continue',
+              onPressed: _loading ? () {} : _submit),
           ),
         ]),
       ),
