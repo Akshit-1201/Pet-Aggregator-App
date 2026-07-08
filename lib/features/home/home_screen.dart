@@ -15,29 +15,32 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.pg;
-    final pets = ref.watch(nearbyPetsProvider);
+    final petsAsync = ref.watch(nearbyPetsProvider);
+    final profile = ref.watch(currentUserProfileProvider).value;
+    final firstName = (profile?.name ?? '').split(' ').first;
+    final greetName = firstName.isEmpty ? 'there' : firstName;
+
     return Container(
       color: c.bg,
       child: SafeArea(
         bottom: false,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Header
           Container(
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
-            decoration: BoxDecoration(
-              color: c.surface, border: Border(bottom: BorderSide(color: c.border))),
+            decoration: BoxDecoration(color: c.surface, border: Border(bottom: BorderSide(color: c.border))),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
                   Icon(Icons.location_on, size: 14, color: c.brand),
                   const SizedBox(width: 4),
-                  Text('Bandra West, Mumbai', style: PgText.inter(12.5, FontWeight.w600, color: c.muted)),
+                  Text(profile?.area.isNotEmpty == true ? '${profile!.area}, Mumbai' : 'Mumbai',
+                      style: PgText.inter(12.5, FontWeight.w600, color: c.muted)),
                 ]),
                 const SizedBox(height: 5),
-                Text('Hey Radhika 👋', style: PgText.poppins(24, FontWeight.w800, color: c.text, ls: -0.5)),
+                Text('Hey $greetName 👋', style: PgText.poppins(24, FontWeight.w800, color: c.text, ls: -0.5)),
                 const SizedBox(height: 2),
-                Text('6 pets near you today', style: PgText.inter(13.5, FontWeight.w400, color: c.muted)),
+                Text('Pets near you today', style: PgText.inter(13.5, FontWeight.w400, color: c.muted)),
               ])),
               const PgImageSlot(size: 46, circle: true),
             ]),
@@ -49,7 +52,7 @@ class HomeScreen extends ConsumerWidget {
                 GridView.count(
                   crossAxisCount: 2, shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.5,
+                  mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.4,
                   children: [
                     _QuickAction(emoji: '🐾', title: 'Discover', subtitle: 'Swipe & Woof nearby pets',
                       bg: null, gradient: [c.brand2, const Color(0xFFF8B45E)], fg: Colors.white,
@@ -70,17 +73,29 @@ class HomeScreen extends ConsumerWidget {
                     child: Text('See map →', style: PgText.inter(12.5, FontWeight.w600, color: c.brand))),
                 ]),
                 const SizedBox(height: 13),
-                for (final p in pets) ...[
-                  PetRow(pet: p, onWoof: () {}),
-                  const SizedBox(height: 11),
-                ],
+                petsAsync.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 30),
+                    child: Center(child: CircularProgressIndicator())),
+                  error: (e, _) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Text('Could not load nearby pets.',
+                      style: PgText.inter(13.5, FontWeight.w500, color: c.muted))),
+                  data: (pets) => pets.isEmpty
+                      ? _EmptyPets(c: c)
+                      : Column(children: [
+                          for (final p in pets) ...[
+                            PetRow(pet: p, onWoof: () {}),
+                            const SizedBox(height: 11),
+                          ],
+                        ]),
+                ),
                 const SizedBox(height: 11),
                 Text('Community picks', style: PgText.sectionHeader(context)),
                 const SizedBox(height: 13),
                 Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: c.surface, border: Border.all(color: c.border),
+                  decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
                     borderRadius: BorderRadius.circular(18), boxShadow: c.shadowSm),
                   child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     const PgChip(label: 'Health'),
@@ -101,6 +116,30 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
+class _EmptyPets extends StatelessWidget {
+  final PgColors c;
+  const _EmptyPets({required this.c});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 16),
+      decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
+        borderRadius: BorderRadius.circular(18)),
+      child: Column(children: [
+        const Text('🐾', style: TextStyle(fontSize: 30)),
+        const SizedBox(height: 8),
+        Text('No pets nearby yet', style: PgText.poppins(15, FontWeight.w700, color: c.text)),
+        const SizedBox(height: 4),
+        Text('Check back soon — new pets join every day.',
+          textAlign: TextAlign.center,
+          style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
+      ]),
+    );
+  }
+}
+
 class _QuickAction extends StatelessWidget {
   final String emoji, title, subtitle;
   final Color? bg;
@@ -116,17 +155,16 @@ class _QuickAction extends StatelessWidget {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: bg,
+        decoration: BoxDecoration(color: bg,
           gradient: gradient == null ? null : LinearGradient(colors: gradient!),
           borderRadius: BorderRadius.circular(20)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           Text(emoji, style: const TextStyle(fontSize: 26)),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
             Text(title, style: PgText.poppins(15, FontWeight.w700, color: fg)),
-            Text(subtitle, style: PgText.inter(11.5, FontWeight.w400,
-              color: fg.withValues(alpha: 0.8))),
+            Text(subtitle, maxLines: 2, overflow: TextOverflow.ellipsis,
+              style: PgText.inter(11.5, FontWeight.w400, color: fg.withValues(alpha: 0.8))),
           ]),
         ]),
       ),

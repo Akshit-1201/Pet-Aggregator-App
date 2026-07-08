@@ -28,7 +28,7 @@ class PetRow extends StatelessWidget {
               decoration: BoxDecoration(color: pet.accentColor, shape: BoxShape.circle)),
           ]),
           const SizedBox(height: 2),
-          Text('${pet.breed} · ${pet.ageLabel} · ${pet.distanceLabel}',
+          Text('${pet.breed} · ${pet.ageLabel} · ${pet.area}',
             maxLines: 1, overflow: TextOverflow.ellipsis,
             style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
         ])),
