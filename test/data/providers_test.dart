@@ -1,10 +1,6 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
-import 'package:pet_aggregator_app/data/repositories/auth_repository.dart';
-import 'package:pet_aggregator_app/data/repositories/user_repository.dart';
-import 'package:pet_aggregator_app/data/repositories/pet_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/providers.dart';
 import '../support/fakes.dart';
 
@@ -28,8 +24,8 @@ void main() {
     addTearDown(container.dispose);
 
     // Keep providers alive and let the auth + pet streams settle.
-    container.listen(authStateProvider, (_, __) {}, fireImmediately: true);
-    container.listen(nearbyPetsProvider, (_, __) {}, fireImmediately: true);
+    container.listen(authStateProvider, (_, _) {}, fireImmediately: true);
+    container.listen(nearbyPetsProvider, (_, _) {}, fireImmediately: true);
     await pumpEventQueue();
 
     final async = container.read(nearbyPetsProvider);

@@ -1,4 +1,7 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../data/repositories/auth_repository.dart';
+import '../../data/repositories/providers.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/auth/signup_screen.dart';
 import '../../features/auth/location_screen.dart';
@@ -8,11 +11,27 @@ import '../../features/home/placeholder_tab.dart';
 import '../../features/onboarding/splash_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/pets/create_pet_screen.dart';
+import 'go_router_refresh_stream.dart';
 import 'routes.dart';
 
-GoRouter buildRouter({String initialLocation = Routes.splash}) {
+/// Routes that require an authenticated user. Signed-out users hitting any of
+/// these are bounced to Welcome. The onboarding/auth funnel entry pages
+/// (splash, onboarding, welcome, signup) are intentionally NOT protected;
+/// funnel progression and post-login navigation are explicit in the screens.
+const _protected = {
+  Routes.home, Routes.discover, Routes.services, Routes.community, Routes.profile,
+  Routes.location, Routes.createPet,
+};
+
+GoRouter buildRouter({required AuthRepository auth, String initialLocation = Routes.splash}) {
   return GoRouter(
     initialLocation: initialLocation,
+    refreshListenable: GoRouterRefreshStream(auth.authStateChanges()),
+    redirect: (context, state) {
+      final loggedIn = auth.currentUser != null;
+      if (!loggedIn && _protected.contains(state.matchedLocation)) return Routes.welcome;
+      return null;
+    },
     routes: [
       GoRoute(path: Routes.splash, builder: (_, _) => const SplashScreen()),
       GoRoute(path: Routes.onboarding, builder: (_, _) => const OnboardingScreen()),
@@ -44,4 +63,8 @@ GoRouter buildRouter({String initialLocation = Routes.splash}) {
   );
 }
 
-final appRouter = buildRouter();
+final routerProvider = Provider<GoRouter>((ref) {
+  final router = buildRouter(auth: ref.watch(authRepositoryProvider));
+  ref.onDispose(router.dispose);
+  return router;
+});

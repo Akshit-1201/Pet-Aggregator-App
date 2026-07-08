@@ -1,16 +1,27 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pet_aggregator_app/core/router/app_router.dart';
-import 'package:pet_aggregator_app/core/theme/app_theme.dart';
+import 'package:pet_aggregator_app/core/router/routes.dart';
+import 'package:pet_aggregator_app/data/repositories/providers.dart';
+import '../../support/fakes.dart';
+import '../../support/pump.dart';
 
 void main() {
-  testWidgets('router starts at splash and can navigate to home shell', (tester) async {
-    final router = buildRouter(initialLocation: '/home');
-    await tester.pumpWidget(ProviderScope(
-      child: MaterialApp.router(theme: PgTheme.light(), routerConfig: router),
-    ));
+  testWidgets('signed-out user is redirected away from /home to Welcome', (tester) async {
+    await pumpPgApp(tester,
+        overrides: [authRepositoryProvider.overrideWithValue(FakeAuthRepository())],
+        initialLocation: Routes.home);
     await tester.pumpAndSettle();
-    expect(find.text('Home'), findsWidgets); // bottom nav label present
+    expect(find.text('Log in'), findsOneWidget); // Welcome screen
+  });
+
+  testWidgets('signed-in user can load the Home shell', (tester) async {
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    await pumpPgApp(tester, overrides: [
+      authRepositoryProvider.overrideWithValue(auth),
+      petRepositoryProvider.overrideWithValue(InMemoryPetRepository()),
+      userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
+    ], initialLocation: Routes.home);
+    await tester.pumpAndSettle();
+    expect(find.text('Home'), findsWidgets); // bottom-nav label
   });
 }
