@@ -7,6 +7,7 @@ import '../../features/auth/welcome_screen.dart';
 import '../../features/auth/signup_screen.dart';
 import '../../features/auth/location_screen.dart';
 import '../../features/discovery/discover_screen.dart';
+import '../../features/discovery/nearby_map_screen.dart';
 import '../../features/discovery/woof_match_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/home/home_shell.dart';
@@ -43,6 +44,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.location, builder: (_, _) => const LocationScreen()),
       GoRoute(path: Routes.createPet, builder: (_, _) => const CreatePetScreen()),
       GoRoute(path: Routes.woofMatch, builder: (_, state) => WoofMatchScreen(pet: state.extra as PetProfile?)),
+      GoRoute(path: Routes.nearby, builder: (_, _) => const NearbyMapScreen()),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(navigationShell: shell),
         branches: [
