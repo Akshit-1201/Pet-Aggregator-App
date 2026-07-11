@@ -7,12 +7,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:pet_aggregator_app/data/models/booking.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
 import 'package:pet_aggregator_app/data/models/pro.dart';
 import 'package:pet_aggregator_app/data/models/role.dart';
 import 'package:pet_aggregator_app/data/models/swipe.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firebase_auth_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/firebase/firestore_booking_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pet_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pro_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_swipe_repository.dart';
@@ -112,6 +114,23 @@ void main() {
     expect(mine!.rate, 250);
     final all = await prosRepo.watchPros().firstWhere((l) => l.any((p) => p.uid == me.uid));
     expect(all.any((p) => p.name == 'Aarav'), isTrue);
+
+    await auth.signOut();
+  });
+
+  testWidgets('bookings create + watchMyBookings round-trip (real Firestore emulators)',
+      (tester) async {
+    final auth = FirebaseAuthRepository();
+    final bookings = FirestoreBookingRepository();
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    final me = await auth.signUp(email: 'bk_$stamp@x.com', password: 'secret1');
+
+    await bookings.createBooking(Booking(parentId: me.uid, proId: 'pro_$stamp', proName: 'Aarav',
+        petId: 'pet_$stamp', petName: 'Bruno', serviceType: ServiceType.walker,
+        rate: 250, fee: 25, total: 275, dateLabel: 'Tue 15 Jul', timeSlot: '5:00 PM'));
+    final mine = await bookings.watchMyBookings(me.uid).firstWhere((l) => l.isNotEmpty);
+    expect(mine.single.petName, 'Bruno');
+    expect(mine.single.total, 275);
 
     await auth.signOut();
   });
