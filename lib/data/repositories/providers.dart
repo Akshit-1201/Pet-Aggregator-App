@@ -4,6 +4,7 @@ import '../models/pet_profile.dart';
 import '../models/user_profile.dart';
 import '../models/pro.dart';
 import 'auth_repository.dart';
+import 'booking_repository.dart';
 import 'user_repository.dart';
 import 'pet_repository.dart';
 import 'pro_repository.dart';
@@ -13,6 +14,7 @@ import 'firebase/firestore_user_repository.dart';
 import 'firebase/firestore_pet_repository.dart';
 import 'firebase/firestore_pro_repository.dart';
 import 'firebase/firestore_swipe_repository.dart';
+import 'firebase/firestore_booking_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) => FirebaseAuthRepository());
 final userRepositoryProvider = Provider<UserRepository>((ref) => FirestoreUserRepository());
@@ -54,4 +56,13 @@ final currentProProvider = StreamProvider<Pro?>((ref) {
   final user = ref.watch(authStateProvider).value;
   if (user == null) return Stream.value(null);
   return ref.watch(proRepositoryProvider).watchPro(user.uid);
+});
+
+final bookingRepositoryProvider =
+    Provider<BookingRepository>((ref) => FirestoreBookingRepository());
+
+final myPetsProvider = StreamProvider<List<PetProfile>>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(const []);
+  return ref.watch(petRepositoryProvider).watchMyPets(user.uid);
 });
