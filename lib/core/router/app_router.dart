@@ -6,6 +6,7 @@ import '../../data/repositories/providers.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/auth/signup_screen.dart';
 import '../../features/auth/location_screen.dart';
+import '../../features/discovery/discover_screen.dart';
 import '../../features/discovery/woof_match_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/home/home_shell.dart';
@@ -49,7 +50,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
             GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: Routes.discover, builder: (_, _) => const PlaceholderTab(title: 'Discover')),
+            GoRoute(path: Routes.discover, builder: (_, _) => const DiscoverScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: Routes.services, builder: (_, _) => const PlaceholderTab(title: 'Services')),
