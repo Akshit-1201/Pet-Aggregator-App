@@ -5,9 +5,11 @@ import '../models/user_profile.dart';
 import 'auth_repository.dart';
 import 'user_repository.dart';
 import 'pet_repository.dart';
+import 'swipe_repository.dart';
 import 'firebase/firebase_auth_repository.dart';
 import 'firebase/firestore_user_repository.dart';
 import 'firebase/firestore_pet_repository.dart';
+import 'firebase/firestore_swipe_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) => FirebaseAuthRepository());
 final userRepositoryProvider = Provider<UserRepository>((ref) => FirestoreUserRepository());
@@ -25,4 +27,18 @@ final currentUserProfileProvider = StreamProvider<UserProfile?>((ref) {
 final nearbyPetsProvider = StreamProvider<List<PetProfile>>((ref) {
   final user = ref.watch(authStateProvider).value;
   return ref.watch(petRepositoryProvider).watchNearbyPets(excludeOwnerId: user?.uid ?? '__none__');
+});
+
+final swipeRepositoryProvider = Provider<SwipeRepository>((ref) => FirestoreSwipeRepository());
+
+final swipedPetIdsProvider = StreamProvider<Set<String>>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(<String>{});
+  return ref.watch(swipeRepositoryProvider).watchSwipedPetIds(user.uid);
+});
+
+final discoverDeckProvider = Provider<AsyncValue<List<PetProfile>>>((ref) {
+  final swiped = ref.watch(swipedPetIdsProvider).value ?? const <String>{};
+  return ref.watch(nearbyPetsProvider).whenData(
+      (pets) => pets.where((p) => !swiped.contains(p.id)).toList());
 });
