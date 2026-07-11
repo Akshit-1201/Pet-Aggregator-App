@@ -83,7 +83,10 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 **How we'll do it:** build `SwipeDeck` reproducing the drag/threshold + rotation and the WOOF/PASS stamps; Woof Match celebration screen (confetti/animation); Nearby as the prototype's stylised static map + bottom sheet list; Pet Profile detail. All fed by `nearbyPetsProvider` mock data.
 **Verify:** widget tests (deck renders card, buttons Woof/pass, match screen shows); manual swipe on emulator; compare to prototype.
 
-## Phase 4 — Services marketplace (static)
+## Phase 4 — Services marketplace (on live data) — split into 4a + 4b
+
+> **Slice 4a (supply & browse) ✅ DONE (2026-07-12):** `pros/{uid}` collection + `Pro`/`ServiceType` models + `ProRepository` seam; Pro-setup screen (servicePro writes a listing), Services list (live pros, category filter, setup banner), Pro profile. "Book" → coming-soon snackbar. 50 tests + emulator integration (pros) green; `pros` rules deployed. Spec/plan: `docs/superpowers/*/2026-07-11-pawgo-services-4a-supply-browse*.md`.
+> **Slice 4b (booking & payment) — NEXT:** `bookings` collection; Booking (date/time/pet) → Payment (UI-only, Razorpay deferred to Phase 10) → Confirmed; wires the "Book" button.
 
 **Goal:** browse-and-book UI, mock-only.
 **Screens:** Services List (categories + pro cards), Pro Profile (rate/experience/reviews/availability), Booking (date/time), Payment (UI only — no real gateway yet), Booking Confirmed.
