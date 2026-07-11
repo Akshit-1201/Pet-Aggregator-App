@@ -5,7 +5,6 @@ import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
-import '../../core/widgets/pg_snackbar.dart';
 import '../../data/models/pro.dart';
 import '../../data/models/role.dart';
 import '../../data/repositories/providers.dart';
@@ -157,7 +156,7 @@ class _ProCard extends StatelessWidget {
             Text('/${pro.unit}', style: PgText.inter(11, FontWeight.w400, color: c.faint)),
             const SizedBox(height: 8),
             GestureDetector(
-              onTap: () => showComingSoon(context, 'Booking'),
+              onTap: () => context.push(Routes.booking, extra: pro),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 decoration: BoxDecoration(color: c.brandSoft, borderRadius: BorderRadius.circular(12)),

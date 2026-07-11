@@ -12,8 +12,8 @@ void main() {
     expect(find.text('Aarav Sharma'), findsOneWidget);
     expect(find.text('Friendly reliable walker.'), findsOneWidget);
     expect(find.textContaining('New'), findsWidgets); // no reviews yet
-    await tester.tap(find.textContaining('Book'));
+    await tester.tap(find.text('💬')); // chat button still shows coming-soon
     await tester.pump();
-    expect(find.text('Booking is coming soon 🐾'), findsOneWidget);
+    expect(find.text('Chat is coming soon 🐾'), findsOneWidget);
   });
 }

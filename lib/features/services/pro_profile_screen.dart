@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
@@ -119,7 +120,7 @@ class ProProfileScreen extends StatelessWidget {
                 child: const Text('💬', style: TextStyle(fontSize: 21)))),
             const SizedBox(width: 12),
             Expanded(child: GestureDetector(
-              onTap: () => showComingSoon(context, 'Booking'),
+              onTap: () => context.push(Routes.booking, extra: p),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 17), alignment: Alignment.center,
                 decoration: BoxDecoration(
