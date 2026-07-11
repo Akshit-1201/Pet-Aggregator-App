@@ -73,7 +73,9 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 
 > **Note on Phases 3–7 below:** written as "(static)/mock-only" under the original plan, they are **now built against the real backend** delivered here — each pillar's screens read/write live Firestore through the repository seam. Maps (Phase 9) and payments (Phase 10) remain the only deferred integrations, so those specific screens stay stylised/mock until then.
 
-## Phase 3 — Discovery "Woof" (on live data)
+## Phase 3 — Discovery "Woof" (on live data) ✅ DONE (Slice 3, 2026-07-11)
+
+> Delivered: drag-to-swipe deck of live Firestore pets (excludes own + already-swiped), real Woof/Pass persisted to a `swipes` collection (rules + composite index deployed), **reciprocal-woof match** celebration, and a faux-map Nearby screen with a live pet list. `PgSwipeCard` gesture widget + `SwipeRepository` seam. 42 unit/widget tests + an emulator integration test (swipes + reciprocity) green; analyze clean; APK builds. Spec/plan: `docs/superpowers/{specs,plans}/2026-07-08-pawgo-discover-woof*.md`. Deferred as planned: photos, real map/geo distance, pet-profile detail, chat (match "Send a message" → coming-soon).
 
 **Goal:** the social core, matching the prototype.
 **Screens (design lines):** Home Feed (374–437, refined from Phase 2's static version), Discover swipe deck (439–475), Woof Match (477–494), Nearby Map static (496–546), Pet Profile (petprofile block).
