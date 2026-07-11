@@ -9,9 +9,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
 import 'package:pet_aggregator_app/data/models/role.dart';
+import 'package:pet_aggregator_app/data/models/swipe.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firebase_auth_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pet_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/firebase/firestore_swipe_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_user_repository.dart';
 import 'package:pet_aggregator_app/firebase_options.dart';
 
@@ -70,5 +72,29 @@ void main() {
 
     await auth.signOut();
     expect(auth.currentUser, isNull);
+  });
+
+  testWidgets('swipes persist + reciprocal woof detected (real Firestore emulators)',
+      (tester) async {
+    final auth = FirebaseAuthRepository();
+    final swipes = FirestoreSwipeRepository();
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+
+    final me = await auth.signUp(email: 'sw_$stamp@x.com', password: 'secret1');
+    await swipes.recordSwipe(Swipe(
+        fromUid: me.uid, petId: 'pet_$stamp', ownerId: 'ownerX', direction: SwipeDirection.woof));
+    final ids = await swipes.watchSwipedPetIds(me.uid).firstWhere((s) => s.contains('pet_$stamp'));
+    expect(ids, contains('pet_$stamp'));
+
+    // No reciprocity yet.
+    expect(await swipes.hasReciprocalWoof(otherUid: 'ownerX', myUid: me.uid), isFalse);
+
+    // ownerX (a second account) woofs one of my pets -> reciprocity.
+    final other = await auth.signUp(email: 'ox_$stamp@x.com', password: 'secret1');
+    await swipes.recordSwipe(Swipe(
+        fromUid: other.uid, petId: 'mine_$stamp', ownerId: me.uid, direction: SwipeDirection.woof));
+    expect(await swipes.hasReciprocalWoof(otherUid: other.uid, myUid: me.uid), isTrue);
+
+    await auth.signOut();
   });
 }
