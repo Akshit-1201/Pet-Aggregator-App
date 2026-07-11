@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:pet_aggregator_app/data/models/app_user.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
+import 'package:pet_aggregator_app/data/models/booking.dart';
 import 'package:pet_aggregator_app/data/models/pro.dart';
 import 'package:pet_aggregator_app/data/models/swipe.dart';
 import 'package:pet_aggregator_app/data/repositories/auth_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/booking_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/user_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/pet_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/pro_repository.dart';
@@ -189,6 +191,24 @@ class InMemoryProRepository implements ProRepository {
   Stream<List<Pro>> watchPros() async* {
     yield _list();
     yield* _controller.stream.map((_) => _list());
+  }
+}
+
+class InMemoryBookingRepository implements BookingRepository {
+  final List<Booking> _bookings = [];
+  final _controller = StreamController<List<Booking>>.broadcast();
+
+  @override
+  Future<void> createBooking(Booking booking) async {
+    _bookings.add(booking);
+    _controller.add(List.of(_bookings));
+  }
+
+  @override
+  Stream<List<Booking>> watchMyBookings(String parentId) async* {
+    List<Booking> mine() => _bookings.where((b) => b.parentId == parentId).toList();
+    yield mine();
+    yield* _controller.stream.map((_) => mine());
   }
 }
 
