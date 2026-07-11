@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../data/models/pet_profile.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/providers.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/auth/signup_screen.dart';
 import '../../features/auth/location_screen.dart';
+import '../../features/discovery/woof_match_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/home/home_shell.dart';
 import '../../features/home/placeholder_tab.dart';
@@ -20,7 +22,7 @@ import 'routes.dart';
 /// funnel progression and post-login navigation are explicit in the screens.
 const _protected = {
   Routes.home, Routes.discover, Routes.services, Routes.community, Routes.profile,
-  Routes.location, Routes.createPet,
+  Routes.location, Routes.createPet, Routes.nearby, Routes.woofMatch,
 };
 
 GoRouter buildRouter({required AuthRepository auth, String initialLocation = Routes.splash}) {
@@ -39,6 +41,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.signup, builder: (_, _) => const SignupScreen()),
       GoRoute(path: Routes.location, builder: (_, _) => const LocationScreen()),
       GoRoute(path: Routes.createPet, builder: (_, _) => const CreatePetScreen()),
+      GoRoute(path: Routes.woofMatch, builder: (_, state) => WoofMatchScreen(pet: state.extra as PetProfile?)),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(navigationShell: shell),
         branches: [

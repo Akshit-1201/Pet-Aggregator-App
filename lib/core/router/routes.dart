@@ -10,4 +10,6 @@ class Routes {
   static const services = '/services';
   static const community = '/community';
   static const profile = '/profile';
+  static const nearby = '/nearby';
+  static const woofMatch = '/woof-match';
 }
