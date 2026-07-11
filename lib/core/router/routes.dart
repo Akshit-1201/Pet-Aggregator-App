@@ -12,4 +12,6 @@ class Routes {
   static const profile = '/profile';
   static const nearby = '/nearby';
   static const woofMatch = '/woof-match';
+  static const proSetup = '/pro-setup';
+  static const servicePro = '/service-pro';
 }

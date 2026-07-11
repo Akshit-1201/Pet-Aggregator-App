@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/pet_profile.dart';
+import '../../data/models/pro.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/providers.dart';
 import '../../features/auth/welcome_screen.dart';
@@ -15,6 +16,9 @@ import '../../features/home/placeholder_tab.dart';
 import '../../features/onboarding/splash_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/pets/create_pet_screen.dart';
+import '../../features/services/pro_profile_screen.dart';
+import '../../features/services/pro_setup_screen.dart';
+import '../../features/services/services_list_screen.dart';
 import 'go_router_refresh_stream.dart';
 import 'routes.dart';
 
@@ -25,6 +29,7 @@ import 'routes.dart';
 const _protected = {
   Routes.home, Routes.discover, Routes.services, Routes.community, Routes.profile,
   Routes.location, Routes.createPet, Routes.nearby, Routes.woofMatch,
+  Routes.proSetup, Routes.servicePro,
 };
 
 GoRouter buildRouter({required AuthRepository auth, String initialLocation = Routes.splash}) {
@@ -45,6 +50,8 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.createPet, builder: (_, _) => const CreatePetScreen()),
       GoRoute(path: Routes.woofMatch, builder: (_, state) => WoofMatchScreen(pet: state.extra as PetProfile?)),
       GoRoute(path: Routes.nearby, builder: (_, _) => const NearbyMapScreen()),
+      GoRoute(path: Routes.proSetup, builder: (_, _) => const ProSetupScreen()),
+      GoRoute(path: Routes.servicePro, builder: (_, state) => ProProfileScreen(pro: state.extra as Pro?)),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(navigationShell: shell),
         branches: [
@@ -55,7 +62,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
             GoRoute(path: Routes.discover, builder: (_, _) => const DiscoverScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: Routes.services, builder: (_, _) => const PlaceholderTab(title: 'Services')),
+            GoRoute(path: Routes.services, builder: (_, _) => const ServicesListScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: Routes.community, builder: (_, _) => const PlaceholderTab(title: 'Community')),
