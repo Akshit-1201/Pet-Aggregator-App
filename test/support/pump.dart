@@ -32,6 +32,7 @@ Future<void> pumpPgApp(
   WidgetTester tester, {
   List<Override> overrides = const [],
   String initialLocation = Routes.splash,
+  Object? extra,
   Brightness brightness = Brightness.light,
 }) async {
   tester.view.physicalSize = const Size(420, 920);
@@ -44,6 +45,9 @@ Future<void> pumpPgApp(
   final AuthRepository auth = container.read(authRepositoryProvider);
   final router = buildRouter(auth: auth, initialLocation: initialLocation);
   addTearDown(router.dispose);
+
+  // initialLocation can't carry `extra`; re-navigate before the first frame.
+  if (extra != null) router.go(initialLocation, extra: extra);
 
   await tester.pumpWidget(UncontrolledProviderScope(
     container: container,

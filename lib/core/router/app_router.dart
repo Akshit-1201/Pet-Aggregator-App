@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../data/models/booking.dart';
 import '../../data/models/pet_profile.dart';
 import '../../data/models/pro.dart';
 import '../../data/repositories/auth_repository.dart';
@@ -16,6 +17,9 @@ import '../../features/home/placeholder_tab.dart';
 import '../../features/onboarding/splash_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/pets/create_pet_screen.dart';
+import '../../features/services/booking_confirmed_screen.dart';
+import '../../features/services/booking_screen.dart';
+import '../../features/services/payment_screen.dart';
 import '../../features/services/pro_profile_screen.dart';
 import '../../features/services/pro_setup_screen.dart';
 import '../../features/services/services_list_screen.dart';
@@ -30,6 +34,7 @@ const _protected = {
   Routes.home, Routes.discover, Routes.services, Routes.community, Routes.profile,
   Routes.location, Routes.createPet, Routes.nearby, Routes.woofMatch,
   Routes.proSetup, Routes.servicePro,
+  Routes.booking, Routes.payment, Routes.bookingConfirmed,
 };
 
 GoRouter buildRouter({required AuthRepository auth, String initialLocation = Routes.splash}) {
@@ -52,6 +57,9 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.nearby, builder: (_, _) => const NearbyMapScreen()),
       GoRoute(path: Routes.proSetup, builder: (_, _) => const ProSetupScreen()),
       GoRoute(path: Routes.servicePro, builder: (_, state) => ProProfileScreen(pro: state.extra as Pro?)),
+      GoRoute(path: Routes.booking, builder: (_, state) => BookingScreen(pro: state.extra as Pro?)),
+      GoRoute(path: Routes.payment, builder: (_, state) => PaymentScreen(draft: state.extra as Booking?)),
+      GoRoute(path: Routes.bookingConfirmed, builder: (_, state) => BookingConfirmedScreen(booking: state.extra as Booking?)),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(navigationShell: shell),
         branches: [

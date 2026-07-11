@@ -14,4 +14,7 @@ class Routes {
   static const woofMatch = '/woof-match';
   static const proSetup = '/pro-setup';
   static const servicePro = '/service-pro';
+  static const booking = '/booking';
+  static const payment = '/payment';
+  static const bookingConfirmed = '/booking-confirmed';
 }
