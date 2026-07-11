@@ -8,11 +8,13 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
+import 'package:pet_aggregator_app/data/models/pro.dart';
 import 'package:pet_aggregator_app/data/models/role.dart';
 import 'package:pet_aggregator_app/data/models/swipe.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firebase_auth_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pet_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pro_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_swipe_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_user_repository.dart';
 import 'package:pet_aggregator_app/firebase_options.dart';
@@ -94,6 +96,22 @@ void main() {
     await swipes.recordSwipe(Swipe(
         fromUid: other.uid, petId: 'mine_$stamp', ownerId: me.uid, direction: SwipeDirection.woof));
     expect(await swipes.hasReciprocalWoof(otherUid: other.uid, myUid: me.uid), isTrue);
+
+    await auth.signOut();
+  });
+
+  testWidgets('pros upsert + watch round-trip (real Firestore emulators)', (tester) async {
+    final auth = FirebaseAuthRepository();
+    final prosRepo = FirestoreProRepository();
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    final me = await auth.signUp(email: 'pro_$stamp@x.com', password: 'secret1');
+
+    await prosRepo.upsertPro(Pro(uid: me.uid, name: 'Aarav', area: 'Bandra West',
+        bio: 'Walker', serviceType: ServiceType.walker, rate: 250, experienceYears: 4));
+    final mine = await prosRepo.watchPro(me.uid).firstWhere((p) => p != null);
+    expect(mine!.rate, 250);
+    final all = await prosRepo.watchPros().firstWhere((l) => l.any((p) => p.uid == me.uid));
+    expect(all.any((p) => p.name == 'Aarav'), isTrue);
 
     await auth.signOut();
   });
