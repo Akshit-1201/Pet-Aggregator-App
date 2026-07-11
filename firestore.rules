@@ -19,5 +19,9 @@ service cloud.firestore {
                   && request.resource.data.fromUid == request.auth.uid;
       allow update, delete: if false;
     }
+    match /pros/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
   }
 }
