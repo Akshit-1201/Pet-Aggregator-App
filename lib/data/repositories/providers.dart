@@ -2,13 +2,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/app_user.dart';
 import '../models/pet_profile.dart';
 import '../models/user_profile.dart';
+import '../models/pro.dart';
 import 'auth_repository.dart';
 import 'user_repository.dart';
 import 'pet_repository.dart';
+import 'pro_repository.dart';
 import 'swipe_repository.dart';
 import 'firebase/firebase_auth_repository.dart';
 import 'firebase/firestore_user_repository.dart';
 import 'firebase/firestore_pet_repository.dart';
+import 'firebase/firestore_pro_repository.dart';
 import 'firebase/firestore_swipe_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) => FirebaseAuthRepository());
@@ -41,4 +44,14 @@ final discoverDeckProvider = Provider<AsyncValue<List<PetProfile>>>((ref) {
   final swiped = ref.watch(swipedPetIdsProvider).value ?? const <String>{};
   return ref.watch(nearbyPetsProvider).whenData(
       (pets) => pets.where((p) => !swiped.contains(p.id)).toList());
+});
+
+final proRepositoryProvider = Provider<ProRepository>((ref) => FirestoreProRepository());
+
+final prosProvider = StreamProvider<List<Pro>>((ref) => ref.watch(proRepositoryProvider).watchPros());
+
+final currentProProvider = StreamProvider<Pro?>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(null);
+  return ref.watch(proRepositoryProvider).watchPro(user.uid);
 });

@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:pet_aggregator_app/data/models/app_user.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
+import 'package:pet_aggregator_app/data/models/pro.dart';
 import 'package:pet_aggregator_app/data/models/swipe.dart';
 import 'package:pet_aggregator_app/data/repositories/auth_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/user_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/pet_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/pro_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/swipe_repository.dart';
 
 class FakeAuthRepository implements AuthRepository {
@@ -155,6 +157,39 @@ class InMemorySwipeRepository implements SwipeRepository {
   Future<bool> hasReciprocalWoof({required String otherUid, required String myUid}) async =>
       _swipes.any((s) =>
           s.fromUid == otherUid && s.ownerId == myUid && s.direction == SwipeDirection.woof);
+}
+
+class InMemoryProRepository implements ProRepository {
+  final Map<String, Pro> _pros = {};
+  final _controller = StreamController<List<Pro>>.broadcast();
+
+  InMemoryProRepository([List<Pro>? seed]) {
+    if (seed != null) {
+      for (final p in seed) {
+        _pros[p.uid] = p;
+      }
+    }
+  }
+
+  List<Pro> _list() => _pros.values.toList();
+
+  @override
+  Future<void> upsertPro(Pro pro) async {
+    _pros[pro.uid] = pro;
+    _controller.add(_list());
+  }
+
+  @override
+  Stream<Pro?> watchPro(String uid) async* {
+    yield _pros[uid];
+    yield* _controller.stream.map((_) => _pros[uid]);
+  }
+
+  @override
+  Stream<List<Pro>> watchPros() async* {
+    yield _list();
+    yield* _controller.stream.map((_) => _list());
+  }
 }
 
 List<PetProfile> fixturePets(String ownerId) => [
