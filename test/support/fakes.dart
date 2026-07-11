@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:pet_aggregator_app/data/models/app_user.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
+import 'package:pet_aggregator_app/data/models/swipe.dart';
 import 'package:pet_aggregator_app/data/repositories/auth_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/user_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/pet_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/swipe_repository.dart';
 
 class FakeAuthRepository implements AuthRepository {
   final _controller = StreamController<AppUser?>.broadcast();
@@ -125,6 +127,34 @@ class InMemoryPetRepository implements PetRepository {
     _pets.add(pet);
     _emit();
   }
+}
+
+class InMemorySwipeRepository implements SwipeRepository {
+  final List<Swipe> _swipes = [];
+  final _controller = StreamController<List<Swipe>>.broadcast();
+
+  InMemorySwipeRepository([List<Swipe>? seed]) {
+    if (seed != null) _swipes.addAll(seed);
+  }
+
+  @override
+  Future<void> recordSwipe(Swipe swipe) async {
+    _swipes.removeWhere((s) => s.id == swipe.id);
+    _swipes.add(swipe);
+    _controller.add(List.of(_swipes));
+  }
+
+  @override
+  Stream<Set<String>> watchSwipedPetIds(String uid) async* {
+    Set<String> ids() => _swipes.where((s) => s.fromUid == uid).map((s) => s.petId).toSet();
+    yield ids();
+    yield* _controller.stream.map((_) => ids());
+  }
+
+  @override
+  Future<bool> hasReciprocalWoof({required String otherUid, required String myUid}) async =>
+      _swipes.any((s) =>
+          s.fromUid == otherUid && s.ownerId == myUid && s.direction == SwipeDirection.woof);
 }
 
 List<PetProfile> fixturePets(String ownerId) => [
