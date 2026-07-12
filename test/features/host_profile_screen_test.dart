@@ -4,7 +4,7 @@ import 'package:pet_aggregator_app/features/homestay/host_profile_screen.dart';
 import '../support/pump.dart';
 
 void main() {
-  testWidgets('renders the host + New host (unverified); Request to book hints coming soon',
+  testWidgets('renders the host + New host (unverified); shows Request to book',
       (tester) async {
     const h = Homestay(uid: 'h1', homeName: "Meera's Home", hostName: 'Meera Iyer',
         area: 'Bandra West', about: 'Spacious 2BHK with a fenced balcony.',
@@ -17,9 +17,7 @@ void main() {
     expect(find.textContaining('New host'), findsOneWidget); // unverified
     expect(find.textContaining('Apartment'), findsOneWidget); // homeType chip
     expect(find.textContaining('Near park'), findsOneWidget); // amenity chip
-    await tester.tap(find.textContaining('Request to book'));
-    await tester.pump();
-    expect(find.text('Booking is coming soon 🐾'), findsOneWidget);
+    expect(find.text('Request to book'), findsOneWidget); // now wired; see homestay_request_screen_test.dart
   });
 
   testWidgets('a verified host shows the Verified host badge', (tester) async {

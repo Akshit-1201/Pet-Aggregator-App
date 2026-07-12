@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
-import '../../core/widgets/pg_snackbar.dart';
 import '../../data/models/homestay.dart';
 
 class HostProfileScreen extends StatelessWidget {
@@ -131,7 +131,7 @@ class HostProfileScreen extends StatelessWidget {
             ]),
             const SizedBox(width: 16),
             Expanded(child: GestureDetector(
-              onTap: () => showComingSoon(context, 'Booking'),
+              onTap: () => context.push(Routes.hostRequest, extra: h),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 17), alignment: Alignment.center,
                 decoration: BoxDecoration(

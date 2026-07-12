@@ -17,6 +17,7 @@ import '../../features/home/home_screen.dart';
 import '../../features/home/home_shell.dart';
 import '../../features/home/placeholder_tab.dart';
 import '../../features/homestay/homestay_list_screen.dart';
+import '../../features/homestay/homestay_request_screen.dart';
 import '../../features/homestay/host_accepted_screen.dart';
 import '../../features/homestay/host_profile_screen.dart';
 import '../../features/homestay/host_setup_screen.dart';
@@ -71,6 +72,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.hostSetup, builder: (_, _) => const HostSetupScreen()),
       GoRoute(path: Routes.homestay, builder: (_, _) => const HomestayListScreen()),
       GoRoute(path: Routes.host, builder: (_, state) => HostProfileScreen(homestay: state.extra as Homestay?)),
+      GoRoute(path: Routes.hostRequest, builder: (_, state) => HomestayRequestScreen(homestay: state.extra as Homestay?)),
       GoRoute(path: Routes.hostAccepted, builder: (_, state) => HostAcceptedScreen(booking: state.extra as HomestayBooking?)),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(navigationShell: shell),
