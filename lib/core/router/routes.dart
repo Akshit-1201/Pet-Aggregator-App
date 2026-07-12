@@ -17,4 +17,7 @@ class Routes {
   static const booking = '/booking';
   static const payment = '/payment';
   static const bookingConfirmed = '/booking-confirmed';
+  static const homestay = '/homestay';
+  static const host = '/host';
+  static const hostSetup = '/host-setup';
 }
