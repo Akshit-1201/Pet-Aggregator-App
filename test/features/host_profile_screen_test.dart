@@ -15,6 +15,8 @@ void main() {
     expect(find.textContaining('Meera Iyer'), findsOneWidget);
     expect(find.text('Spacious 2BHK with a fenced balcony.'), findsOneWidget);
     expect(find.textContaining('New host'), findsOneWidget); // unverified
+    expect(find.textContaining('Apartment'), findsOneWidget); // homeType chip
+    expect(find.textContaining('Near park'), findsOneWidget); // amenity chip
     await tester.tap(find.textContaining('Request to book'));
     await tester.pump();
     expect(find.text('Booking is coming soon 🐾'), findsOneWidget);
