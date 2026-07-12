@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/booking.dart';
+import '../../data/models/homestay.dart';
 import '../../data/models/pet_profile.dart';
 import '../../data/models/pro.dart';
 import '../../data/repositories/auth_repository.dart';
@@ -15,6 +16,7 @@ import '../../features/home/home_screen.dart';
 import '../../features/home/home_shell.dart';
 import '../../features/home/placeholder_tab.dart';
 import '../../features/homestay/homestay_list_screen.dart';
+import '../../features/homestay/host_profile_screen.dart';
 import '../../features/homestay/host_setup_screen.dart';
 import '../../features/onboarding/splash_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
@@ -65,6 +67,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.bookingConfirmed, builder: (_, state) => BookingConfirmedScreen(booking: state.extra as Booking?)),
       GoRoute(path: Routes.hostSetup, builder: (_, _) => const HostSetupScreen()),
       GoRoute(path: Routes.homestay, builder: (_, _) => const HomestayListScreen()),
+      GoRoute(path: Routes.host, builder: (_, state) => HostProfileScreen(homestay: state.extra as Homestay?)),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(navigationShell: shell),
         branches: [
