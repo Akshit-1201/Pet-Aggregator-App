@@ -60,7 +60,7 @@ class HomeScreen extends ConsumerWidget {
                     _QuickAction(emoji: '🦮', title: 'Services', subtitle: 'Walkers, sitters, groomers',
                       bg: c.butter, fg: c.text, onTap: () => context.go(Routes.services)),
                     _QuickAction(emoji: '🏡', title: 'Homestay', subtitle: 'Verified boarding hosts',
-                      bg: c.lav, fg: c.text, onTap: () => context.go(Routes.services)),
+                      bg: c.lav, fg: c.text, onTap: () => context.push(Routes.homestay)),
                     _QuickAction(emoji: '💬', title: 'Community', subtitle: 'Ask, share, lost & found',
                       bg: c.mint, fg: c.text, onTap: () => context.go(Routes.community)),
                   ],
