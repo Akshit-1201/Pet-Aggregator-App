@@ -86,7 +86,7 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 ## Phase 4 — Services marketplace (on live data) — split into 4a + 4b
 
 > **Slice 4a (supply & browse) ✅ DONE (2026-07-12):** `pros/{uid}` collection + `Pro`/`ServiceType` models + `ProRepository` seam; Pro-setup screen (servicePro writes a listing), Services list (live pros, category filter, setup banner), Pro profile. "Book" → coming-soon snackbar. 50 tests + emulator integration (pros) green; `pros` rules deployed. Spec/plan: `docs/superpowers/*/2026-07-11-pawgo-services-4a-supply-browse*.md`.
-> **Slice 4b (booking & payment) — NEXT:** `bookings` collection; Booking (date/time/pet) → Payment (UI-only, Razorpay deferred to Phase 10) → Confirmed; wires the "Book" button.
+> **Slice 4b (booking & payment) ✅ DONE (2026-07-12):** `bookings` collection + `Booking` model + `BookingRepository` + `myPetsProvider`; Booking (date/time/pet) → Payment (UI-only, Razorpay deferred to Phase 10) → Confirmed; "Book" buttons wired. 59 tests + emulator integration (bookings) green; `bookings` rules deployed. **Services pillar (Phase 4) is now complete.** Spec/plan: `docs/superpowers/*/2026-07-12-pawgo-services-4b-booking-payment*.md`.
 
 **Goal:** browse-and-book UI, mock-only.
 **Screens:** Services List (categories + pro cards), Pro Profile (rate/experience/reviews/availability), Booking (date/time), Payment (UI only — no real gateway yet), Booking Confirmed.
