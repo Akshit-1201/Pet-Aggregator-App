@@ -12,6 +12,8 @@ import 'package:pet_aggregator_app/data/repositories/user_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/pet_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/pro_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/swipe_repository.dart';
+import 'package:pet_aggregator_app/data/models/homestay.dart';
+import 'package:pet_aggregator_app/data/repositories/homestay_repository.dart';
 
 class FakeAuthRepository implements AuthRepository {
   final _controller = StreamController<AppUser?>.broadcast();
@@ -223,3 +225,36 @@ List<PetProfile> fixturePets(String ownerId) => [
           ageLabel: '3 yrs', sex: 'male', area: 'Bandra West', species: Species.dog,
           vaccinated: true, accentColor: const Color(0xFF6B8DE0)),
     ];
+
+class InMemoryHomestayRepository implements HomestayRepository {
+  final Map<String, Homestay> _homestays = {};
+  final _controller = StreamController<List<Homestay>>.broadcast();
+
+  InMemoryHomestayRepository([List<Homestay>? seed]) {
+    if (seed != null) {
+      for (final h in seed) {
+        _homestays[h.uid] = h;
+      }
+    }
+  }
+
+  List<Homestay> _list() => _homestays.values.toList();
+
+  @override
+  Future<void> upsertHomestay(Homestay homestay) async {
+    _homestays[homestay.uid] = homestay;
+    _controller.add(_list());
+  }
+
+  @override
+  Stream<Homestay?> watchHomestay(String uid) async* {
+    yield _homestays[uid];
+    yield* _controller.stream.map((_) => _homestays[uid]);
+  }
+
+  @override
+  Stream<List<Homestay>> watchHomestays() async* {
+    yield _list();
+    yield* _controller.stream.map((_) => _list());
+  }
+}
