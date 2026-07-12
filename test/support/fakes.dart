@@ -14,6 +14,8 @@ import 'package:pet_aggregator_app/data/repositories/pro_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/swipe_repository.dart';
 import 'package:pet_aggregator_app/data/models/homestay.dart';
 import 'package:pet_aggregator_app/data/repositories/homestay_repository.dart';
+import 'package:pet_aggregator_app/data/models/homestay_booking.dart';
+import 'package:pet_aggregator_app/data/repositories/homestay_booking_repository.dart';
 
 class FakeAuthRepository implements AuthRepository {
   final _controller = StreamController<AppUser?>.broadcast();
@@ -256,5 +258,23 @@ class InMemoryHomestayRepository implements HomestayRepository {
   Stream<List<Homestay>> watchHomestays() async* {
     yield _list();
     yield* _controller.stream.map((_) => _list());
+  }
+}
+
+class InMemoryHomestayBookingRepository implements HomestayBookingRepository {
+  final List<HomestayBooking> _bookings = [];
+  final _controller = StreamController<List<HomestayBooking>>.broadcast();
+
+  @override
+  Future<void> createHomestayBooking(HomestayBooking booking) async {
+    _bookings.add(booking);
+    _controller.add(List.of(_bookings));
+  }
+
+  @override
+  Stream<List<HomestayBooking>> watchMyHomestayBookings(String guestId) async* {
+    List<HomestayBooking> mine() => _bookings.where((b) => b.guestId == guestId).toList();
+    yield mine();
+    yield* _controller.stream.map((_) => mine());
   }
 }
