@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:pet_aggregator_app/data/models/booking.dart';
 import 'package:pet_aggregator_app/data/models/homestay.dart';
+import 'package:pet_aggregator_app/data/models/homestay_booking.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
 import 'package:pet_aggregator_app/data/models/pro.dart';
 import 'package:pet_aggregator_app/data/models/role.dart';
@@ -17,6 +18,7 @@ import 'package:pet_aggregator_app/data/models/user_profile.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firebase_auth_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_booking_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_homestay_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/firebase/firestore_homestay_booking_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pet_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pro_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_swipe_repository.dart';
@@ -152,6 +154,25 @@ void main() {
     expect(mine.amenities, contains(Amenity.nearPark));
     final all = await homestaysRepo.watchHomestays().firstWhere((l) => l.any((h) => h.uid == me.uid));
     expect(all.any((h) => h.homeName == "Meera's Home"), isTrue);
+
+    await auth.signOut();
+  });
+
+  testWidgets('homestayBookings create + watch round-trip (real Firestore emulators)', (tester) async {
+    final auth = FirebaseAuthRepository();
+    final repo = FirestoreHomestayBookingRepository();
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    final me = await auth.signUp(email: 'hb_$stamp@x.com', password: 'secret1');
+
+    await repo.createHomestayBooking(HomestayBooking(guestId: me.uid, hostId: 'host_$stamp',
+        homeName: "Meera's Home", hostName: 'Meera Iyer', petId: 'pet_$stamp', petName: 'Bruno',
+        ratePerNight: 900, checkIn: DateTime(2026, 7, 12), checkOut: DateTime(2026, 7, 15),
+        nights: 3, subtotal: 2700, fee: 150, total: 2850, note: 'Friendly boy'));
+    final mine = await repo.watchMyHomestayBookings(me.uid).firstWhere((l) => l.isNotEmpty);
+    expect(mine.single.petName, 'Bruno');
+    expect(mine.single.total, 2850);
+    expect(mine.single.status, 'requested');
+    expect(mine.single.checkIn, DateTime(2026, 7, 12));
 
     await auth.signOut();
   });
