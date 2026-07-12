@@ -8,6 +8,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:pet_aggregator_app/data/models/booking.dart';
+import 'package:pet_aggregator_app/data/models/homestay.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
 import 'package:pet_aggregator_app/data/models/pro.dart';
 import 'package:pet_aggregator_app/data/models/role.dart';
@@ -15,6 +16,7 @@ import 'package:pet_aggregator_app/data/models/swipe.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firebase_auth_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_booking_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/firebase/firestore_homestay_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pet_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pro_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_swipe_repository.dart';
@@ -131,6 +133,25 @@ void main() {
     final mine = await bookings.watchMyBookings(me.uid).firstWhere((l) => l.isNotEmpty);
     expect(mine.single.petName, 'Bruno');
     expect(mine.single.total, 275);
+
+    await auth.signOut();
+  });
+
+  testWidgets('homestays upsert + watch round-trip (real Firestore emulators)', (tester) async {
+    final auth = FirebaseAuthRepository();
+    final homestaysRepo = FirestoreHomestayRepository();
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    final me = await auth.signUp(email: 'host_$stamp@x.com', password: 'secret1');
+
+    await homestaysRepo.upsertHomestay(Homestay(uid: me.uid, homeName: "Meera's Home",
+        hostName: 'Meera Iyer', area: 'Bandra West', about: 'Spacious 2BHK.',
+        homeType: HomeType.apartment, ratePerNight: 900, amenities: [Amenity.nearPark]));
+    final mine = await homestaysRepo.watchHomestay(me.uid).firstWhere((h) => h != null);
+    expect(mine!.ratePerNight, 900);
+    expect(mine.verified, isFalse);
+    expect(mine.amenities, contains(Amenity.nearPark));
+    final all = await homestaysRepo.watchHomestays().firstWhere((l) => l.any((h) => h.uid == me.uid));
+    expect(all.any((h) => h.homeName == "Meera's Home"), isTrue);
 
     await auth.signOut();
   });
