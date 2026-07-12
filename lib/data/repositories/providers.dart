@@ -3,16 +3,19 @@ import '../models/app_user.dart';
 import '../models/pet_profile.dart';
 import '../models/user_profile.dart';
 import '../models/pro.dart';
+import '../models/homestay.dart';
 import 'auth_repository.dart';
 import 'booking_repository.dart';
 import 'user_repository.dart';
 import 'pet_repository.dart';
 import 'pro_repository.dart';
+import 'homestay_repository.dart';
 import 'swipe_repository.dart';
 import 'firebase/firebase_auth_repository.dart';
 import 'firebase/firestore_user_repository.dart';
 import 'firebase/firestore_pet_repository.dart';
 import 'firebase/firestore_pro_repository.dart';
+import 'firebase/firestore_homestay_repository.dart';
 import 'firebase/firestore_swipe_repository.dart';
 import 'firebase/firestore_booking_repository.dart';
 
@@ -65,4 +68,16 @@ final myPetsProvider = StreamProvider<List<PetProfile>>((ref) {
   final user = ref.watch(authStateProvider).value;
   if (user == null) return Stream.value(const []);
   return ref.watch(petRepositoryProvider).watchMyPets(user.uid);
+});
+
+final homestayRepositoryProvider =
+    Provider<HomestayRepository>((ref) => FirestoreHomestayRepository());
+
+final homestaysProvider =
+    StreamProvider<List<Homestay>>((ref) => ref.watch(homestayRepositoryProvider).watchHomestays());
+
+final currentHomestayProvider = StreamProvider<Homestay?>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(null);
+  return ref.watch(homestayRepositoryProvider).watchHomestay(user.uid);
 });
