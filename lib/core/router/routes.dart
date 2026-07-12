@@ -20,4 +20,6 @@ class Routes {
   static const homestay = '/homestay';
   static const host = '/host';
   static const hostSetup = '/host-setup';
+  static const hostRequest = '/host-request';
+  static const hostAccepted = '/host-accepted';
 }

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/booking.dart';
 import '../../data/models/homestay.dart';
+import '../../data/models/homestay_booking.dart';
 import '../../data/models/pet_profile.dart';
 import '../../data/models/pro.dart';
 import '../../data/repositories/auth_repository.dart';
@@ -16,6 +17,7 @@ import '../../features/home/home_screen.dart';
 import '../../features/home/home_shell.dart';
 import '../../features/home/placeholder_tab.dart';
 import '../../features/homestay/homestay_list_screen.dart';
+import '../../features/homestay/host_accepted_screen.dart';
 import '../../features/homestay/host_profile_screen.dart';
 import '../../features/homestay/host_setup_screen.dart';
 import '../../features/onboarding/splash_screen.dart';
@@ -40,6 +42,7 @@ const _protected = {
   Routes.proSetup, Routes.servicePro,
   Routes.booking, Routes.payment, Routes.bookingConfirmed,
   Routes.homestay, Routes.host, Routes.hostSetup,
+  Routes.hostRequest, Routes.hostAccepted,
 };
 
 GoRouter buildRouter({required AuthRepository auth, String initialLocation = Routes.splash}) {
@@ -68,6 +71,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.hostSetup, builder: (_, _) => const HostSetupScreen()),
       GoRoute(path: Routes.homestay, builder: (_, _) => const HomestayListScreen()),
       GoRoute(path: Routes.host, builder: (_, state) => HostProfileScreen(homestay: state.extra as Homestay?)),
+      GoRoute(path: Routes.hostAccepted, builder: (_, state) => HostAcceptedScreen(booking: state.extra as HomestayBooking?)),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(navigationShell: shell),
         branches: [
