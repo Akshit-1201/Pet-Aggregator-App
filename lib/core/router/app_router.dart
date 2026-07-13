@@ -4,12 +4,14 @@ import '../../data/models/booking.dart';
 import '../../data/models/homestay.dart';
 import '../../data/models/homestay_booking.dart';
 import '../../data/models/pet_profile.dart';
+import '../../data/models/post.dart';
 import '../../data/models/pro.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/providers.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/auth/signup_screen.dart';
 import '../../features/auth/location_screen.dart';
+import '../../features/community/post_live_screen.dart';
 import '../../features/discovery/discover_screen.dart';
 import '../../features/discovery/nearby_map_screen.dart';
 import '../../features/discovery/woof_match_screen.dart';
@@ -44,6 +46,7 @@ const _protected = {
   Routes.booking, Routes.payment, Routes.bookingConfirmed,
   Routes.homestay, Routes.host, Routes.hostSetup,
   Routes.hostRequest, Routes.hostAccepted,
+  Routes.newPost, Routes.thread, Routes.postLive,
 };
 
 GoRouter buildRouter({required AuthRepository auth, String initialLocation = Routes.splash}) {
@@ -74,6 +77,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.host, builder: (_, state) => HostProfileScreen(homestay: state.extra as Homestay?)),
       GoRoute(path: Routes.hostRequest, builder: (_, state) => HomestayRequestScreen(homestay: state.extra as Homestay?)),
       GoRoute(path: Routes.hostAccepted, builder: (_, state) => HostAcceptedScreen(booking: state.extra as HomestayBooking?)),
+      GoRoute(path: Routes.postLive, builder: (_, state) => PostLiveScreen(post: state.extra as Post?)),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(navigationShell: shell),
         branches: [
