@@ -30,13 +30,14 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     if (text.isEmpty) return;
     final me = ref.read(authRepositoryProvider).currentUser;
     if (me == null) return;
-    final profile = await ref.read(userRepositoryProvider).watchUser(me.uid).first;
     setState(() => _sending = true);
+    final profile = await ref.read(userRepositoryProvider).watchUser(me.uid).first;
     await ref.read(postRepositoryProvider).addComment(post.id, Comment(
         authorId: me.uid, authorName: profile?.name ?? 'Someone', body: text,
         createdAt: DateTime.now().millisecondsSinceEpoch));
+    if (!mounted) return;
     _reply.clear();
-    if (mounted) setState(() => _sending = false);
+    setState(() => _sending = false);
   }
 
   @override
