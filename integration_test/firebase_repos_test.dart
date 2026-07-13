@@ -11,6 +11,7 @@ import 'package:pet_aggregator_app/data/models/booking.dart';
 import 'package:pet_aggregator_app/data/models/homestay.dart';
 import 'package:pet_aggregator_app/data/models/homestay_booking.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
+import 'package:pet_aggregator_app/data/models/post.dart';
 import 'package:pet_aggregator_app/data/models/pro.dart';
 import 'package:pet_aggregator_app/data/models/role.dart';
 import 'package:pet_aggregator_app/data/models/swipe.dart';
@@ -20,6 +21,7 @@ import 'package:pet_aggregator_app/data/repositories/firebase/firestore_booking_
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_homestay_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_homestay_booking_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pet_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/firebase/firestore_post_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pro_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_swipe_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_user_repository.dart';
@@ -173,6 +175,29 @@ void main() {
     expect(mine.single.total, 2850);
     expect(mine.single.status, 'requested');
     expect(mine.single.checkIn, DateTime(2026, 7, 12));
+
+    await auth.signOut();
+  });
+
+  testWidgets('posts + comments create/watch round-trip (real Firestore emulators)', (tester) async {
+    final auth = FirebaseAuthRepository();
+    final repo = FirestorePostRepository();
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    final me = await auth.signUp(email: 'post_$stamp@x.com', password: 'secret1');
+
+    final created = await repo.createPost(Post(authorId: me.uid, authorName: 'Radhika',
+        category: PostCategory.health, title: 'Vet in Bandra?', body: 'Boosters due.', createdAt: stamp));
+    expect(created.id, isNotEmpty);
+    final posts = await repo.watchPosts().firstWhere((l) => l.any((p) => p.id == created.id));
+    expect(posts.firstWhere((p) => p.id == created.id).title, 'Vet in Bandra?');
+
+    await repo.addComment(created.id, Comment(authorId: me.uid, authorName: 'Radhika',
+        body: 'Any tips?', createdAt: stamp + 1));
+    final comments = await repo.watchComments(created.id).firstWhere((l) => l.isNotEmpty);
+    expect(comments.single.body, 'Any tips?');
+    final afterReply = await repo.watchPosts().firstWhere((l) =>
+        l.any((p) => p.id == created.id && p.replyCount == 1));
+    expect(afterReply.firstWhere((p) => p.id == created.id).replyCount, 1);
 
     await auth.signOut();
   });
