@@ -12,4 +12,11 @@ void main() {
     await tester.enterText(find.byType(TextField), 'r@x.com');
     expect(controller.text, 'r@x.com');
   });
+
+  testWidgets('maxLines passes through to the inner TextField', (tester) async {
+    final controller = TextEditingController();
+    addTearDown(controller.dispose);
+    await pumpPg(tester, PgTextField(label: 'Details', controller: controller, maxLines: 6));
+    expect(tester.widget<TextField>(find.byType(TextField)).maxLines, 6);
+  });
 }

@@ -10,6 +10,7 @@ class PgTextField extends StatelessWidget {
   final bool obscure;
   final TextInputType? keyboardType;
   final String? hint;
+  final int maxLines;
 
   const PgTextField({
     super.key,
@@ -19,6 +20,7 @@ class PgTextField extends StatelessWidget {
     this.obscure = false,
     this.keyboardType,
     this.hint,
+    this.maxLines = 1,
   });
 
   @override
@@ -46,6 +48,7 @@ class PgTextField extends StatelessWidget {
                 controller: controller,
                 obscureText: obscure,
                 keyboardType: keyboardType,
+                maxLines: maxLines,
                 style: PgText.inter(14.5, FontWeight.w500, color: c.text),
                 cursorColor: c.brand,
                 decoration: InputDecoration(
