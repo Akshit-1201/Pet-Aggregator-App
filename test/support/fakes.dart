@@ -16,6 +16,8 @@ import 'package:pet_aggregator_app/data/models/homestay.dart';
 import 'package:pet_aggregator_app/data/repositories/homestay_repository.dart';
 import 'package:pet_aggregator_app/data/models/homestay_booking.dart';
 import 'package:pet_aggregator_app/data/repositories/homestay_booking_repository.dart';
+import 'package:pet_aggregator_app/data/models/post.dart';
+import 'package:pet_aggregator_app/data/repositories/post_repository.dart';
 
 class FakeAuthRepository implements AuthRepository {
   final _controller = StreamController<AppUser?>.broadcast();
@@ -276,5 +278,56 @@ class InMemoryHomestayBookingRepository implements HomestayBookingRepository {
     List<HomestayBooking> mine() => _bookings.where((b) => b.guestId == guestId).toList();
     yield mine();
     yield* _controller.stream.map((_) => mine());
+  }
+}
+
+class InMemoryPostRepository implements PostRepository {
+  final List<Post> _posts = [];
+  final Map<String, List<Comment>> _comments = {};
+  final _postsCtrl = StreamController<List<Post>>.broadcast();
+  final Map<String, StreamController<List<Comment>>> _commentCtrls = {};
+  int _seq = 0;
+
+  InMemoryPostRepository([List<Post>? seed]) {
+    if (seed != null) _posts.addAll(seed);
+  }
+
+  StreamController<List<Comment>> _cctrl(String postId) =>
+      _commentCtrls.putIfAbsent(postId, () => StreamController<List<Comment>>.broadcast());
+
+  List<Post> _sortedPosts() => [..._posts]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+  @override
+  Future<Post> createPost(Post post) async {
+    final created = Post.fromMap('post_${_seq++}', post.toMap());
+    _posts.add(created);
+    _postsCtrl.add(_sortedPosts());
+    return created;
+  }
+
+  @override
+  Stream<List<Post>> watchPosts() async* {
+    yield _sortedPosts();
+    yield* _postsCtrl.stream;
+  }
+
+  @override
+  Future<void> addComment(String postId, Comment comment) async {
+    final list = _comments.putIfAbsent(postId, () => []);
+    list.add(Comment.fromMap('c_${_seq++}', comment.toMap()));
+    _cctrl(postId).add([...list]);
+    final i = _posts.indexWhere((p) => p.id == postId);
+    if (i >= 0) {
+      _posts[i] = Post.fromMap(_posts[i].id, {..._posts[i].toMap(), 'replyCount': _posts[i].replyCount + 1});
+      _postsCtrl.add(_sortedPosts());
+    }
+  }
+
+  @override
+  Stream<List<Comment>> watchComments(String postId) async* {
+    List<Comment> sorted() =>
+        [...(_comments[postId] ?? const <Comment>[])]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    yield sorted();
+    yield* _cctrl(postId).stream.map((_) => sorted());
   }
 }
