@@ -11,6 +11,7 @@ import '../../data/repositories/providers.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/auth/signup_screen.dart';
 import '../../features/auth/location_screen.dart';
+import '../../features/community/community_feed_screen.dart';
 import '../../features/community/new_post_screen.dart';
 import '../../features/community/post_live_screen.dart';
 import '../../features/community/thread_screen.dart';
@@ -95,7 +96,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
             GoRoute(path: Routes.services, builder: (_, _) => const ServicesListScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: Routes.community, builder: (_, _) => const PlaceholderTab(title: 'Community')),
+            GoRoute(path: Routes.community, builder: (_, _) => const CommunityFeedScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: Routes.profile, builder: (_, _) => const PlaceholderTab(title: 'Profile')),
