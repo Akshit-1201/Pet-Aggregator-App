@@ -94,5 +94,5 @@ final postRepositoryProvider = Provider<PostRepository>((ref) => FirestorePostRe
 
 final postsProvider = StreamProvider<List<Post>>((ref) => ref.watch(postRepositoryProvider).watchPosts());
 
-final commentsProvider = StreamProvider.family<List<Comment>, String>(
+final commentsProvider = StreamProvider.autoDispose.family<List<Comment>, String>(
     (ref, postId) => ref.watch(postRepositoryProvider).watchComments(postId));

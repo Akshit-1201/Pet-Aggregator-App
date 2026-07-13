@@ -41,4 +41,21 @@ void main() {
     expect(comments.last.authorName, 'Radhika');
     expect(find.textContaining('Happy Tails'), findsOneWidget);
   });
+
+  testWidgets('back from a go-entered thread lands on Community (no crash)', (tester) async {
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    const post = Post(id: 'post1', authorId: 'op', authorName: 'Dev', category: PostCategory.health,
+        title: 'Vet in Bandra?', body: 'b', createdAt: 1000);
+    await pumpPgApp(tester, overrides: [
+      authRepositoryProvider.overrideWithValue(auth),
+      userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
+      postRepositoryProvider.overrideWithValue(InMemoryPostRepository([post])),
+    ], initialLocation: Routes.thread, extra: post);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.chevron_left));
+    await tester.pumpAndSettle();
+    expect(find.text('Add a reply…'), findsNothing);          // left the thread, no exception
+    expect(find.text('Mumbai pet parents'), findsOneWidget);  // landed on the Community feed
+  });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_app_bar.dart';
@@ -53,7 +54,8 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
       backgroundColor: c.bg,
       body: SafeArea(
         child: Column(children: [
-          PgAppBar(title: post.category.label, onBack: () => context.pop()),
+          PgAppBar(title: post.category.label,
+              onBack: () => context.canPop() ? context.pop() : context.go(Routes.community)),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(22, 8, 22, 20),
