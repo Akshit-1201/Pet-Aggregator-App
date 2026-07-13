@@ -11,6 +11,7 @@ import '../../data/repositories/providers.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/auth/signup_screen.dart';
 import '../../features/auth/location_screen.dart';
+import '../../features/community/new_post_screen.dart';
 import '../../features/community/post_live_screen.dart';
 import '../../features/community/thread_screen.dart';
 import '../../features/discovery/discover_screen.dart';
@@ -78,6 +79,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.host, builder: (_, state) => HostProfileScreen(homestay: state.extra as Homestay?)),
       GoRoute(path: Routes.hostRequest, builder: (_, state) => HomestayRequestScreen(homestay: state.extra as Homestay?)),
       GoRoute(path: Routes.hostAccepted, builder: (_, state) => HostAcceptedScreen(booking: state.extra as HomestayBooking?)),
+      GoRoute(path: Routes.newPost, builder: (_, _) => const NewPostScreen()),
       GoRoute(path: Routes.postLive, builder: (_, state) => PostLiveScreen(post: state.extra as Post?)),
       GoRoute(path: Routes.thread, builder: (_, state) => ThreadScreen(post: state.extra as Post?)),
       StatefulShellRoute.indexedStack(
