@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/app_user.dart';
 import '../models/pet_profile.dart';
@@ -14,6 +15,7 @@ import 'homestay_repository.dart';
 import 'homestay_booking_repository.dart';
 import 'swipe_repository.dart';
 import 'post_repository.dart';
+import 'preferences_repository.dart';
 import 'firebase/firebase_auth_repository.dart';
 import 'firebase/firestore_user_repository.dart';
 import 'firebase/firestore_pet_repository.dart';
@@ -96,3 +98,20 @@ final postsProvider = StreamProvider<List<Post>>((ref) => ref.watch(postReposito
 
 final commentsProvider = StreamProvider.autoDispose.family<List<Comment>, String>(
     (ref, postId) => ref.watch(postRepositoryProvider).watchComments(postId));
+
+final preferencesRepositoryProvider = Provider<PreferencesRepository>(
+    (ref) => throw UnimplementedError('preferencesRepositoryProvider must be overridden in main()'));
+
+class ThemeModeNotifier extends Notifier<ThemeMode> {
+  @override
+  ThemeMode build() => ref.read(preferencesRepositoryProvider).themeMode;
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    state = mode;
+    await ref.read(preferencesRepositoryProvider).setThemeMode(mode);
+  }
+
+  Future<void> toggleDark(bool on) => setThemeMode(on ? ThemeMode.dark : ThemeMode.light);
+}
+
+final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);

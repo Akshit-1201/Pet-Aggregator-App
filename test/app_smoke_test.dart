@@ -8,7 +8,10 @@ import 'support/fakes.dart';
 void main() {
   testWidgets('PawgoApp builds a MaterialApp', (tester) async {
     await tester.pumpWidget(ProviderScope(
-      overrides: [authRepositoryProvider.overrideWithValue(FakeAuthRepository())],
+      overrides: [
+        authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+        preferencesRepositoryProvider.overrideWithValue(InMemoryPreferencesRepository()),
+      ],
       child: const PawgoApp(),
     ));
     expect(find.byType(MaterialApp), findsOneWidget);
