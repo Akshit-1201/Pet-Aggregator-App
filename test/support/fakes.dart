@@ -18,6 +18,7 @@ import 'package:pet_aggregator_app/data/models/homestay_booking.dart';
 import 'package:pet_aggregator_app/data/repositories/homestay_booking_repository.dart';
 import 'package:pet_aggregator_app/data/models/post.dart';
 import 'package:pet_aggregator_app/data/repositories/post_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/preferences_repository.dart';
 
 class FakeAuthRepository implements AuthRepository {
   final _controller = StreamController<AppUser?>.broadcast();
@@ -330,4 +331,15 @@ class InMemoryPostRepository implements PostRepository {
     yield sorted();
     yield* _cctrl(postId).stream.map((_) => sorted());
   }
+}
+
+class InMemoryPreferencesRepository implements PreferencesRepository {
+  ThemeMode _mode;
+  InMemoryPreferencesRepository([this._mode = ThemeMode.system]);
+
+  @override
+  ThemeMode get themeMode => _mode;
+
+  @override
+  Future<void> setThemeMode(ThemeMode mode) async => _mode = mode;
 }
