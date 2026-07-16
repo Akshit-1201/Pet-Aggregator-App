@@ -201,4 +201,17 @@ void main() {
 
     await auth.signOut();
   });
+
+  testWidgets('watchMyWoofCount reflects a recorded woof (real Firestore emulators)', (tester) async {
+    final auth = FirebaseAuthRepository();
+    final swipes = FirestoreSwipeRepository();
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    final me = await auth.signUp(email: 'woofc_$stamp@x.com', password: 'secret1');
+    expect(await swipes.watchMyWoofCount(me.uid).first, 0);
+    await swipes.recordSwipe(Swipe(fromUid: me.uid, petId: 'pet_$stamp', ownerId: 'owner_$stamp',
+        direction: SwipeDirection.woof));
+    final count = await swipes.watchMyWoofCount(me.uid).firstWhere((n) => n >= 1);
+    expect(count, 1);
+    await auth.signOut();
+  });
 }
