@@ -18,6 +18,8 @@ import 'package:pet_aggregator_app/data/models/homestay_booking.dart';
 import 'package:pet_aggregator_app/data/repositories/homestay_booking_repository.dart';
 import 'package:pet_aggregator_app/data/models/post.dart';
 import 'package:pet_aggregator_app/data/repositories/post_repository.dart';
+import 'package:pet_aggregator_app/data/models/chat.dart';
+import 'package:pet_aggregator_app/data/repositories/chat_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/preferences_repository.dart';
 
 class FakeAuthRepository implements AuthRepository {
@@ -349,4 +351,70 @@ class InMemoryPreferencesRepository implements PreferencesRepository {
 
   @override
   Future<void> setThemeMode(ThemeMode mode) async => _mode = mode;
+}
+
+class InMemoryChatRepository implements ChatRepository {
+  final Map<String, Chat> _chats = {};
+  final Map<String, List<Message>> _messages = {};
+  final _chatsCtrl = StreamController<List<Chat>>.broadcast();
+  final Map<String, StreamController<List<Message>>> _msgCtrls = {};
+  int _seq = 0;
+
+  StreamController<List<Message>> _mctrl(String chatId) =>
+      _msgCtrls.putIfAbsent(chatId, () => StreamController<List<Message>>.broadcast());
+
+  @override
+  Future<Chat> openChat({required String myUid, required String myName,
+      required String otherUid, required String otherName}) async {
+    final id = Chat.chatIdFor(myUid, otherUid);
+    final existing = _chats[id];
+    if (existing != null) return existing;
+    final chat = Chat(id: id, participants: [myUid, otherUid]..sort(),
+        names: {myUid: myName, otherUid: otherName},
+        createdAt: DateTime.now().millisecondsSinceEpoch);
+    _chats[id] = chat;
+    _chatsCtrl.add(_chats.values.toList());
+    return chat;
+  }
+
+  @override
+  Stream<List<Chat>> watchMyChats(String uid) async* {
+    List<Chat> mine() => _chats.values.where((c) => c.participants.contains(uid)).toList()
+      ..sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
+    yield mine();
+    yield* _chatsCtrl.stream.map((_) => mine());
+  }
+
+  @override
+  Stream<List<Message>> watchMessages(String chatId) async* {
+    List<Message> msgs() =>
+        [...(_messages[chatId] ?? const <Message>[])]..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    yield msgs();
+    yield* _mctrl(chatId).stream.map((_) => msgs());
+  }
+
+  @override
+  Future<void> sendMessage({required String chatId, required String senderId, required String text}) async {
+    final masked = maskPhones(text);
+    final now = DateTime.now().millisecondsSinceEpoch;
+    final list = _messages.putIfAbsent(chatId, () => []);
+    list.add(Message(id: 'm_${_seq++}', senderId: senderId, text: masked, createdAt: now));
+    _mctrl(chatId).add([...list]);
+    final c = _chats[chatId];
+    if (c != null) {
+      _chats[chatId] = Chat.fromMap(chatId,
+          {...c.toMap(), 'lastMessage': masked, 'lastMessageAt': now, 'lastSenderId': senderId});
+      _chatsCtrl.add(_chats.values.toList());
+    }
+  }
+
+  @override
+  Future<void> markRead({required String chatId, required String uid}) async {
+    final c = _chats[chatId];
+    if (c != null) {
+      final lr = {...c.lastRead, uid: DateTime.now().millisecondsSinceEpoch};
+      _chats[chatId] = Chat.fromMap(chatId, {...c.toMap(), 'lastRead': lr});
+      _chatsCtrl.add(_chats.values.toList());
+    }
+  }
 }
