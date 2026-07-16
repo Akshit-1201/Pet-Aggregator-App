@@ -21,6 +21,12 @@ class FirestoreSwipeRepository implements SwipeRepository {
       .map((snap) => snap.docs.map((d) => d.data()['petId'] as String).toSet());
 
   @override
+  Stream<int> watchMyWoofCount(String uid) => _col
+      .where('fromUid', isEqualTo: uid)
+      .snapshots()
+      .map((snap) => snap.docs.where((d) => d.data()['direction'] == 'woof').length);
+
+  @override
   Future<bool> hasReciprocalWoof({required String otherUid, required String myUid}) async {
     final q = await _col
         .where('fromUid', isEqualTo: otherUid)

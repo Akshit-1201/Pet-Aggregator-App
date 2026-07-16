@@ -163,6 +163,13 @@ class InMemorySwipeRepository implements SwipeRepository {
   }
 
   @override
+  Stream<int> watchMyWoofCount(String uid) async* {
+    int count() => _swipes.where((s) => s.fromUid == uid && s.direction == SwipeDirection.woof).length;
+    yield count();
+    yield* _controller.stream.map((_) => count());
+  }
+
+  @override
   Future<bool> hasReciprocalWoof({required String otherUid, required String myUid}) async =>
       _swipes.any((s) =>
           s.fromUid == otherUid && s.ownerId == myUid && s.direction == SwipeDirection.woof);
