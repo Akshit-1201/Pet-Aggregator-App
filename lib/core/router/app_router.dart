@@ -20,7 +20,6 @@ import '../../features/discovery/nearby_map_screen.dart';
 import '../../features/discovery/woof_match_screen.dart';
 import '../../features/home/home_screen.dart';
 import '../../features/home/home_shell.dart';
-import '../../features/home/placeholder_tab.dart';
 import '../../features/homestay/homestay_list_screen.dart';
 import '../../features/homestay/homestay_request_screen.dart';
 import '../../features/homestay/host_accepted_screen.dart';
@@ -30,6 +29,7 @@ import '../../features/onboarding/splash_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/pets/create_pet_screen.dart';
 import '../../features/pets/pet_profile_detail_screen.dart';
+import '../../features/profile/profile_screen.dart';
 import '../../features/profile/settings_screen.dart';
 import '../../features/services/booking_confirmed_screen.dart';
 import '../../features/services/booking_screen.dart';
@@ -104,7 +104,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
             GoRoute(path: Routes.community, builder: (_, _) => const CommunityFeedScreen()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(path: Routes.profile, builder: (_, _) => const PlaceholderTab(title: 'Profile')),
+            GoRoute(path: Routes.profile, builder: (_, _) => const ProfileScreen()),
           ]),
         ],
       ),
