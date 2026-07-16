@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/app_user.dart';
+import '../models/booking.dart';
 import '../models/pet_profile.dart';
 import '../models/user_profile.dart';
 import '../models/pro.dart';
@@ -115,3 +116,18 @@ class ThemeModeNotifier extends Notifier<ThemeMode> {
 }
 
 final themeModeProvider = NotifierProvider<ThemeModeNotifier, ThemeMode>(ThemeModeNotifier.new);
+
+final myWoofCountProvider = StreamProvider<int>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(0);
+  return ref.watch(swipeRepositoryProvider).watchMyWoofCount(user.uid);
+});
+
+final myBookingsProvider = StreamProvider<List<Booking>>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(const []);
+  return ref.watch(bookingRepositoryProvider).watchMyBookings(user.uid);
+});
+
+final userByIdProvider = StreamProvider.family<UserProfile?, String>(
+    (ref, uid) => ref.watch(userRepositoryProvider).watchUser(uid));
