@@ -25,8 +25,7 @@ class PetProfileDetailScreen extends ConsumerWidget {
       return Scaffold(backgroundColor: c.bg, appBar: AppBar(backgroundColor: c.bg, elevation: 0),
         body: Center(child: Text('Pet not found', style: PgText.body(context))));
     }
-    final me = ref.watch(authStateProvider).value;
-    final isMine = me != null && me.uid == p.ownerId;
+    final isMine = ref.watch(authRepositoryProvider).currentUser?.uid == p.ownerId;
     final owner = ref.watch(userByIdProvider(p.ownerId)).value;
     final sexSymbol = p.sex.toLowerCase() == 'female' ? '♀' : '♂';
 
