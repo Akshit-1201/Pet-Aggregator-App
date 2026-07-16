@@ -25,4 +25,6 @@ class Routes {
   static const newPost = '/new-post';
   static const thread = '/thread';
   static const postLive = '/post-live';
+  static const settings = '/settings';
+  static const petProfile = '/pet-profile';
 }
