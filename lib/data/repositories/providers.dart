@@ -7,6 +7,7 @@ import '../models/user_profile.dart';
 import '../models/pro.dart';
 import '../models/homestay.dart';
 import '../models/post.dart';
+import '../models/chat.dart';
 import 'auth_repository.dart';
 import 'booking_repository.dart';
 import 'user_repository.dart';
@@ -16,6 +17,7 @@ import 'homestay_repository.dart';
 import 'homestay_booking_repository.dart';
 import 'swipe_repository.dart';
 import 'post_repository.dart';
+import 'chat_repository.dart';
 import 'preferences_repository.dart';
 import 'firebase/firebase_auth_repository.dart';
 import 'firebase/firestore_user_repository.dart';
@@ -26,6 +28,7 @@ import 'firebase/firestore_homestay_booking_repository.dart';
 import 'firebase/firestore_swipe_repository.dart';
 import 'firebase/firestore_booking_repository.dart';
 import 'firebase/firestore_post_repository.dart';
+import 'firebase/firestore_chat_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) => FirebaseAuthRepository());
 final userRepositoryProvider = Provider<UserRepository>((ref) => FirestoreUserRepository());
@@ -131,3 +134,14 @@ final myBookingsProvider = StreamProvider<List<Booking>>((ref) {
 
 final userByIdProvider = StreamProvider.family<UserProfile?, String>(
     (ref, uid) => ref.watch(userRepositoryProvider).watchUser(uid));
+
+final chatRepositoryProvider = Provider<ChatRepository>((ref) => FirestoreChatRepository());
+
+final myChatsProvider = StreamProvider<List<Chat>>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(const []);
+  return ref.watch(chatRepositoryProvider).watchMyChats(user.uid);
+});
+
+final chatMessagesProvider = StreamProvider.autoDispose.family<List<Message>, String>(
+    (ref, chatId) => ref.watch(chatRepositoryProvider).watchMessages(chatId));
