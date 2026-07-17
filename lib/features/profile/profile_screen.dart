@@ -49,7 +49,10 @@ class ProfileScreen extends ConsumerWidget {
               Row(children: [
                 Expanded(child: _stat(c, '${pets.length}', 'Pets')),
                 Container(width: 1, height: 34, color: c.border),
-                Expanded(child: _stat(c, '${bookings.length}', 'Bookings')),
+                Expanded(child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => context.push(Routes.bookings),
+                  child: _stat(c, '${bookings.length}', 'Bookings'))),
                 Container(width: 1, height: 34, color: c.border),
                 Expanded(child: _stat(c, '$woofs', 'Woofs')),
               ]),
