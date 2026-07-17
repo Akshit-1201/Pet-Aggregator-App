@@ -42,6 +42,14 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Text('Pets near you today', style: PgText.inter(13.5, FontWeight.w400, color: c.muted)),
               ])),
+              GestureDetector(
+                onTap: () => context.push(Routes.chatList),
+                child: Container(
+                  width: 42, height: 42, alignment: Alignment.center,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(color: c.surface2, borderRadius: BorderRadius.circular(13)),
+                  child: Icon(Icons.chat_bubble_outline_rounded, size: 20, color: c.text)),
+              ),
               const PgImageSlot(size: 46, circle: true),
             ]),
           ),
