@@ -13,6 +13,7 @@ import '../../features/auth/welcome_screen.dart';
 import '../../features/auth/signup_screen.dart';
 import '../../features/auth/location_screen.dart';
 import '../../features/chat/chat_conversation_screen.dart';
+import '../../features/chat/chat_list_screen.dart';
 import '../../features/community/community_feed_screen.dart';
 import '../../features/community/new_post_screen.dart';
 import '../../features/community/post_live_screen.dart';
@@ -92,6 +93,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.settings, builder: (_, _) => const SettingsScreen()),
       GoRoute(path: Routes.thread, builder: (_, state) => ThreadScreen(post: state.extra as Post?)),
       GoRoute(path: Routes.chat, builder: (_, state) => ChatConversationScreen(chat: state.extra as Chat?)),
+      GoRoute(path: Routes.chatList, builder: (_, _) => const ChatListScreen()),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(navigationShell: shell),
         branches: [
