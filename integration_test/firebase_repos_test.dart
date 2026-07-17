@@ -14,6 +14,7 @@ import 'package:pet_aggregator_app/data/models/homestay_booking.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
 import 'package:pet_aggregator_app/data/models/post.dart';
 import 'package:pet_aggregator_app/data/models/pro.dart';
+import 'package:pet_aggregator_app/data/models/review.dart';
 import 'package:pet_aggregator_app/data/models/role.dart';
 import 'package:pet_aggregator_app/data/models/swipe.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
@@ -25,6 +26,7 @@ import 'package:pet_aggregator_app/data/repositories/firebase/firestore_homestay
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pet_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_post_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pro_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/firebase/firestore_review_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_swipe_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_user_repository.dart';
 import 'package:pet_aggregator_app/firebase_options.dart';
@@ -240,6 +242,41 @@ void main() {
     final read = await repo.watchMyChats(me.uid).firstWhere((l) =>
         l.any((c) => c.id == chat.id && (c.lastRead[me.uid] ?? 0) > 0));
     expect((read.firstWhere((c) => c.id == chat.id).lastRead[me.uid] ?? 0) > 0, isTrue);
+
+    await auth.signOut();
+  });
+
+  testWidgets('reviews submit + aggregate transactionally + idempotent (real Firestore emulators)', (tester) async {
+    final auth = FirebaseAuthRepository();
+    final pros = FirestoreProRepository();
+    final reviews = FirestoreReviewRepository();
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+
+    // The pro owns their listing doc (rules require uid == doc id to create it).
+    final proAcct = await auth.signUp(email: 'proacct_$stamp@x.com', password: 'secret1');
+    await pros.upsertPro(Pro(uid: proAcct.uid, name: 'Aarav', area: 'Bandra West', bio: 'Walker',
+        serviceType: ServiceType.walker, rate: 250, experienceYears: 4));
+    await auth.signOut();
+
+    // A different user (the reviewer) rates a booking with this pro.
+    final me = await auth.signUp(email: 'rev_$stamp@x.com', password: 'secret1');
+    Review review(int stars) => Review(targetType: ReviewTargetType.pro, targetId: proAcct.uid,
+        targetName: 'Aarav', authorId: me.uid, authorName: 'Radhika', bookingId: 'bk_$stamp',
+        stars: stars, text: 'Great', createdAt: stamp);
+
+    await reviews.submitReview(review(5));
+    final list = await reviews.watchReviews(proAcct.uid).firstWhere((l) => l.isNotEmpty);
+    expect(list.single.stars, 5);
+    final after = await pros.watchPro(proAcct.uid).firstWhere((p) => p != null && p.reviewCount == 1);
+    expect(after!.reviewCount, 1);
+    expect(after.rating, 5.0);
+    expect(await reviews.watchMyReviewedBookingIds(me.uid).firstWhere((s) => s.isNotEmpty),
+        contains('bk_$stamp'));
+
+    // Re-submitting the same booking is a no-op (transaction sees the existing review).
+    await reviews.submitReview(review(1));
+    final again = await pros.watchPro(proAcct.uid).first;
+    expect(again!.reviewCount, 1); // unchanged
 
     await auth.signOut();
   });
