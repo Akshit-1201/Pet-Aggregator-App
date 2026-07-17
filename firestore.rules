@@ -56,7 +56,10 @@ service cloud.firestore {
       }
     }
     match /chats/{chatId} {
-      allow read: if request.auth != null && request.auth.uid in resource.data.participants;
+      // resource == null lets openChat's get-or-create probe a not-yet-created
+      // chat (a missing doc leaks nothing; chat ids are deterministic anyway).
+      allow read: if request.auth != null
+                  && (resource == null || request.auth.uid in resource.data.participants);
       allow create: if request.auth != null && request.auth.uid in request.resource.data.participants;
       allow update: if request.auth != null && request.auth.uid in resource.data.participants;
       allow delete: if false;

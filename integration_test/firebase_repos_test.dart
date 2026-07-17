@@ -8,6 +8,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:pet_aggregator_app/data/models/booking.dart';
+import 'package:pet_aggregator_app/data/models/chat.dart';
 import 'package:pet_aggregator_app/data/models/homestay.dart';
 import 'package:pet_aggregator_app/data/models/homestay_booking.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
@@ -18,6 +19,7 @@ import 'package:pet_aggregator_app/data/models/swipe.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firebase_auth_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_booking_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/firebase/firestore_chat_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_homestay_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_homestay_booking_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pet_repository.dart';
@@ -212,6 +214,33 @@ void main() {
         direction: SwipeDirection.woof));
     final count = await swipes.watchMyWoofCount(me.uid).firstWhere((n) => n >= 1);
     expect(count, 1);
+    await auth.signOut();
+  });
+
+  testWidgets('chats + messages open/send/watch round-trip (real Firestore emulators)', (tester) async {
+    final auth = FirebaseAuthRepository();
+    final repo = FirestoreChatRepository();
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+    final me = await auth.signUp(email: 'chat_$stamp@x.com', password: 'secret1');
+    final otherUid = 'other_$stamp';
+
+    final chat = await repo.openChat(myUid: me.uid, myName: 'Me', otherUid: otherUid, otherName: 'Aarav');
+    expect(chat.id, Chat.chatIdFor(me.uid, otherUid));
+    final mine = await repo.watchMyChats(me.uid).firstWhere((l) => l.any((c) => c.id == chat.id));
+    expect(mine.any((c) => c.id == chat.id), isTrue);
+
+    await repo.sendMessage(chatId: chat.id, senderId: me.uid, text: 'ring me 9876543210');
+    final msgs = await repo.watchMessages(chat.id).firstWhere((l) => l.isNotEmpty);
+    expect(msgs.single.text, 'ring me ••••'); // write-time masked
+    final afterSend = await repo.watchMyChats(me.uid).firstWhere((l) =>
+        l.any((c) => c.id == chat.id && c.lastMessage == 'ring me ••••'));
+    expect(afterSend.firstWhere((c) => c.id == chat.id).lastMessage, 'ring me ••••');
+
+    await repo.markRead(chatId: chat.id, uid: me.uid);
+    final read = await repo.watchMyChats(me.uid).firstWhere((l) =>
+        l.any((c) => c.id == chat.id && (c.lastRead[me.uid] ?? 0) > 0));
+    expect((read.firstWhere((c) => c.id == chat.id).lastRead[me.uid] ?? 0) > 0, isTrue);
+
     await auth.signOut();
   });
 }
