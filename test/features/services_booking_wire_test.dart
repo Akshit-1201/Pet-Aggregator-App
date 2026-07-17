@@ -15,6 +15,7 @@ void main() {
     await pumpPgApp(tester, overrides: [
       authRepositoryProvider.overrideWithValue(auth),
       petRepositoryProvider.overrideWithValue(InMemoryPetRepository(fixturePets('uid_me@x.com'))),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
     ], initialLocation: Routes.servicePro, extra: _pro);
     await tester.pumpAndSettle();
 

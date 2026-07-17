@@ -16,6 +16,7 @@ void main() {
       authRepositoryProvider.overrideWithValue(auth),
       userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
       chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
     ], initialLocation: Routes.servicePro, extra: pro);
     await tester.pumpAndSettle();
 

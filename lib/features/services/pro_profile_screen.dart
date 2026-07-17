@@ -7,6 +7,7 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
 import '../../data/models/pro.dart';
 import '../chat/chat_actions.dart';
+import '../reviews/reviews_section.dart';
 
 class ProProfileScreen extends ConsumerWidget {
   final Pro? pro;
@@ -102,7 +103,7 @@ class ProProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 20),
                     Text('Reviews', style: PgText.sectionHeader(context)),
                     const SizedBox(height: 10),
-                    Text('No reviews yet.', style: PgText.inter(13.5, FontWeight.w400, color: c.muted)),
+                    ReviewsSection(targetId: p.uid),
                   ]),
                 ),
               ),
