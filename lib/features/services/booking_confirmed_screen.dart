@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
-import '../../core/widgets/pg_snackbar.dart';
 import '../../data/models/booking.dart';
+import '../chat/chat_actions.dart';
 
-class BookingConfirmedScreen extends StatelessWidget {
+class BookingConfirmedScreen extends ConsumerWidget {
   final Booking? booking;
   const BookingConfirmedScreen({super.key, this.booking});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.pg;
     final b = booking;
     if (b == null) {
@@ -60,7 +61,7 @@ class BookingConfirmedScreen extends StatelessWidget {
             ),
             const Spacer(),
             SizedBox(width: double.infinity, child: GestureDetector(
-              onTap: () => showComingSoon(context, 'Chat'),
+              onTap: () => openChatWith(context, ref, otherUid: b.proId, otherName: b.proName),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 17), alignment: Alignment.center,
                 decoration: BoxDecoration(
