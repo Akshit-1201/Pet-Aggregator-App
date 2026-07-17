@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
-import '../../core/widgets/pg_snackbar.dart';
 import '../../data/models/pet_profile.dart';
+import '../../data/repositories/providers.dart';
+import '../chat/chat_actions.dart';
 
-class WoofMatchScreen extends StatelessWidget {
+class WoofMatchScreen extends ConsumerWidget {
   final PetProfile? pet;
   const WoofMatchScreen({super.key, this.pet});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final name = pet?.name ?? 'your match';
+    final ownerUid = pet?.ownerId ?? '';
+    final ownerName = ref.watch(userByIdProvider(ownerUid)).value?.name ?? 'Pet parent';
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -46,7 +50,9 @@ class WoofMatchScreen extends StatelessWidget {
               ),
               const Spacer(),
               SizedBox(width: double.infinity, child: _darkButton(
-                'Send a message 💬', () => showComingSoon(context, 'Chat'))),
+                'Send a message 💬', () => ownerUid.isEmpty
+                    ? null
+                    : openChatWith(context, ref, otherUid: ownerUid, otherName: ownerName))),
               const SizedBox(height: 12),
               SizedBox(width: double.infinity, child: _outlineButton(
                 'Keep swiping', () => context.pop())),

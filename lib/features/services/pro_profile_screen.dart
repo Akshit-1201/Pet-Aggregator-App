@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
-import '../../core/widgets/pg_snackbar.dart';
 import '../../data/models/pro.dart';
+import '../chat/chat_actions.dart';
 
-class ProProfileScreen extends StatelessWidget {
+class ProProfileScreen extends ConsumerWidget {
   final Pro? pro;
   const ProProfileScreen({super.key, this.pro});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.pg;
     final p = pro;
     if (p == null) {
@@ -113,7 +114,7 @@ class ProProfileScreen extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(22, 13, 22, 18 + MediaQuery.of(context).padding.bottom),
           child: Row(children: [
             GestureDetector(
-              onTap: () => showComingSoon(context, 'Chat'),
+              onTap: () => openChatWith(context, ref, otherUid: p.uid, otherName: p.name),
               child: Container(
                 width: 54, height: 54, alignment: Alignment.center,
                 decoration: BoxDecoration(color: c.ink, shape: BoxShape.circle),
