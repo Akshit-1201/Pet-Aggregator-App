@@ -27,4 +27,6 @@ class Routes {
   static const postLive = '/post-live';
   static const settings = '/settings';
   static const petProfile = '/pet-profile';
+  static const chatList = '/messages';
+  static const chat = '/chat';
 }

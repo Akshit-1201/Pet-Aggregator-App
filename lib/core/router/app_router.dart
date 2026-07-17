@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/booking.dart';
+import '../../data/models/chat.dart';
 import '../../data/models/homestay.dart';
 import '../../data/models/homestay_booking.dart';
 import '../../data/models/pet_profile.dart';
@@ -11,6 +12,7 @@ import '../../data/repositories/providers.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/auth/signup_screen.dart';
 import '../../features/auth/location_screen.dart';
+import '../../features/chat/chat_conversation_screen.dart';
 import '../../features/community/community_feed_screen.dart';
 import '../../features/community/new_post_screen.dart';
 import '../../features/community/post_live_screen.dart';
@@ -53,6 +55,7 @@ const _protected = {
   Routes.hostRequest, Routes.hostAccepted,
   Routes.newPost, Routes.thread, Routes.postLive,
   Routes.settings, Routes.petProfile,
+  Routes.chatList, Routes.chat,
 };
 
 GoRouter buildRouter({required AuthRepository auth, String initialLocation = Routes.splash}) {
@@ -88,6 +91,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.petProfile, builder: (_, state) => PetProfileDetailScreen(pet: state.extra as PetProfile?)),
       GoRoute(path: Routes.settings, builder: (_, _) => const SettingsScreen()),
       GoRoute(path: Routes.thread, builder: (_, state) => ThreadScreen(post: state.extra as Post?)),
+      GoRoute(path: Routes.chat, builder: (_, state) => ChatConversationScreen(chat: state.extra as Chat?)),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(navigationShell: shell),
         branches: [

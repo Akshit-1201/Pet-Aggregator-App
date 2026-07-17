@@ -371,6 +371,7 @@ class InMemoryChatRepository implements ChatRepository {
     if (existing != null) return existing;
     final chat = Chat(id: id, participants: [myUid, otherUid]..sort(),
         names: {myUid: myName, otherUid: otherName},
+        lastRead: <String, int>{},
         createdAt: DateTime.now().millisecondsSinceEpoch);
     _chats[id] = chat;
     _chatsCtrl.add(_chats.values.toList());
@@ -412,8 +413,11 @@ class InMemoryChatRepository implements ChatRepository {
   Future<void> markRead({required String chatId, required String uid}) async {
     final c = _chats[chatId];
     if (c != null) {
-      final lr = {...c.lastRead, uid: DateTime.now().millisecondsSinceEpoch};
-      _chats[chatId] = Chat.fromMap(chatId, {...c.toMap(), 'lastRead': lr});
+      // Mutate the existing Chat's lastRead map in place (rather than
+      // replacing the Chat entry) so any already-fetched `Chat` reference
+      // (e.g. one held by a screen that navigated in via `extra`) observes
+      // the read-cursor update immediately, without needing to re-fetch.
+      c.lastRead[uid] = DateTime.now().millisecondsSinceEpoch;
       _chatsCtrl.add(_chats.values.toList());
     }
   }
