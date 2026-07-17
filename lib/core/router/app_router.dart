@@ -7,6 +7,7 @@ import '../../data/models/homestay_booking.dart';
 import '../../data/models/pet_profile.dart';
 import '../../data/models/post.dart';
 import '../../data/models/pro.dart';
+import '../../data/models/review.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/providers.dart';
 import '../../features/auth/welcome_screen.dart';
@@ -34,6 +35,7 @@ import '../../features/pets/create_pet_screen.dart';
 import '../../features/pets/pet_profile_detail_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/profile/settings_screen.dart';
+import '../../features/reviews/rate_review_screen.dart';
 import '../../features/services/booking_confirmed_screen.dart';
 import '../../features/services/booking_screen.dart';
 import '../../features/services/payment_screen.dart';
@@ -57,6 +59,7 @@ const _protected = {
   Routes.newPost, Routes.thread, Routes.postLive,
   Routes.settings, Routes.petProfile,
   Routes.chatList, Routes.chat,
+  Routes.bookings, Routes.rate,
 };
 
 GoRouter buildRouter({required AuthRepository auth, String initialLocation = Routes.splash}) {
@@ -94,6 +97,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.thread, builder: (_, state) => ThreadScreen(post: state.extra as Post?)),
       GoRoute(path: Routes.chat, builder: (_, state) => ChatConversationScreen(chat: state.extra as Chat?)),
       GoRoute(path: Routes.chatList, builder: (_, _) => const ChatListScreen()),
+      GoRoute(path: Routes.rate, builder: (_, state) => RateReviewScreen(target: state.extra as ReviewTarget?)),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(navigationShell: shell),
         branches: [

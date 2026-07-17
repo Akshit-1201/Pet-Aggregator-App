@@ -29,4 +29,6 @@ class Routes {
   static const petProfile = '/pet-profile';
   static const chatList = '/messages';
   static const chat = '/chat';
+  static const bookings = '/bookings';
+  static const rate = '/rate';
 }
