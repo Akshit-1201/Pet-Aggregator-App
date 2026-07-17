@@ -38,7 +38,7 @@ class _ReviewTile extends StatelessWidget {
         Row(children: [
           Expanded(child: Text(review.authorName, maxLines: 1, overflow: TextOverflow.ellipsis,
             style: PgText.poppins(13.5, FontWeight.w700, color: c.text))),
-          Text(List.filled(review.stars, '★').join(),
+          Text(List.filled(review.stars.clamp(0, 5), '★').join(),
             style: PgText.inter(12.5, FontWeight.w700, color: c.brand)),
         ]),
         if (review.text.isNotEmpty) ...[
