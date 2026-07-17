@@ -21,6 +21,8 @@ import 'package:pet_aggregator_app/data/repositories/post_repository.dart';
 import 'package:pet_aggregator_app/data/models/chat.dart';
 import 'package:pet_aggregator_app/data/repositories/chat_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/preferences_repository.dart';
+import 'package:pet_aggregator_app/data/models/review.dart';
+import 'package:pet_aggregator_app/data/repositories/review_repository.dart';
 
 class FakeAuthRepository implements AuthRepository {
   final _controller = StreamController<AppUser?>.broadcast();
@@ -420,5 +422,41 @@ class InMemoryChatRepository implements ChatRepository {
       c.lastRead[uid] = DateTime.now().millisecondsSinceEpoch;
       _chatsCtrl.add(_chats.values.toList());
     }
+  }
+}
+
+class InMemoryReviewRepository implements ReviewRepository {
+  final Map<String, Review> _reviews = {};                    // keyed by reviewId (== bookingId)
+  final Map<String, ({double rating, int count})> _agg = {};  // keyed by targetId
+  final _ctrl = StreamController<List<Review>>.broadcast();
+
+  ({double rating, int count}) aggregateFor(String targetId) =>
+      _agg[targetId] ?? (rating: 0.0, count: 0);
+
+  @override
+  Future<void> submitReview(Review review) async {
+    if (_reviews.containsKey(review.bookingId)) return; // idempotent
+    _reviews[review.bookingId] = Review.fromMap(review.bookingId, review.toMap());
+    final cur = aggregateFor(review.targetId);
+    final newCount = cur.count + 1;
+    final newRating = (cur.rating * cur.count + review.stars) / newCount;
+    _agg[review.targetId] = (rating: newRating, count: newCount);
+    _ctrl.add(_reviews.values.toList());
+  }
+
+  @override
+  Stream<List<Review>> watchReviews(String targetId) async* {
+    List<Review> forTarget() => _reviews.values.where((r) => r.targetId == targetId).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    yield forTarget();
+    yield* _ctrl.stream.map((_) => forTarget());
+  }
+
+  @override
+  Stream<Set<String>> watchMyReviewedBookingIds(String uid) async* {
+    Set<String> mine() =>
+        _reviews.values.where((r) => r.authorId == uid).map((r) => r.bookingId).toSet();
+    yield mine();
+    yield* _ctrl.stream.map((_) => mine());
   }
 }
