@@ -6,8 +6,10 @@ import '../models/pet_profile.dart';
 import '../models/user_profile.dart';
 import '../models/pro.dart';
 import '../models/homestay.dart';
+import '../models/homestay_booking.dart';
 import '../models/post.dart';
 import '../models/chat.dart';
+import '../models/review.dart';
 import 'auth_repository.dart';
 import 'booking_repository.dart';
 import 'user_repository.dart';
@@ -19,6 +21,7 @@ import 'swipe_repository.dart';
 import 'post_repository.dart';
 import 'chat_repository.dart';
 import 'preferences_repository.dart';
+import 'review_repository.dart';
 import 'firebase/firebase_auth_repository.dart';
 import 'firebase/firestore_user_repository.dart';
 import 'firebase/firestore_pet_repository.dart';
@@ -29,6 +32,7 @@ import 'firebase/firestore_swipe_repository.dart';
 import 'firebase/firestore_booking_repository.dart';
 import 'firebase/firestore_post_repository.dart';
 import 'firebase/firestore_chat_repository.dart';
+import 'firebase/firestore_review_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) => FirebaseAuthRepository());
 final userRepositoryProvider = Provider<UserRepository>((ref) => FirestoreUserRepository());
@@ -145,3 +149,20 @@ final myChatsProvider = StreamProvider<List<Chat>>((ref) {
 
 final chatMessagesProvider = StreamProvider.autoDispose.family<List<Message>, String>(
     (ref, chatId) => ref.watch(chatRepositoryProvider).watchMessages(chatId));
+
+final reviewRepositoryProvider = Provider<ReviewRepository>((ref) => FirestoreReviewRepository());
+
+final reviewsProvider = StreamProvider.autoDispose.family<List<Review>, String>(
+    (ref, targetId) => ref.watch(reviewRepositoryProvider).watchReviews(targetId));
+
+final myReviewedBookingIdsProvider = StreamProvider<Set<String>>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(const {});
+  return ref.watch(reviewRepositoryProvider).watchMyReviewedBookingIds(user.uid);
+});
+
+final myHomestayBookingsProvider = StreamProvider<List<HomestayBooking>>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(const []);
+  return ref.watch(homestayBookingRepositoryProvider).watchMyHomestayBookings(user.uid);
+});
