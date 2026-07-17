@@ -63,6 +63,7 @@ void main() {
       authRepositoryProvider.overrideWithValue(auth),
       petRepositoryProvider.overrideWithValue(InMemoryPetRepository()),
       homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
     ], initialLocation: Routes.host, extra: _meera);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Request to book'));

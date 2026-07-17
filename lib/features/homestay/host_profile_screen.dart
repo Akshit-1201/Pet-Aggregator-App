@@ -4,6 +4,7 @@ import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../data/models/homestay.dart';
+import '../reviews/reviews_section.dart';
 
 class HostProfileScreen extends StatelessWidget {
   final Homestay? homestay;
@@ -114,7 +115,7 @@ class HostProfileScreen extends StatelessWidget {
                     const SizedBox(height: 20),
                     Text('Recent reviews', style: PgText.sectionHeader(context)),
                     const SizedBox(height: 10),
-                    Text('No reviews yet.', style: PgText.inter(13.5, FontWeight.w400, color: c.muted)),
+                    ReviewsSection(targetId: h.uid),
                   ]),
                 ),
               ),

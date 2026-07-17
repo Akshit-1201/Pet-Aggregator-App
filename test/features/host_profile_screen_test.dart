@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:pet_aggregator_app/core/router/routes.dart';
 import 'package:pet_aggregator_app/data/models/homestay.dart';
-import 'package:pet_aggregator_app/features/homestay/host_profile_screen.dart';
+import 'package:pet_aggregator_app/data/repositories/providers.dart';
+import '../support/fakes.dart';
 import '../support/pump.dart';
 
 void main() {
@@ -10,7 +12,13 @@ void main() {
         area: 'Bandra West', about: 'Spacious 2BHK with a fenced balcony.',
         homeType: HomeType.apartment, ratePerNight: 900,
         amenities: [Amenity.nearPark, Amenity.residentDog]);
-    await pumpPg(tester, const HostProfileScreen(homestay: h));
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    await pumpPgApp(tester, overrides: [
+      authRepositoryProvider.overrideWithValue(auth),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
+    ], initialLocation: Routes.host, extra: h);
+    await tester.pumpAndSettle();
     expect(find.text("Meera's Home"), findsOneWidget);
     expect(find.textContaining('Meera Iyer'), findsOneWidget);
     expect(find.text('Spacious 2BHK with a fenced balcony.'), findsOneWidget);
@@ -24,7 +32,13 @@ void main() {
     const h = Homestay(uid: 'h2', homeName: 'Anjali Stays', hostName: 'Anjali Rao',
         area: 'Pali Hill', about: 'x', homeType: HomeType.villa, ratePerNight: 1100,
         verified: true);
-    await pumpPg(tester, const HostProfileScreen(homestay: h));
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    await pumpPgApp(tester, overrides: [
+      authRepositoryProvider.overrideWithValue(auth),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
+    ], initialLocation: Routes.host, extra: h);
+    await tester.pumpAndSettle();
     expect(find.text('Pawgo Verified host'), findsOneWidget);
     expect(find.textContaining('New host'), findsNothing);
   });
