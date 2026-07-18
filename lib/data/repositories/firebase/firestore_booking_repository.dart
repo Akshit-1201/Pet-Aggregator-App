@@ -9,10 +9,11 @@ class FirestoreBookingRepository implements BookingRepository {
   CollectionReference<Map<String, dynamic>> get _col => _db.collection('bookings');
 
   @override
-  Future<void> createBooking(Booking booking) => _col.add({
-        ...booking.toMap(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+  Future<void> createBooking(Booking booking) {
+    final map = booking.toMap();
+    if ((map['createdAt'] ?? 0) == 0) map['createdAt'] = DateTime.now().millisecondsSinceEpoch;
+    return _col.add(map);
+  }
 
   @override
   Stream<List<Booking>> watchMyBookings(String parentId) => _col

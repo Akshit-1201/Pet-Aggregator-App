@@ -9,10 +9,11 @@ class FirestoreHomestayBookingRepository implements HomestayBookingRepository {
   CollectionReference<Map<String, dynamic>> get _col => _db.collection('homestayBookings');
 
   @override
-  Future<void> createHomestayBooking(HomestayBooking booking) => _col.add({
-        ...booking.toMap(),
-        'createdAt': FieldValue.serverTimestamp(),
-      });
+  Future<void> createHomestayBooking(HomestayBooking booking) {
+    final map = booking.toMap();
+    if ((map['createdAt'] ?? 0) == 0) map['createdAt'] = DateTime.now().millisecondsSinceEpoch;
+    return _col.add(map);
+  }
 
   @override
   Stream<List<HomestayBooking>> watchMyHomestayBookings(String guestId) => _col

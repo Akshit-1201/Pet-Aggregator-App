@@ -15,7 +15,7 @@ void main() {
         subtotal: 2700, fee: 150, total: 2850, note: 'Friendly boy');
     final m = b.toMap();
     expect(m.containsKey('id'), isFalse);
-    expect(m.containsKey('createdAt'), isFalse);
+    expect(m.containsKey('createdAt'), isTrue); // createdAt is now included (value 0)
     expect(m['checkIn'], '2026-07-12');
     expect(m['checkOut'], '2026-07-15');
     expect(m['status'], 'requested');

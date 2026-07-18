@@ -3,7 +3,7 @@ import 'pro.dart';
 class Booking {
   final String id, parentId, proId, proName, petId, petName;
   final ServiceType serviceType;
-  final int rate, fee, total;
+  final int rate, fee, total, createdAt;
   final String dateLabel, timeSlot, status;
 
   const Booking({
@@ -11,7 +11,7 @@ class Booking {
     required this.parentId, required this.proId, required this.proName,
     required this.petId, required this.petName, required this.serviceType,
     required this.rate, required this.fee, required this.total,
-    required this.dateLabel, required this.timeSlot, this.status = 'confirmed',
+    required this.dateLabel, required this.timeSlot, this.status = 'confirmed', this.createdAt = 0,
   });
 
   static int feeFor(int rate) => (rate * 0.1).round();
@@ -29,6 +29,7 @@ class Booking {
         'dateLabel': dateLabel,
         'timeSlot': timeSlot,
         'status': status,
+        'createdAt': createdAt,
       };
 
   factory Booking.fromMap(String id, Map<String, dynamic> m) => Booking(
@@ -45,5 +46,6 @@ class Booking {
         dateLabel: (m['dateLabel'] ?? '') as String,
         timeSlot: (m['timeSlot'] ?? '') as String,
         status: (m['status'] ?? 'confirmed') as String,
+        createdAt: (m['createdAt'] is int) ? m['createdAt'] as int : 0, // stale serverTimestamp -> 0
       );
 }

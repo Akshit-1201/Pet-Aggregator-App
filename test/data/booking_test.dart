@@ -14,7 +14,7 @@ void main() {
         dateLabel: 'Tue 15 Jul', timeSlot: '5:00 PM');
     final m = b.toMap();
     expect(m.containsKey('id'), isFalse);
-    expect(m.containsKey('createdAt'), isFalse);
+    expect(m.containsKey('createdAt'), isTrue); // createdAt is now included (value 0)
     expect(m['serviceType'], 'walker');
     expect(m['total'], 275);
     expect(m['status'], 'confirmed');

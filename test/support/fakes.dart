@@ -218,7 +218,9 @@ class InMemoryBookingRepository implements BookingRepository {
 
   @override
   Future<void> createBooking(Booking booking) async {
-    _bookings.add(booking);
+    final stamped = booking.createdAt != 0 ? booking
+        : Booking.fromMap(booking.id, {...booking.toMap(), 'createdAt': DateTime.now().millisecondsSinceEpoch});
+    _bookings.add(stamped);
     _controller.add(List.of(_bookings));
   }
 
@@ -281,7 +283,9 @@ class InMemoryHomestayBookingRepository implements HomestayBookingRepository {
 
   @override
   Future<void> createHomestayBooking(HomestayBooking booking) async {
-    _bookings.add(booking);
+    final stamped = booking.createdAt != 0 ? booking
+        : HomestayBooking.fromMap(booking.id, {...booking.toMap(), 'createdAt': DateTime.now().millisecondsSinceEpoch});
+    _bookings.add(stamped);
     _controller.add(List.of(_bookings));
   }
 

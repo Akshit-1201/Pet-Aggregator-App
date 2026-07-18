@@ -1,7 +1,7 @@
 class HomestayBooking {
   final String id, guestId, hostId, homeName, hostName, petId, petName, note, status;
   final DateTime checkIn, checkOut;
-  final int ratePerNight, nights, subtotal, fee, total;
+  final int ratePerNight, nights, subtotal, fee, total, createdAt;
 
   const HomestayBooking({
     this.id = '',
@@ -9,7 +9,7 @@ class HomestayBooking {
     required this.hostName, required this.petId, required this.petName,
     required this.ratePerNight, required this.checkIn, required this.checkOut,
     required this.nights, required this.subtotal, required this.fee, required this.total,
-    this.note = '', this.status = 'requested',
+    this.note = '', this.status = 'requested', this.createdAt = 0,
   });
 
   static const int serviceFee = 150;
@@ -43,6 +43,7 @@ class HomestayBooking {
         'total': total,
         'note': note,
         'status': status,
+        'createdAt': createdAt,
       };
 
   factory HomestayBooking.fromMap(String id, Map<String, dynamic> m) => HomestayBooking(
@@ -62,5 +63,6 @@ class HomestayBooking {
         total: (m['total'] ?? 0) as int,
         note: (m['note'] ?? '') as String,
         status: (m['status'] ?? 'requested') as String,
+        createdAt: (m['createdAt'] is int) ? m['createdAt'] as int : 0,
       );
 }
