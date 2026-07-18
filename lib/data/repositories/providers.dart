@@ -10,6 +10,7 @@ import '../models/homestay_booking.dart';
 import '../models/post.dart';
 import '../models/chat.dart';
 import '../models/review.dart';
+import '../../features/notifications/notification_item.dart';
 import 'auth_repository.dart';
 import 'booking_repository.dart';
 import 'user_repository.dart';
@@ -166,3 +167,21 @@ final myHomestayBookingsProvider = StreamProvider<List<HomestayBooking>>((ref) {
   if (user == null) return Stream.value(const []);
   return ref.watch(homestayBookingRepositoryProvider).watchMyHomestayBookings(user.uid);
 });
+
+final notificationsProvider = Provider<List<NotificationItem>>((ref) {
+  final uid = ref.watch(authRepositoryProvider).currentUser?.uid ?? '';
+  final seenAt = ref.watch(currentUserProfileProvider).value?.notifsSeenAt ?? 0;
+  return buildNotifications(
+    myUid: uid,
+    seenAt: seenAt,
+    chats: ref.watch(myChatsProvider).value ?? const [],
+    reviews: ref.watch(reviewsProvider(uid)).value ?? const [],
+    bookings: ref.watch(myBookingsProvider).value ?? const [],
+    homestays: ref.watch(myHomestayBookingsProvider).value ?? const [],
+    myPro: ref.watch(currentProProvider).value,
+    myHomestay: ref.watch(currentHomestayProvider).value,
+  );
+});
+
+final hasUnreadNotificationsProvider =
+    Provider<bool>((ref) => ref.watch(notificationsProvider).any((n) => !n.read));
