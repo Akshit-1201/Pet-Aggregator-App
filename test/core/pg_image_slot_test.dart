@@ -22,4 +22,22 @@ void main() {
     expect(find.text('🐾'), findsOneWidget);
     expect(find.byType(Image), findsNothing);
   });
+
+  testWidgets('fills its bounded parent when size is null', (tester) async {
+    await pumpPg(
+      tester,
+      const SizedBox(
+        width: 200,
+        height: 300,
+        child: PgImageSlot(imageUrl: 'https://x/img.jpg'),
+      ),
+    );
+    // PgImageSlot always draws a 1px `Border.all` around its content; Container
+    // auto-applies a border's `dimensions` as padding to its child so the
+    // border isn't painted over the image. So the fully-filled Image is the
+    // 200x300 parent box minus that 1px inset on every side (198x298), not
+    // exactly 200x300 — this proves the image fills 100% of the *available*
+    // content area rather than collapsing to its intrinsic (zero) size.
+    expect(tester.getSize(find.byType(Image)), const Size(198, 298));
+  });
 }

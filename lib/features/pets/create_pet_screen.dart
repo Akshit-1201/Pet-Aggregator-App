@@ -80,11 +80,25 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
       }
     }
 
-    await ref.read(petRepositoryProvider).addPet(PetProfile(
-          id: '', ownerId: uid, name: name, breed: _breed.text.trim(),
-          ageLabel: _age.text.trim(), sex: '', area: area, species: _species,
-          vaccinated: _vaccinated, accentColor: PetProfile.accentFor(name),
-          photoUrl: photoUrl));
+    if (!mounted) return;
+
+    try {
+      await ref.read(petRepositoryProvider).addPet(PetProfile(
+            id: '', ownerId: uid, name: name, breed: _breed.text.trim(),
+            ageLabel: _age.text.trim(), sex: '', area: area, species: _species,
+            vaccinated: _vaccinated, accentColor: PetProfile.accentFor(name),
+            photoUrl: photoUrl));
+    } catch (_) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(
+            content: Text("Couldn't save your pet. Please try again."),
+            behavior: SnackBarBehavior.floating));
+      }
+      return;
+    }
     if (mounted) context.go(Routes.home);
   }
 

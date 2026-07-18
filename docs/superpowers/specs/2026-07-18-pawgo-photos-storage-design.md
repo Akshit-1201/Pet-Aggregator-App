@@ -118,6 +118,8 @@ service firebase.storage {
 ```
 (If the `file.matches(...)` prefix rule proves troublesome to deploy, fall back to `allow write: if request.auth != null` and track the prefix enforcement as a rules-hardening follow-up — consistent with the codebase's current posture.) Add to `firebase.json`: `"storage": { "rules": "storage.rules" }`. **Owner one-time step:** enable Firebase Storage (create the default bucket) in the console; then `firebase deploy --only storage`. (Read requires auth via the SDK; `getDownloadURL` tokens render fine in `Image.network`.)
 
+**Note:** `getDownloadURL()` mints a token-bearing URL that bypasses Storage rules on subsequent GETs, so every stored `photoUrl` is effectively a public link to anyone who has it — acceptable for pet/avatar photos here, but not a privacy boundary. Keep that in mind before storing anything sensitive this way in a later slice.
+
 ## Error handling
 
 Both flows wrap `uploadImage` in try/catch → a "Couldn't upload the photo" snackbar; the pet save proceeds photo-less, the avatar keeps its prior value. `mounted` guarded after each await. `PgImageSlot`'s `errorBuilder` falls back to the emoji, so a broken/loading URL never blanks the UI.

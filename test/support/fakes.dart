@@ -498,12 +498,17 @@ class InMemoryStorageRepository implements StorageRepository {
 
 class FakeImagePickerService implements ImagePickerService {
   final Uint8List? next;
+  final bool shouldThrow;
   int calls = 0;
-  FakeImagePickerService([this.next]);
+  FakeImagePickerService([this.next]) : shouldThrow = false;
+  FakeImagePickerService.throwing()
+      : next = null,
+        shouldThrow = true;
 
   @override
   Future<Uint8List?> pickImage() async {
     calls++;
+    if (shouldThrow) throw Exception('picker failed');
     return next;
   }
 }
