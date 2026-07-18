@@ -14,6 +14,12 @@ void main() {
       authRepositoryProvider.overrideWithValue(auth),
       petRepositoryProvider.overrideWithValue(pets),
       userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
+      chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
+      bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
+      homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
     ], initialLocation: Routes.createPet);
 
     expect(find.text('Add your pet'), findsOneWidget);

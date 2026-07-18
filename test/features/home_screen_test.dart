@@ -19,6 +19,12 @@ void main() {
       authRepositoryProvider.overrideWithValue(auth),
       userRepositoryProvider.overrideWithValue(users),
       petRepositoryProvider.overrideWithValue(InMemoryPetRepository(fixturePets('someone-else'))),
+      chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
+      bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
+      homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
     ], initialLocation: Routes.home);
     await tester.pumpAndSettle();
 
@@ -34,6 +40,12 @@ void main() {
       authRepositoryProvider.overrideWithValue(auth),
       userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
       petRepositoryProvider.overrideWithValue(InMemoryPetRepository()),
+      chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
+      bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
+      homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
     ], initialLocation: Routes.home);
     await tester.pumpAndSettle();
     expect(find.text('No pets nearby yet'), findsOneWidget);

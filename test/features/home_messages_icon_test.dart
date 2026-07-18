@@ -14,6 +14,11 @@ void main() {
       userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
       petRepositoryProvider.overrideWithValue(InMemoryPetRepository()),
       chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
+      bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
+      homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
     ], initialLocation: Routes.home);
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.chat_bubble_outline_rounded));

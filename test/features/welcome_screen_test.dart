@@ -10,6 +10,12 @@ Future<void> _pumpWelcome(WidgetTester tester, FakeAuthRepository auth) =>
       authRepositoryProvider.overrideWithValue(auth),
       petRepositoryProvider.overrideWithValue(InMemoryPetRepository()),
       userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
+      chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
+      bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
+      homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
     ], initialLocation: Routes.welcome);
 
 void main() {

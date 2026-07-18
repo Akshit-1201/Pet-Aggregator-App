@@ -20,6 +20,12 @@ void main() {
       authRepositoryProvider.overrideWithValue(auth),
       petRepositoryProvider.overrideWithValue(InMemoryPetRepository()),
       userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
+      chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
+      bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
+      homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
     ], initialLocation: Routes.home);
     await tester.pumpAndSettle();
     expect(find.text('Home'), findsWidgets); // bottom-nav label

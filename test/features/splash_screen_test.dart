@@ -22,6 +22,12 @@ void main() {
       authRepositoryProvider.overrideWithValue(auth),
       petRepositoryProvider.overrideWithValue(InMemoryPetRepository()),
       userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
+      chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
+      bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
+      homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
     ], initialLocation: Routes.splash);
     await tester.pump(const Duration(milliseconds: 1600));
     await tester.pumpAndSettle();

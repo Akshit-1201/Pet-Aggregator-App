@@ -65,6 +65,11 @@ void main() {
       userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
       petRepositoryProvider.overrideWithValue(InMemoryPetRepository()),
       homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository([_meera])),
+      chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
+      bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
+      homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
     ], initialLocation: Routes.home);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Homestay'));

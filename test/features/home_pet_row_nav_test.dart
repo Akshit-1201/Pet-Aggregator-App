@@ -17,6 +17,12 @@ void main() {
       userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
       petRepositoryProvider.overrideWithValue(pets),
       swipeRepositoryProvider.overrideWithValue(InMemorySwipeRepository()),
+      chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
+      bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
+      homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
     ], initialLocation: Routes.home);
     await tester.pumpAndSettle();
     expect(find.text('Mochi'), findsOneWidget);
