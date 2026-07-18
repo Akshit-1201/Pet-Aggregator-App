@@ -31,4 +31,5 @@ class Routes {
   static const chat = '/chat';
   static const bookings = '/bookings';
   static const rate = '/rate';
+  static const notifications = '/notifications';
 }

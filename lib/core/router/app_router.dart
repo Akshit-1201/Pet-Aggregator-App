@@ -29,6 +29,7 @@ import '../../features/homestay/homestay_request_screen.dart';
 import '../../features/homestay/host_accepted_screen.dart';
 import '../../features/homestay/host_profile_screen.dart';
 import '../../features/homestay/host_setup_screen.dart';
+import '../../features/notifications/notifications_screen.dart';
 import '../../features/onboarding/splash_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/pets/create_pet_screen.dart';
@@ -61,6 +62,7 @@ const _protected = {
   Routes.settings, Routes.petProfile,
   Routes.chatList, Routes.chat,
   Routes.bookings, Routes.rate,
+  Routes.notifications,
 };
 
 GoRouter buildRouter({required AuthRepository auth, String initialLocation = Routes.splash}) {
@@ -98,6 +100,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.thread, builder: (_, state) => ThreadScreen(post: state.extra as Post?)),
       GoRoute(path: Routes.chat, builder: (_, state) => ChatConversationScreen(chat: state.extra as Chat?)),
       GoRoute(path: Routes.chatList, builder: (_, _) => const ChatListScreen()),
+      GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen()),
       GoRoute(path: Routes.rate, builder: (_, state) => RateReviewScreen(target: state.extra as ReviewTarget?)),
       GoRoute(path: Routes.bookings, builder: (_, _) => const MyBookingsScreen()),
       StatefulShellRoute.indexedStack(
