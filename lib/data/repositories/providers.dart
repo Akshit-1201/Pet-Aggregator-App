@@ -24,6 +24,7 @@ import 'chat_repository.dart';
 import 'preferences_repository.dart';
 import 'review_repository.dart';
 import 'storage_repository.dart';
+import '../services/image_picker_service.dart';
 import 'firebase/firebase_auth_repository.dart';
 import 'firebase/firestore_user_repository.dart';
 import 'firebase/firestore_pet_repository.dart';
@@ -190,3 +191,6 @@ final hasUnreadNotificationsProvider =
 
 final storageRepositoryProvider =
     Provider<StorageRepository>((ref) => FirebaseStorageRepository());
+
+final imagePickerServiceProvider =
+    Provider<ImagePickerService>((ref) => ImagePickerServiceImpl());

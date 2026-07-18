@@ -25,6 +25,7 @@ import 'package:pet_aggregator_app/data/repositories/preferences_repository.dart
 import 'package:pet_aggregator_app/data/models/review.dart';
 import 'package:pet_aggregator_app/data/repositories/review_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/storage_repository.dart';
+import 'package:pet_aggregator_app/data/services/image_picker_service.dart';
 
 class FakeAuthRepository implements AuthRepository {
   final _controller = StreamController<AppUser?>.broadcast();
@@ -492,5 +493,17 @@ class InMemoryStorageRepository implements StorageRepository {
   Future<String> uploadImage({required String path, required Uint8List bytes}) async {
     uploads[path] = bytes;
     return 'https://fake.storage/$path';
+  }
+}
+
+class FakeImagePickerService implements ImagePickerService {
+  final Uint8List? next;
+  int calls = 0;
+  FakeImagePickerService([this.next]);
+
+  @override
+  Future<Uint8List?> pickImage() async {
+    calls++;
+    return next;
   }
 }
