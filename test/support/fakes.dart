@@ -115,6 +115,15 @@ class InMemoryUserRepository implements UserRepository {
   }
 
   @override
+  Future<void> setPhotoUrl(String uid, String url) async {
+    final u = _users[uid];
+    if (u != null) {
+      _users[uid] = u.copyWith(photoUrl: url);
+      _ctrl(uid).add(_users[uid]);
+    }
+  }
+
+  @override
   Stream<UserProfile?> watchUser(String uid) async* {
     yield _users[uid];
     yield* _ctrl(uid).stream;

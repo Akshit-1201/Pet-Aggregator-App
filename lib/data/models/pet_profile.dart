@@ -13,7 +13,7 @@ enum Species {
 }
 
 class PetProfile {
-  final String id, ownerId, name, breed, ageLabel, sex, area;
+  final String id, ownerId, name, breed, ageLabel, sex, area, photoUrl;
   final Species species;
   final bool vaccinated;
   final Color accentColor;
@@ -22,6 +22,7 @@ class PetProfile {
     required this.id, required this.ownerId, required this.name, required this.breed,
     required this.ageLabel, required this.sex, required this.area,
     required this.species, required this.vaccinated, required this.accentColor,
+    this.photoUrl = '',
   });
 
   Map<String, dynamic> toMap() => {
@@ -33,6 +34,7 @@ class PetProfile {
         'sex': sex,
         'area': area,
         'vaccinated': vaccinated,
+        'photoUrl': photoUrl,
       };
 
   factory PetProfile.fromMap(String id, Map<String, dynamic> m) => PetProfile(
@@ -46,6 +48,7 @@ class PetProfile {
         species: Species.fromStorage((m['species'] ?? 'dog') as String),
         vaccinated: (m['vaccinated'] ?? false) as bool,
         accentColor: accentFor((m['name'] ?? '') as String),
+        photoUrl: (m['photoUrl'] ?? '') as String,
       );
 
   static const _accents = [
