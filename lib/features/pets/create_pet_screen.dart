@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -25,6 +26,7 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
   Species _species = Species.dog;
   bool _vaccinated = true;
   bool _saving = false;
+  Uint8List? _photoBytes;
 
   static const _speciesLabel = {
     Species.dog: '🐶 Dog', Species.cat: '🐱 Cat', Species.other: '🐦 Other',
@@ -38,16 +40,41 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
     super.dispose();
   }
 
+  Future<void> _pickPhoto() async {
+    final bytes = await ref.read(imagePickerServiceProvider).pickImage();
+    if (!mounted || bytes == null) return;
+    setState(() => _photoBytes = bytes);
+  }
+
   Future<void> _finish() async {
     final uid = ref.read(authRepositoryProvider).currentUser?.uid;
     if (uid == null) return;
     setState(() => _saving = true);
     final area = ref.read(currentUserProfileProvider).value?.area ?? '';
     final name = _name.text.trim();
+
+    var photoUrl = '';
+    final bytes = _photoBytes;
+    if (bytes != null) {
+      try {
+        photoUrl = await ref.read(storageRepositoryProvider).uploadImage(
+            path: 'pets/${uid}_${DateTime.now().millisecondsSinceEpoch}.jpg', bytes: bytes);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(const SnackBar(
+              content: Text("Couldn't upload the photo — saving without it."),
+              behavior: SnackBarBehavior.floating));
+        }
+      }
+    }
+
     await ref.read(petRepositoryProvider).addPet(PetProfile(
           id: '', ownerId: uid, name: name, breed: _breed.text.trim(),
           ageLabel: _age.text.trim(), sex: '', area: area, species: _species,
-          vaccinated: _vaccinated, accentColor: PetProfile.accentFor(name)));
+          vaccinated: _vaccinated, accentColor: PetProfile.accentFor(name),
+          photoUrl: photoUrl));
     if (mounted) context.go(Routes.home);
   }
 
@@ -64,9 +91,18 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
               padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
               children: [
                 Center(child: Column(children: [
-                  const PgImageSlot(size: 110, circle: true, emoji: '📸'),
+                  GestureDetector(
+                    onTap: _pickPhoto,
+                    child: _photoBytes == null
+                        ? const PgImageSlot(size: 110, circle: true, emoji: '📸')
+                        : ClipOval(child: Image.memory(_photoBytes!,
+                            width: 110, height: 110, fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) =>
+                                const PgImageSlot(size: 110, circle: true, emoji: '📸'))),
+                  ),
                   const SizedBox(height: 10),
-                  Text('Upload a cute photo 📸', style: PgText.inter(13, FontWeight.w600, color: c.brand)),
+                  Text(_photoBytes == null ? 'Upload a cute photo 📸' : 'Tap to change photo',
+                    style: PgText.inter(13, FontWeight.w600, color: c.brand)),
                 ])),
                 const SizedBox(height: 14),
                 PgTextField(label: 'Pet name', controller: _name, hint: 'Bruno'),
