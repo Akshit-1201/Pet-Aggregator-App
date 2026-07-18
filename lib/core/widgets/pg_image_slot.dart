@@ -6,21 +6,31 @@ class PgImageSlot extends StatelessWidget {
   final bool circle;
   final String? emoji;
   final double radius;
-  const PgImageSlot({super.key, this.size, this.circle = false, this.emoji, this.radius = 20});
+  final String? imageUrl;
+  const PgImageSlot({
+    super.key, this.size, this.circle = false, this.emoji, this.radius = 20, this.imageUrl,
+  });
 
   @override
   Widget build(BuildContext context) {
     final c = context.pg;
+    final placeholder = Text(emoji ?? '🐾', style: const TextStyle(fontSize: 22));
+    final url = imageUrl;
+    final hasImage = url != null && url.isNotEmpty;
     return Container(
       width: size, height: size,
       alignment: Alignment.center,
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: c.surface2,
         shape: circle ? BoxShape.circle : BoxShape.rectangle,
         borderRadius: circle ? null : BorderRadius.circular(radius),
         border: Border.all(color: c.border),
       ),
-      child: Text(emoji ?? '🐾', style: const TextStyle(fontSize: 22)),
+      child: hasImage
+          ? Image.network(url, width: size, height: size, fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => Center(child: placeholder))
+          : placeholder,
     );
   }
 }
