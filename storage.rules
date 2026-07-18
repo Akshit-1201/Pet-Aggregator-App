@@ -1,0 +1,14 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /users/{uid}/{file} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /pets/{file} {
+      allow read: if request.auth != null;
+      // pet files are named "{uid}_{millis}.jpg" — enforce the uploader's own prefix
+      allow write: if request.auth != null && file.matches(request.auth.uid + '_.*');
+    }
+  }
+}
