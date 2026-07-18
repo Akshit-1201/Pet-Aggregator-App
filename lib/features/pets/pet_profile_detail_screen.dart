@@ -34,8 +34,14 @@ class PetProfileDetailScreen extends ConsumerWidget {
       body: Column(children: [
         Expanded(child: ListView(padding: EdgeInsets.zero, children: [
           Stack(children: [
-            Container(height: 280, width: double.infinity, color: c.surface2, alignment: Alignment.center,
-              child: Text(_speciesEmoji(p.species), style: const TextStyle(fontSize: 64))),
+            Container(
+              height: 280, width: double.infinity, color: c.surface2, alignment: Alignment.center,
+              child: p.photoUrl.isEmpty
+                  ? Text(_speciesEmoji(p.species), style: const TextStyle(fontSize: 64))
+                  : Image.network(p.photoUrl, height: 280, width: double.infinity, fit: BoxFit.cover,
+                      errorBuilder: (_, _, _) =>
+                          Text(_speciesEmoji(p.species), style: const TextStyle(fontSize: 64))),
+            ),
             Positioned(top: 0, left: 0, child: SafeArea(child: Padding(
               padding: const EdgeInsets.all(14),
               child: GestureDetector(

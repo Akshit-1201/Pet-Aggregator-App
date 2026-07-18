@@ -22,7 +22,7 @@ class PetRow extends StatelessWidget {
           color: c.surface, border: Border.all(color: c.border),
           borderRadius: BorderRadius.circular(18), boxShadow: c.shadowSm),
         child: Row(children: [
-          const PgImageSlot(size: 54, circle: true),
+          PgImageSlot(size: 54, circle: true, imageUrl: pet.photoUrl),
           const SizedBox(width: 13),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [

@@ -90,7 +90,8 @@ class _PgSwipeCardState extends State<PgSwipeCard> with SingleTickerProviderStat
             child: Column(children: [
               Expanded(
                 child: Stack(children: [
-                  const Positioned.fill(child: PgImageSlot(radius: 0, emoji: '🐶')),
+                  Positioned.fill(
+                    child: PgImageSlot(radius: 0, emoji: '🐶', imageUrl: widget.pet.photoUrl)),
                   Positioned(
                     top: 22, left: 20,
                     child: Opacity(opacity: passOpacity, child: _stamp('PASS', const Color(0xFFF2547B))),

@@ -103,7 +103,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(color: c.brandSoft, border: Border.all(color: c.border), borderRadius: BorderRadius.circular(18)),
                 child: Row(children: [
-                  const PgImageSlot(size: 52, circle: true, emoji: '🐾'),
+                  PgImageSlot(size: 52, circle: true, emoji: '🐾', imageUrl: pets.first.photoUrl),
                   const SizedBox(width: 13),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(pets.first.name, style: PgText.poppins(15, FontWeight.w700, color: c.text)),

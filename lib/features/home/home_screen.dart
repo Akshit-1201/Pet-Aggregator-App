@@ -66,7 +66,7 @@ class HomeScreen extends ConsumerWidget {
                   decoration: BoxDecoration(color: c.surface2, borderRadius: BorderRadius.circular(13)),
                   child: Icon(Icons.chat_bubble_outline_rounded, size: 20, color: c.text)),
               ),
-              const PgImageSlot(size: 46, circle: true),
+              PgImageSlot(size: 46, circle: true, imageUrl: profile?.photoUrl),
             ]),
           ),
           Expanded(
