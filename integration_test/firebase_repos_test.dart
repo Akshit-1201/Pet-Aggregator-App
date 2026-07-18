@@ -141,6 +141,7 @@ void main() {
     final mine = await bookings.watchMyBookings(me.uid).firstWhere((l) => l.isNotEmpty);
     expect(mine.single.petName, 'Bruno');
     expect(mine.single.total, 275);
+    expect(mine.single.createdAt, greaterThan(0)); // client-int createdAt stamped on create
 
     await auth.signOut();
   });
