@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:pet_aggregator_app/data/models/app_user.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
@@ -23,6 +24,7 @@ import 'package:pet_aggregator_app/data/repositories/chat_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/preferences_repository.dart';
 import 'package:pet_aggregator_app/data/models/review.dart';
 import 'package:pet_aggregator_app/data/repositories/review_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/storage_repository.dart';
 
 class FakeAuthRepository implements AuthRepository {
   final _controller = StreamController<AppUser?>.broadcast();
@@ -480,5 +482,15 @@ class InMemoryReviewRepository implements ReviewRepository {
         _reviews.values.where((r) => r.authorId == uid).map((r) => r.bookingId).toSet();
     yield mine();
     yield* _ctrl.stream.map((_) => mine());
+  }
+}
+
+class InMemoryStorageRepository implements StorageRepository {
+  final Map<String, Uint8List> uploads = {};
+
+  @override
+  Future<String> uploadImage({required String path, required Uint8List bytes}) async {
+    uploads[path] = bytes;
+    return 'https://fake.storage/$path';
   }
 }

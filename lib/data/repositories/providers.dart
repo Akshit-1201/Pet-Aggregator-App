@@ -23,6 +23,7 @@ import 'post_repository.dart';
 import 'chat_repository.dart';
 import 'preferences_repository.dart';
 import 'review_repository.dart';
+import 'storage_repository.dart';
 import 'firebase/firebase_auth_repository.dart';
 import 'firebase/firestore_user_repository.dart';
 import 'firebase/firestore_pet_repository.dart';
@@ -34,6 +35,7 @@ import 'firebase/firestore_booking_repository.dart';
 import 'firebase/firestore_post_repository.dart';
 import 'firebase/firestore_chat_repository.dart';
 import 'firebase/firestore_review_repository.dart';
+import 'firebase/firebase_storage_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) => FirebaseAuthRepository());
 final userRepositoryProvider = Provider<UserRepository>((ref) => FirestoreUserRepository());
@@ -185,3 +187,6 @@ final notificationsProvider = Provider<List<NotificationItem>>((ref) {
 
 final hasUnreadNotificationsProvider =
     Provider<bool>((ref) => ref.watch(notificationsProvider).any((n) => !n.read));
+
+final storageRepositoryProvider =
+    Provider<StorageRepository>((ref) => FirebaseStorageRepository());
