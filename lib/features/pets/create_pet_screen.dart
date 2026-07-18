@@ -41,9 +41,19 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
   }
 
   Future<void> _pickPhoto() async {
-    final bytes = await ref.read(imagePickerServiceProvider).pickImage();
-    if (!mounted || bytes == null) return;
-    setState(() => _photoBytes = bytes);
+    try {
+      final bytes = await ref.read(imagePickerServiceProvider).pickImage();
+      if (!mounted || bytes == null) return;
+      setState(() => _photoBytes = bytes);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(
+            content: Text("Couldn't open your photos. Please try again."),
+            behavior: SnackBarBehavior.floating));
+      }
+    }
   }
 
   Future<void> _finish() async {

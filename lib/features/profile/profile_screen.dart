@@ -22,10 +22,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _pickAndUploadAvatar() async {
     final uid = ref.read(authRepositoryProvider).currentUser?.uid;
     if (uid == null || _uploading) return;
-    final bytes = await ref.read(imagePickerServiceProvider).pickImage();
-    if (!mounted || bytes == null) return;
-    setState(() => _uploading = true);
     try {
+      final bytes = await ref.read(imagePickerServiceProvider).pickImage();
+      if (!mounted || bytes == null) return;
+      setState(() => _uploading = true);
       final url = await ref.read(storageRepositoryProvider)
           .uploadImage(path: 'users/$uid/avatar.jpg', bytes: bytes);
       await ref.read(userRepositoryProvider).setPhotoUrl(uid, url);
@@ -38,7 +38,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             behavior: SnackBarBehavior.floating));
       }
     } finally {
-      if (mounted) setState(() => _uploading = false);
+      if (mounted && _uploading) setState(() => _uploading = false);
     }
   }
 
