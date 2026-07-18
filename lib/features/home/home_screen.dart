@@ -34,14 +34,30 @@ class HomeScreen extends ConsumerWidget {
                 Row(children: [
                   Icon(Icons.location_on, size: 14, color: c.brand),
                   const SizedBox(width: 4),
-                  Text(profile?.area.isNotEmpty == true ? '${profile!.area}, Mumbai' : 'Mumbai',
-                      style: PgText.inter(12.5, FontWeight.w600, color: c.muted)),
+                  Flexible(child: Text(profile?.area.isNotEmpty == true ? '${profile!.area}, Mumbai' : 'Mumbai',
+                      overflow: TextOverflow.ellipsis,
+                      style: PgText.inter(12.5, FontWeight.w600, color: c.muted))),
                 ]),
                 const SizedBox(height: 5),
                 Text('Hey $greetName 👋', style: PgText.poppins(24, FontWeight.w800, color: c.text, ls: -0.5)),
                 const SizedBox(height: 2),
                 Text('Pets near you today', style: PgText.inter(13.5, FontWeight.w400, color: c.muted)),
               ])),
+              GestureDetector(
+                onTap: () => context.push(Routes.notifications),
+                child: Container(
+                  width: 42, height: 42, alignment: Alignment.center,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(color: c.surface2, borderRadius: BorderRadius.circular(13)),
+                  child: Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
+                    Icon(Icons.notifications_none_rounded, size: 20, color: c.text),
+                    if (ref.watch(hasUnreadNotificationsProvider))
+                      Positioned(top: -2, right: -2, child: Container(
+                        key: const ValueKey('notif-dot'), width: 9, height: 9,
+                        decoration: BoxDecoration(color: c.brand, shape: BoxShape.circle,
+                          border: Border.all(color: c.surface2, width: 1.5)))),
+                  ])),
+              ),
               GestureDetector(
                 onTap: () => context.push(Routes.chatList),
                 child: Container(
