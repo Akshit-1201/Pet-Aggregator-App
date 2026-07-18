@@ -106,6 +106,15 @@ class InMemoryUserRepository implements UserRepository {
   }
 
   @override
+  Future<void> markNotificationsSeen(String uid) async {
+    final u = _users[uid];
+    if (u != null) {
+      _users[uid] = u.copyWith(notifsSeenAt: DateTime.now().millisecondsSinceEpoch);
+      _ctrl(uid).add(_users[uid]);
+    }
+  }
+
+  @override
   Stream<UserProfile?> watchUser(String uid) async* {
     yield _users[uid];
     yield* _ctrl(uid).stream;

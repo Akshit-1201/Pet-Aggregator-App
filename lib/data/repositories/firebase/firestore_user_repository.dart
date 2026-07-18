@@ -18,6 +18,10 @@ class FirestoreUserRepository implements UserRepository {
   Future<void> updateArea(String uid, String area) => _col.doc(uid).update({'area': area});
 
   @override
+  Future<void> markNotificationsSeen(String uid) =>
+      _col.doc(uid).update({'notifsSeenAt': DateTime.now().millisecondsSinceEpoch});
+
+  @override
   Stream<UserProfile?> watchUser(String uid) => _col.doc(uid).snapshots().map(
       (doc) => doc.exists ? UserProfile.fromMap(uid, doc.data()!) : null);
 }
