@@ -8,7 +8,7 @@ void main() {
     expect(HomestayBooking.fmtDay(DateTime(2024, 1, 1)), 'Mon, 1 Jan'); // 2024-01-01 was a Monday
   });
 
-  test('toMap omits id/createdAt with ISO dates; fromMap restores', () {
+  test('toMap omits id, includes createdAt + ISO dates; fromMap restores', () {
     final b = HomestayBooking(guestId: 'g1', hostId: 'h1', homeName: "Meera's Home",
         hostName: 'Meera Iyer', petId: 'p1', petName: 'Bruno', ratePerNight: 900,
         checkIn: DateTime(2026, 7, 12), checkOut: DateTime(2026, 7, 15), nights: 3,

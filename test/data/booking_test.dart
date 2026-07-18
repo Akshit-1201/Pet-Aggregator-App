@@ -8,7 +8,7 @@ void main() {
     expect(Booking.feeFor(255), 26); // 25.5 -> 26
   });
 
-  test('toMap omits id/createdAt; fromMap restores', () {
+  test('toMap omits id, includes createdAt (default 0); fromMap restores', () {
     const b = Booking(parentId: 'u1', proId: 'p1', proName: 'Aarav', petId: 'pet1',
         petName: 'Bruno', serviceType: ServiceType.walker, rate: 250, fee: 25, total: 275,
         dateLabel: 'Tue 15 Jul', timeSlot: '5:00 PM');

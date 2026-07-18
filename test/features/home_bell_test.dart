@@ -10,7 +10,7 @@ import '../support/fakes.dart';
 import '../support/pump.dart';
 
 void main() {
-  testWidgets('Home bell opens Notifications and shows an unread dot that clears', (tester) async {
+  testWidgets('Home bell shows an unread dot and opens Notifications', (tester) async {
     final auth = FakeAuthRepository();
     await auth.signUp(email: 'me@x.com', password: 'secret1');
     final uid = auth.currentUser!.uid;

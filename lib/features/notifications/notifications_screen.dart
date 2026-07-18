@@ -46,9 +46,10 @@ class NotificationsScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(30),
                 child: Text("You're all caught up — no notifications yet.",
                   textAlign: TextAlign.center, style: PgText.inter(13.5, FontWeight.w400, color: c.muted))))
-            : ListView(
+            : ListView.builder(
                 padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
-                children: [for (final n in items) _NotifRow(item: n)],
+                itemCount: items.length,
+                itemBuilder: (_, i) => _NotifRow(item: items[i]),
               )),
         ]),
       ),
