@@ -39,7 +39,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
     context.push(Routes.payment, extra: Booking(
       parentId: me.uid, proId: pro.uid, proName: pro.name, petId: pet.id, petName: pet.name,
       serviceType: pro.serviceType, rate: pro.rate, fee: fee, total: pro.rate + fee,
-      dateLabel: _label(_days[_dateIndex]), timeSlot: _times[_timeIndex]));
+      dateLabel: _label(_days[_dateIndex]), timeSlot: _times[_timeIndex],
+      date: Booking.isoDate(_days[_dateIndex])));
   }
 
   @override
