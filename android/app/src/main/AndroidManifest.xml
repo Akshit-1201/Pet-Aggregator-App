@@ -30,6 +30,11 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Restricted to this package + debug SHA-1; add the release SHA-1
+             to the key's restriction before a Play release. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBbEEoDT0x6i44ENxXRAGIV0i9zziaYItQ" />
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
