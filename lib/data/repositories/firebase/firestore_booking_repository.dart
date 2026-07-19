@@ -20,4 +20,17 @@ class FirestoreBookingRepository implements BookingRepository {
       .where('parentId', isEqualTo: parentId)
       .snapshots()
       .map((snap) => snap.docs.map((d) => Booking.fromMap(d.id, d.data())).toList());
+
+  @override
+  Stream<List<Booking>> watchBookingsForPro(String proId) => _col
+      .where('proId', isEqualTo: proId)
+      .snapshots()
+      .map((snap) => snap.docs.map((d) => Booking.fromMap(d.id, d.data())).toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
+
+  @override
+  Future<void> cancelBooking(String id) => _col.doc(id).update({
+        'status': 'cancelled',
+        'updatedAt': DateTime.now().millisecondsSinceEpoch,
+      });
 }

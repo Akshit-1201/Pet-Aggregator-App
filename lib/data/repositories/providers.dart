@@ -171,6 +171,22 @@ final myHomestayBookingsProvider = StreamProvider<List<HomestayBooking>>((ref) {
   return ref.watch(homestayBookingRepositoryProvider).watchMyHomestayBookings(user.uid);
 });
 
+final receivedServiceBookingsProvider = StreamProvider<List<Booking>>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null || ref.watch(currentProProvider).value == null) {
+    return Stream.value(const []);
+  }
+  return ref.watch(bookingRepositoryProvider).watchBookingsForPro(user.uid);
+});
+
+final receivedStayBookingsProvider = StreamProvider<List<HomestayBooking>>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null || ref.watch(currentHomestayProvider).value == null) {
+    return Stream.value(const []);
+  }
+  return ref.watch(homestayBookingRepositoryProvider).watchBookingsForHost(user.uid);
+});
+
 final notificationsProvider = Provider<List<NotificationItem>>((ref) {
   final uid = ref.watch(authRepositoryProvider).currentUser?.uid ?? '';
   final seenAt = ref.watch(currentUserProfileProvider).value?.notifsSeenAt ?? 0;

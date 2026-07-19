@@ -251,6 +251,23 @@ class InMemoryBookingRepository implements BookingRepository {
     yield mine();
     yield* _controller.stream.map((_) => mine());
   }
+
+  @override
+  Stream<List<Booking>> watchBookingsForPro(String proId) async* {
+    List<Booking> mine() => (_bookings.where((b) => b.proId == proId).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
+    yield mine();
+    yield* _controller.stream.map((_) => mine());
+  }
+
+  @override
+  Future<void> cancelBooking(String id) async {
+    final i = _bookings.indexWhere((b) => b.id == id);
+    if (i == -1) return;
+    _bookings[i] = Booking.fromMap(id, {..._bookings[i].toMap(),
+        'status': 'cancelled', 'updatedAt': DateTime.now().millisecondsSinceEpoch});
+    _controller.add(List.of(_bookings));
+  }
 }
 
 List<PetProfile> fixturePets(String ownerId) => [
@@ -316,6 +333,31 @@ class InMemoryHomestayBookingRepository implements HomestayBookingRepository {
     yield mine();
     yield* _controller.stream.map((_) => mine());
   }
+
+  @override
+  Stream<List<HomestayBooking>> watchBookingsForHost(String hostId) async* {
+    List<HomestayBooking> mine() => (_bookings.where((b) => b.hostId == hostId).toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
+    yield mine();
+    yield* _controller.stream.map((_) => mine());
+  }
+
+  Future<void> _setStatus(String id, String status) async {
+    final i = _bookings.indexWhere((b) => b.id == id);
+    if (i == -1) return;
+    _bookings[i] = HomestayBooking.fromMap(id, {..._bookings[i].toMap(),
+        'status': status, 'updatedAt': DateTime.now().millisecondsSinceEpoch});
+    _controller.add(List.of(_bookings));
+  }
+
+  @override
+  Future<void> acceptRequest(String id) => _setStatus(id, 'accepted');
+
+  @override
+  Future<void> declineRequest(String id) => _setStatus(id, 'declined');
+
+  @override
+  Future<void> cancelStay(String id) => _setStatus(id, 'cancelled');
 }
 
 class InMemoryPostRepository implements PostRepository {
