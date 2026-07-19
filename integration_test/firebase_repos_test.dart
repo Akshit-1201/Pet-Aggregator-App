@@ -307,15 +307,16 @@ void main() {
         db.collection('homestayBookings').doc(stayId).update({'status': 'accepted', 'updatedAt': 1}),
         throwsA(isA<FirebaseException>()));
 
+    // Host accepts via the repo (writes status + updatedAt only).
+    await auth.signOut();
+    await auth.signIn(email: 'lh_$stamp@x.com', password: 'secret1');
+
     // A valid transition that also touches another field is denied (hasOnly guard).
     await expectLater(
         db.collection('homestayBookings').doc(stayId).update(
             {'status': 'accepted', 'total': 1, 'updatedAt': 2}),
         throwsA(isA<FirebaseException>()));
 
-    // Host accepts via the repo (writes status + updatedAt only).
-    await auth.signOut();
-    await auth.signIn(email: 'lh_$stamp@x.com', password: 'secret1');
     await stays.acceptRequest(stayId);
     final accepted = (await stays.watchBookingsForHost(host.uid).firstWhere(
             (l) => l.any((s) => s.id == stayId && s.status == 'accepted')))
