@@ -307,6 +307,12 @@ void main() {
         db.collection('homestayBookings').doc(stayId).update({'status': 'accepted', 'updatedAt': 1}),
         throwsA(isA<FirebaseException>()));
 
+    // A valid transition that also touches another field is denied (hasOnly guard).
+    await expectLater(
+        db.collection('homestayBookings').doc(stayId).update(
+            {'status': 'accepted', 'total': 1, 'updatedAt': 2}),
+        throwsA(isA<FirebaseException>()));
+
     // Host accepts via the repo (writes status + updatedAt only).
     await auth.signOut();
     await auth.signIn(email: 'lh_$stamp@x.com', password: 'secret1');
@@ -344,6 +350,13 @@ void main() {
     await expectLater(
         db.collection('bookings').doc(bkId).update({'status': 'paused', 'updatedAt': 1}),
         throwsA(isA<FirebaseException>()));
+
+    // Valid parent cancel + an extra field is denied (hasOnly guard).
+    await expectLater(
+        db.collection('bookings').doc(bkId).update(
+            {'status': 'cancelled', 'total': 1, 'updatedAt': 1}),
+        throwsA(isA<FirebaseException>()));
+
     await bookings.cancelBooking(bkId);
 
     await auth.signOut();
