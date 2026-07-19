@@ -22,7 +22,19 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
     final uid = ref.read(authRepositoryProvider).currentUser?.uid;
     if (uid == null || _saving) return;
     setState(() => _saving = true);
-    await ref.read(userRepositoryProvider).updateArea(uid, _selected);
+    try {
+      await ref.read(userRepositoryProvider).updateArea(uid, _selected);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _saving = false);
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(const SnackBar(
+            content: Text("Couldn't save your area. Please try again."),
+            behavior: SnackBarBehavior.floating));
+      }
+      return;
+    }
     if (mounted) context.go(Routes.createPet);
   }
 

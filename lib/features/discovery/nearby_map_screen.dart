@@ -154,12 +154,7 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
   Widget _sheet(PgColors c, List<PetProfile> pets, List<Pro> pros, List<Homestay> homestays) {
     final filteredPets = [
       for (final p in pets)
-        if (switch (_petFilter) {
-          PetPinFilter.all => true,
-          PetPinFilter.dogs => p.species == Species.dog,
-          PetPinFilter.cats => p.species == Species.cat,
-          PetPinFilter.vaccinated => p.vaccinated,
-        }) p,
+        if (matchesPetFilter(p, _petFilter)) p,
     ];
     final (String header, int count) = switch (_layer) {
       NearbyLayer.pets => ('pets nearby', filteredPets.length),

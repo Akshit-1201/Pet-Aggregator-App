@@ -12,6 +12,15 @@ const double petHue = 25.0;
 const double proHue = 210.0;
 const double homestayHue = 120.0;
 
+/// Single source of truth for the pet-layer filter — used for both the map
+/// pins (buildPins) and the bottom sheet's row list, so they never disagree.
+bool matchesPetFilter(PetProfile pet, PetPinFilter filter) => switch (filter) {
+      PetPinFilter.all => true,
+      PetPinFilter.dogs => pet.species == Species.dog,
+      PetPinFilter.cats => pet.species == Species.cat,
+      PetPinFilter.vaccinated => pet.vaccinated,
+    };
+
 /// Plain pin data the map screen turns into google_maps Markers.
 /// Pure Dart on purpose — unit-testable without the map SDK.
 class PinSpec {
@@ -34,12 +43,7 @@ List<PinSpec> buildPins({
 }) {
   switch (layer) {
     case NearbyLayer.pets:
-      final filtered = pets.where((p) => switch (petFilter) {
-            PetPinFilter.all => true,
-            PetPinFilter.dogs => p.species == Species.dog,
-            PetPinFilter.cats => p.species == Species.cat,
-            PetPinFilter.vaccinated => p.vaccinated,
-          });
+      final filtered = pets.where((p) => matchesPetFilter(p, petFilter));
       return [
         for (final p in filtered)
           _spec('pet_${p.id}', p.name, '${p.breed} · ${p.area}', Routes.petProfile, p,
