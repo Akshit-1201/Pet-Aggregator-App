@@ -7,7 +7,7 @@ import '../support/fakes.dart';
 import '../support/pump.dart';
 
 void main() {
-  testWidgets('Allow persists area and continues to Create Pet', (tester) async {
+  testWidgets('picking an area persists it and continues to Create Pet', (tester) async {
     final auth = FakeAuthRepository();
     await auth.signUp(email: 'me@x.com', password: 'secret1');
     final users = InMemoryUserRepository();
@@ -19,13 +19,16 @@ void main() {
       userRepositoryProvider.overrideWithValue(users),
       petRepositoryProvider.overrideWithValue(InMemoryPetRepository()),
     ], initialLocation: Routes.location);
+    await tester.pumpAndSettle();
 
-    expect(find.text('Enable location'), findsOneWidget);
-    await tester.tap(find.text('Allow while using app'));
+    expect(find.text('Choose your area'), findsOneWidget);
+    await tester.tap(find.text('Khar'));
+    await tester.pump();
+    await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
     final profile = await users.watchUser(auth.currentUser!.uid).first;
-    expect(profile!.area, 'Bandra West');
+    expect(profile!.area, 'Khar');
     expect(find.text('Add your pet'), findsOneWidget); // Create Pet screen
   });
 }

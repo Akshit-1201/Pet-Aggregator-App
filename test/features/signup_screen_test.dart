@@ -34,6 +34,6 @@ void main() {
     expect(auth.currentUser, isNotNull);
     final profile = await users.watchUser(auth.currentUser!.uid).first;
     expect(profile!.name, 'Radhika Nair');
-    expect(find.text('Enable location'), findsOneWidget); // Location screen
+    expect(find.text('Choose your area'), findsOneWidget); // Location screen
   });
 }
