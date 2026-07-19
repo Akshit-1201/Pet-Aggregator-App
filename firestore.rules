@@ -31,7 +31,12 @@ service cloud.firestore {
                       || resource.data.proId == request.auth.uid);
       allow create: if request.auth != null
                   && request.resource.data.parentId == request.auth.uid;
-      allow update, delete: if false;
+      allow update: if request.auth != null
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+                    && resource.data.parentId == request.auth.uid
+                    && resource.data.status == 'confirmed'
+                    && request.resource.data.status == 'cancelled';
+      allow delete: if false;
     }
     match /homestays/{uid} {
       allow read: if request.auth != null;
@@ -45,7 +50,17 @@ service cloud.firestore {
                       || resource.data.hostId == request.auth.uid);
       allow create: if request.auth != null
                   && request.resource.data.guestId == request.auth.uid;
-      allow update, delete: if false;
+      allow update: if request.auth != null
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+                    && (
+                      (resource.data.hostId == request.auth.uid
+                        && resource.data.status == 'requested'
+                        && request.resource.data.status in ['accepted', 'declined'])
+                      || (resource.data.guestId == request.auth.uid
+                        && resource.data.status in ['requested', 'accepted']
+                        && request.resource.data.status == 'cancelled')
+                    );
+      allow delete: if false;
     }
     match /posts/{postId} {
       allow read: if request.auth != null;

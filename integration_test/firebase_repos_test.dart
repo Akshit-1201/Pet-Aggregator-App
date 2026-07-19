@@ -281,4 +281,80 @@ void main() {
 
     await auth.signOut();
   });
+
+  testWidgets('booking lifecycle transitions obey the rules matrix (real Firestore emulators)',
+      (tester) async {
+    final auth = FirebaseAuthRepository();
+    final stays = FirestoreHomestayBookingRepository();
+    final bookings = FirestoreBookingRepository();
+    final db = FirebaseFirestore.instance;
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+
+    final host = await auth.signUp(email: 'lh_$stamp@x.com', password: 'secret1');
+    await auth.signOut();
+    final guest = await auth.signUp(email: 'lg_$stamp@x.com', password: 'secret1');
+
+    // Guest requests a stay with the host.
+    await stays.createHomestayBooking(HomestayBooking(guestId: guest.uid, hostId: host.uid,
+        homeName: 'H', hostName: 'M', petId: 'p', petName: 'Bruno', ratePerNight: 900,
+        checkIn: DateTime(2027, 1, 10), checkOut: DateTime(2027, 1, 13), nights: 3,
+        subtotal: 2700, fee: 150, total: 2850));
+    final stayId =
+        (await stays.watchMyHomestayBookings(guest.uid).firstWhere((l) => l.isNotEmpty)).single.id;
+
+    // Guest cannot accept their own request.
+    await expectLater(
+        db.collection('homestayBookings').doc(stayId).update({'status': 'accepted', 'updatedAt': 1}),
+        throwsA(isA<FirebaseException>()));
+
+    // Host accepts via the repo (writes status + updatedAt only).
+    await auth.signOut();
+    await auth.signIn(email: 'lh_$stamp@x.com', password: 'secret1');
+    await stays.acceptRequest(stayId);
+    final accepted = (await stays.watchBookingsForHost(host.uid).firstWhere(
+            (l) => l.any((s) => s.id == stayId && s.status == 'accepted')))
+        .firstWhere((s) => s.id == stayId);
+    expect(accepted.updatedAt, greaterThan(0));
+
+    // Host cannot re-decide, cancel, or touch other fields once decided.
+    await expectLater(
+        db.collection('homestayBookings').doc(stayId).update({'status': 'declined', 'updatedAt': 2}),
+        throwsA(isA<FirebaseException>()));
+    await expectLater(
+        db.collection('homestayBookings').doc(stayId).update({'status': 'cancelled', 'updatedAt': 2}),
+        throwsA(isA<FirebaseException>()));
+    await expectLater(
+        db.collection('homestayBookings').doc(stayId).update({'total': 1, 'updatedAt': 2}),
+        throwsA(isA<FirebaseException>()));
+
+    // Guest can cancel the accepted stay.
+    await auth.signOut();
+    await auth.signIn(email: 'lg_$stamp@x.com', password: 'secret1');
+    await stays.cancelStay(stayId);
+    final cancelled = await stays
+        .watchMyHomestayBookings(guest.uid)
+        .firstWhere((l) => l.any((s) => s.id == stayId && s.status == 'cancelled'));
+    expect(cancelled.firstWhere((s) => s.id == stayId).status, 'cancelled');
+
+    // Service booking: parent cancels; pro-side stream sees it; invalid targets rejected.
+    await bookings.createBooking(Booking(parentId: guest.uid, proId: host.uid, proName: 'Aarav',
+        petId: 'p', petName: 'Bruno', serviceType: ServiceType.walker, rate: 250, fee: 25,
+        total: 275, dateLabel: 'Tue 15 Jul', timeSlot: '5:00 PM', date: '2027-01-10'));
+    final bkId = (await bookings.watchMyBookings(guest.uid).firstWhere((l) => l.isNotEmpty)).single.id;
+    await expectLater(
+        db.collection('bookings').doc(bkId).update({'status': 'paused', 'updatedAt': 1}),
+        throwsA(isA<FirebaseException>()));
+    await bookings.cancelBooking(bkId);
+
+    await auth.signOut();
+    await auth.signIn(email: 'lh_$stamp@x.com', password: 'secret1');
+    final proSide = await bookings.watchBookingsForPro(host.uid).firstWhere((l) => l.isNotEmpty);
+    expect(proSide.single.status, 'cancelled');
+    // The pro cannot resurrect a cancelled booking.
+    await expectLater(
+        db.collection('bookings').doc(bkId).update({'status': 'confirmed', 'updatedAt': 9}),
+        throwsA(isA<FirebaseException>()));
+
+    await auth.signOut();
+  });
 }
