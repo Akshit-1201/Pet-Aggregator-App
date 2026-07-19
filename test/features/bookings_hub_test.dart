@@ -4,6 +4,7 @@ import 'package:pet_aggregator_app/data/models/booking.dart';
 import 'package:pet_aggregator_app/data/models/homestay.dart';
 import 'package:pet_aggregator_app/data/models/homestay_booking.dart';
 import 'package:pet_aggregator_app/data/models/pro.dart';
+import 'package:pet_aggregator_app/data/models/review.dart';
 import 'package:pet_aggregator_app/data/repositories/providers.dart';
 import '../support/fakes.dart';
 import '../support/pump.dart';
@@ -114,5 +115,33 @@ void main() {
     expect(find.text('Bookings'), findsOneWidget);
     expect(find.text('My bookings'), findsOneWidget);
     expect(find.text('Received'), findsOneWidget);
+  });
+
+  testWidgets('a legacy rated-but-upcoming stay still offers Cancel', (tester) async {
+    final (auth, uid) = await _me();
+    final hbookings = InMemoryHomestayBookingRepository();
+    await hbookings.createHomestayBooking(_stay('hb1', uid)); // requested, future dates
+    final reviews = InMemoryReviewRepository();
+    await reviews.submitReview(Review(targetType: ReviewTargetType.homestay, targetId: 'host1',
+        targetName: "Meera's Home", authorId: uid, authorName: 'Me', bookingId: 'hb1',
+        stars: 5, createdAt: 1));
+    await pumpPgApp(tester, overrides: [
+      authRepositoryProvider.overrideWithValue(auth),
+      bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
+      homestayBookingRepositoryProvider.overrideWithValue(hbookings),
+      reviewRepositoryProvider.overrideWithValue(reviews),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
+    ], initialLocation: Routes.bookings);
+    await tester.pumpAndSettle();
+
+    expect(find.text('★ Rated'), findsOneWidget);
+    expect(find.text('Cancel'), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel booking'));
+    await tester.pumpAndSettle();
+    expect(find.text('Cancelled'), findsOneWidget);
+    expect((await hbookings.watchMyHomestayBookings(uid).first).single.status, 'cancelled');
   });
 }

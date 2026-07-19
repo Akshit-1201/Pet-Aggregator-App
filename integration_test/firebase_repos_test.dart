@@ -294,6 +294,16 @@ void main() {
     await auth.signOut();
     final guest = await auth.signUp(email: 'lg_$stamp@x.com', password: 'secret1');
 
+    // A booking cannot be born past 'requested'/'confirmed' (create-status guard).
+    await expectLater(
+        db.collection('homestayBookings').add(
+            {'guestId': guest.uid, 'hostId': host.uid, 'status': 'accepted'}),
+        throwsA(isA<FirebaseException>()));
+    await expectLater(
+        db.collection('bookings').add(
+            {'parentId': guest.uid, 'proId': host.uid, 'status': 'cancelled'}),
+        throwsA(isA<FirebaseException>()));
+
     // Guest requests a stay with the host.
     await stays.createHomestayBooking(HomestayBooking(guestId: guest.uid, hostId: host.uid,
         homeName: 'H', hostName: 'M', petId: 'p', petName: 'Bruno', ratePerNight: 900,

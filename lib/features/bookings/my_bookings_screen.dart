@@ -201,7 +201,8 @@ class _MyBookingRow extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20)),
                     child: Text('Rate',
                         style: PgText.poppins(13, FontWeight.w700, color: Colors.white)))),
-          ] else if (canCancel) ...[
+          ],
+          if (canCancel) ...[
             const SizedBox(height: 6),
             GestureDetector(
                 onTap: onCancel,

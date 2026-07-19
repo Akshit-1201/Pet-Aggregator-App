@@ -30,7 +30,8 @@ service cloud.firestore {
                   && (resource.data.parentId == request.auth.uid
                       || resource.data.proId == request.auth.uid);
       allow create: if request.auth != null
-                  && request.resource.data.parentId == request.auth.uid;
+                  && request.resource.data.parentId == request.auth.uid
+                  && request.resource.data.status == 'confirmed';
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
                     && resource.data.parentId == request.auth.uid
@@ -49,7 +50,8 @@ service cloud.firestore {
                   && (resource.data.guestId == request.auth.uid
                       || resource.data.hostId == request.auth.uid);
       allow create: if request.auth != null
-                  && request.resource.data.guestId == request.auth.uid;
+                  && request.resource.data.guestId == request.auth.uid
+                  && request.resource.data.status == 'requested';
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
                     && (
