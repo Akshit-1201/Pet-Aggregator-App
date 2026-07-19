@@ -197,6 +197,8 @@ final notificationsProvider = Provider<List<NotificationItem>>((ref) {
     reviews: ref.watch(reviewsProvider(uid)).value ?? const [],
     bookings: ref.watch(myBookingsProvider).value ?? const [],
     homestays: ref.watch(myHomestayBookingsProvider).value ?? const [],
+    receivedBookings: ref.watch(receivedServiceBookingsProvider).value ?? const [],
+    receivedStays: ref.watch(receivedStayBookingsProvider).value ?? const [],
     myPro: ref.watch(currentProProvider).value,
     myHomestay: ref.watch(currentHomestayProvider).value,
   );

@@ -26,6 +26,8 @@ class NotificationItem {
   });
 }
 
+int _eventTs(int updatedAt, int createdAt) => updatedAt > 0 ? updatedAt : createdAt;
+
 /// Builds the derived notification feed (newest first) from the user's own data.
 List<NotificationItem> buildNotifications({
   required String myUid,
@@ -34,6 +36,8 @@ List<NotificationItem> buildNotifications({
   required List<Review> reviews,
   required List<Booking> bookings,
   required List<HomestayBooking> homestays,
+  List<Booking> receivedBookings = const [],
+  List<HomestayBooking> receivedStays = const [],
   Pro? myPro,
   Homestay? myHomestay,
 }) {
@@ -63,6 +67,7 @@ List<NotificationItem> buildNotifications({
   }
 
   for (final b in bookings) {
+    if (b.status == 'cancelled') continue;
     items.add(NotificationItem(
       type: PgNotificationType.booking, icon: '✅', accent: const Color(0xFF34B27B),
       title: 'Booking confirmed with ${b.proName}',
@@ -76,6 +81,51 @@ List<NotificationItem> buildNotifications({
       title: 'Homestay request · ${s.petName}',
       body: '${s.homeName} · ${s.nights} nights',
       timestamp: s.createdAt, route: Routes.bookings, read: !unread(s.createdAt)));
+  }
+
+  for (final s in homestays) {
+    if (s.status != 'accepted' && s.status != 'declined') continue;
+    final ok = s.status == 'accepted';
+    final ts = _eventTs(s.updatedAt, s.createdAt);
+    items.add(NotificationItem(
+        type: PgNotificationType.homestay,
+        icon: ok ? '✅' : '❌',
+        accent: ok ? const Color(0xFF34B27B) : const Color(0xFFE5484D),
+        title: '${s.homeName} ${ok ? 'accepted' : 'declined'} your request',
+        body: '${HomestayBooking.fmtDay(s.checkIn)} · ${s.nights} nights',
+        timestamp: ts, route: Routes.bookings, extra: 0, read: !unread(ts)));
+  }
+
+  for (final s in receivedStays) {
+    if (s.status == 'requested') {
+      items.add(NotificationItem(
+          type: PgNotificationType.homestay,
+          icon: '🏡', accent: const Color(0xFFF97316),
+          title: "New booking request from ${s.petName}'s parent",
+          body: '${HomestayBooking.fmtDay(s.checkIn)} → ${HomestayBooking.fmtDay(s.checkOut)}'
+              ' · ₹${s.total}',
+          timestamp: s.createdAt, route: Routes.bookings, extra: 1,
+          read: !unread(s.createdAt)));
+    } else if (s.status == 'cancelled') {
+      final ts = _eventTs(s.updatedAt, s.createdAt);
+      items.add(NotificationItem(
+          type: PgNotificationType.homestay,
+          icon: '↩️', accent: const Color(0xFF9AA0A6),
+          title: "${s.petName}'s stay was cancelled",
+          body: '${s.homeName} · ${s.nights} nights',
+          timestamp: ts, route: Routes.bookings, extra: 1, read: !unread(ts)));
+    }
+  }
+
+  for (final b in receivedBookings) {
+    if (b.status != 'cancelled') continue;
+    final ts = _eventTs(b.updatedAt, b.createdAt);
+    items.add(NotificationItem(
+        type: PgNotificationType.booking,
+        icon: '↩️', accent: const Color(0xFF9AA0A6),
+        title: "${b.petName}'s booking was cancelled",
+        body: '${b.serviceType.label} · ${b.dateLabel}',
+        timestamp: ts, route: Routes.bookings, extra: 1, read: !unread(ts)));
   }
 
   items.sort((a, b) => b.timestamp.compareTo(a.timestamp));
