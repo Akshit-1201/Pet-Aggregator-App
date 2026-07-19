@@ -16,6 +16,8 @@ void main() {
       homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
       reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
       swipeRepositoryProvider.overrideWithValue(InMemorySwipeRepository()),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
     ], initialLocation: Routes.profile);
     await tester.pumpAndSettle();
 

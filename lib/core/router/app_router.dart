@@ -36,7 +36,7 @@ import '../../features/pets/create_pet_screen.dart';
 import '../../features/pets/pet_profile_detail_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/profile/settings_screen.dart';
-import '../../features/reviews/my_bookings_screen.dart';
+import '../../features/bookings/my_bookings_screen.dart';
 import '../../features/reviews/rate_review_screen.dart';
 import '../../features/services/booking_confirmed_screen.dart';
 import '../../features/services/booking_screen.dart';
@@ -102,7 +102,8 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.chatList, builder: (_, _) => const ChatListScreen()),
       GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen()),
       GoRoute(path: Routes.rate, builder: (_, state) => RateReviewScreen(target: state.extra as ReviewTarget?)),
-      GoRoute(path: Routes.bookings, builder: (_, _) => const MyBookingsScreen()),
+      GoRoute(path: Routes.bookings, builder: (_, state) =>
+          MyBookingsScreen(initialTab: state.extra is int ? state.extra as int : 0)),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => HomeShell(navigationShell: shell),
         branches: [

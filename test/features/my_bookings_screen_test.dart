@@ -22,11 +22,12 @@ void main() {
     await bookings.createBooking(Booking(id: 'bk1', parentId: uid, proId: 'pro1', proName: 'Aarav Sharma',
         petId: 'p1', petName: 'Bruno', serviceType: ServiceType.walker, rate: 250, fee: 25, total: 275,
         dateLabel: 'Tue 15 Jul', timeSlot: '5:00 PM'));
+    final now = DateTime.now();
     final hbookings = InMemoryHomestayBookingRepository();
     await hbookings.createHomestayBooking(HomestayBooking(id: 'hb1', guestId: uid, hostId: 'host1',
         homeName: "Meera's Home", hostName: 'Meera Iyer', petId: 'p1', petName: 'Bruno', ratePerNight: 900,
-        checkIn: DateTime(2026, 7, 20), checkOut: DateTime(2026, 7, 23), nights: 3, subtotal: 2700,
-        fee: 150, total: 2850));
+        checkIn: now.subtract(const Duration(days: 5)), checkOut: now.subtract(const Duration(days: 2)),
+        nights: 3, subtotal: 2700, fee: 150, total: 2850, status: 'accepted'));
     final reviews = InMemoryReviewRepository();
 
     await pumpPgApp(tester, overrides: [
@@ -35,6 +36,8 @@ void main() {
       bookingRepositoryProvider.overrideWithValue(bookings),
       homestayBookingRepositoryProvider.overrideWithValue(hbookings),
       reviewRepositoryProvider.overrideWithValue(reviews),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
     ], initialLocation: Routes.bookings);
     await tester.pumpAndSettle();
 
@@ -56,11 +59,12 @@ void main() {
     await bookings.createBooking(Booking(id: 'bk1', parentId: uid, proId: 'pro1', proName: 'Aarav Sharma',
         petId: 'p1', petName: 'Bruno', serviceType: ServiceType.walker, rate: 250, fee: 25, total: 275,
         dateLabel: 'Tue 15 Jul', timeSlot: '5:00 PM'));
+    final now = DateTime.now();
     final hbookings = InMemoryHomestayBookingRepository();
     await hbookings.createHomestayBooking(HomestayBooking(id: 'hb1', guestId: uid, hostId: 'host1',
         homeName: "Meera's Home", hostName: 'Meera Iyer', petId: 'p1', petName: 'Bruno', ratePerNight: 900,
-        checkIn: DateTime(2026, 7, 20), checkOut: DateTime(2026, 7, 23), nights: 3, subtotal: 2700,
-        fee: 150, total: 2850));
+        checkIn: now.subtract(const Duration(days: 5)), checkOut: now.subtract(const Duration(days: 2)),
+        nights: 3, subtotal: 2700, fee: 150, total: 2850, status: 'accepted'));
     final reviews = InMemoryReviewRepository();
     // The service booking (bk1) is already reviewed; the homestay (hb1) is not.
     await reviews.submitReview(Review(targetType: ReviewTargetType.pro, targetId: 'pro1',
@@ -72,6 +76,8 @@ void main() {
       bookingRepositoryProvider.overrideWithValue(bookings),
       homestayBookingRepositoryProvider.overrideWithValue(hbookings),
       reviewRepositoryProvider.overrideWithValue(reviews),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
     ], initialLocation: Routes.bookings);
     await tester.pumpAndSettle();
 
