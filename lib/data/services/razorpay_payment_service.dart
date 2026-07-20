@@ -29,6 +29,13 @@ class RazorpayPaymentService implements PaymentService {
     if (_inFlight != null) {
       throw const PaymentException(PaymentErrorType.failed, 'busy');
     }
+    // Claim the slot synchronously, before any await, so a re-entrant call
+    // (e.g. a double-tap during order creation) is rejected as busy rather
+    // than creating a second order and orphaning this completer.
+    final completer = Completer<PaymentResult>();
+    _inFlight = completer;
+    _onVerifying = onVerifying;
+
     final Map<String, dynamic> order;
     try {
       final res = await _functions
@@ -36,12 +43,11 @@ class RazorpayPaymentService implements PaymentService {
           .call<Map<Object?, Object?>>({'amountRupees': amountRupees});
       order = Map<String, dynamic>.from(res.data);
     } catch (_) {
+      _inFlight = null;
+      _onVerifying = null;
       throw const PaymentException(PaymentErrorType.failed, 'order-failed');
     }
 
-    final completer = Completer<PaymentResult>();
-    _inFlight = completer;
-    _onVerifying = onVerifying;
     final razorpay = Razorpay();
     razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS,
         (PaymentSuccessResponse r) => _verify(razorpay, r));
