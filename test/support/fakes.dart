@@ -359,6 +359,15 @@ class InMemoryHomestayBookingRepository implements HomestayBookingRepository {
 
   @override
   Future<void> cancelStay(String id) => _setStatus(id, 'cancelled');
+
+  @override
+  Future<void> markPaid(String id, String paymentId) async {
+    final i = _bookings.indexWhere((b) => b.id == id);
+    if (i == -1) return;
+    _bookings[i] = HomestayBooking.fromMap(id, {..._bookings[i].toMap(),
+        'status': 'paid', 'updatedAt': DateTime.now().millisecondsSinceEpoch, 'paymentId': paymentId});
+    _controller.add(List.of(_bookings));
+  }
 }
 
 class InMemoryPostRepository implements PostRepository {
