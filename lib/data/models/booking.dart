@@ -4,7 +4,7 @@ class Booking {
   final String id, parentId, proId, proName, petId, petName;
   final ServiceType serviceType;
   final int rate, fee, total, createdAt, updatedAt;
-  final String dateLabel, timeSlot, status, date; // date: ISO yyyy-MM-dd ('' = legacy booking)
+  final String dateLabel, timeSlot, status, date, paymentId; // date: ISO yyyy-MM-dd ('' = legacy booking)
 
   const Booking({
     this.id = '',
@@ -12,7 +12,7 @@ class Booking {
     required this.petId, required this.petName, required this.serviceType,
     required this.rate, required this.fee, required this.total,
     required this.dateLabel, required this.timeSlot, this.status = 'confirmed',
-    this.date = '', this.createdAt = 0, this.updatedAt = 0,
+    this.date = '', this.paymentId = '', this.createdAt = 0, this.updatedAt = 0,
   });
 
   static int feeFor(int rate) => (rate * 0.1).round();
@@ -36,6 +36,7 @@ class Booking {
         'timeSlot': timeSlot,
         'status': status,
         'date': date,
+        'paymentId': paymentId,
         'updatedAt': updatedAt,
         'createdAt': createdAt,
       };
@@ -55,6 +56,7 @@ class Booking {
         timeSlot: (m['timeSlot'] ?? '') as String,
         status: (m['status'] ?? 'confirmed') as String,
         date: (m['date'] ?? '') as String,
+        paymentId: (m['paymentId'] ?? '') as String,
         updatedAt: (m['updatedAt'] is int) ? m['updatedAt'] as int : 0,
         createdAt: (m['createdAt'] is int) ? m['createdAt'] as int : 0, // stale serverTimestamp -> 0
       );
