@@ -60,8 +60,11 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
           bio: _bio.text.trim(), serviceType: _type, rate: rate,
           experienceYears: int.tryParse(_exp.text.trim()) ?? 0,
           rating: _rating, reviewCount: _reviewCount));
-    if (mounted) context.go(Routes.services);
+    if (mounted) _exit();
   }
+
+  void _exit() =>
+      context.go(widget.fromOnboarding ? Routes.home : Routes.services);
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +80,7 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
       backgroundColor: c.surface,
       body: SafeArea(
         child: Column(children: [
-          PgAppBar(title: 'Offer your services', onBack: () => context.go(Routes.services)),
+          PgAppBar(title: 'Offer your services', onBack: _exit),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
@@ -119,8 +122,17 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
           Container(
             decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
             padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
-            child: PgPrimaryButton(label: _saving ? 'Saving…' : 'Save listing',
-              onPressed: _saving ? () {} : _save),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              PgPrimaryButton(label: _saving ? 'Saving…' : 'Save listing',
+                onPressed: _saving ? () {} : _save),
+              if (widget.fromOnboarding) ...[
+                const SizedBox(height: 6),
+                TextButton(
+                  onPressed: _saving ? null : () => context.go(Routes.home),
+                  child: Text('Set up later',
+                    style: PgText.inter(13.5, FontWeight.w600, color: context.pg.muted))),
+              ],
+            ]),
           ),
         ]),
       ),
