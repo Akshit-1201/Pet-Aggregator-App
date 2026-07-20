@@ -36,7 +36,7 @@ Future<void> _pumpAsHost(WidgetTester tester,
 }
 
 void main() {
-  testWidgets('host sees a pending request and Accept flips it to Upcoming', (tester) async {
+  testWidgets('host sees a pending request and Accept flips it to Pay to confirm', (tester) async {
     final auth = FakeAuthRepository();
     await auth.signUp(email: 'host@x.com', password: 'secret1');
     final uid = auth.currentUser!.uid;
@@ -56,7 +56,7 @@ void main() {
     await tester.tap(find.text('Accept'));
     await tester.pumpAndSettle();
     expect(find.text('Accept'), findsNothing);
-    expect(find.text('Upcoming'), findsOneWidget);
+    expect(find.text('Pay to confirm'), findsOneWidget);
     final stored = (await hbookings.watchBookingsForHost(uid).first).single;
     expect(stored.status, 'accepted');
     expect(stored.updatedAt, greaterThan(0));

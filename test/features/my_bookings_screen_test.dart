@@ -27,7 +27,7 @@ void main() {
     await hbookings.createHomestayBooking(HomestayBooking(id: 'hb1', guestId: uid, hostId: 'host1',
         homeName: "Meera's Home", hostName: 'Meera Iyer', petId: 'p1', petName: 'Bruno', ratePerNight: 900,
         checkIn: now.subtract(const Duration(days: 5)), checkOut: now.subtract(const Duration(days: 2)),
-        nights: 3, subtotal: 2700, fee: 150, total: 2850, status: 'accepted'));
+        nights: 3, subtotal: 2700, fee: 150, total: 2850, status: 'paid'));
     final reviews = InMemoryReviewRepository();
 
     await pumpPgApp(tester, overrides: [
@@ -64,7 +64,7 @@ void main() {
     await hbookings.createHomestayBooking(HomestayBooking(id: 'hb1', guestId: uid, hostId: 'host1',
         homeName: "Meera's Home", hostName: 'Meera Iyer', petId: 'p1', petName: 'Bruno', ratePerNight: 900,
         checkIn: now.subtract(const Duration(days: 5)), checkOut: now.subtract(const Duration(days: 2)),
-        nights: 3, subtotal: 2700, fee: 150, total: 2850, status: 'accepted'));
+        nights: 3, subtotal: 2700, fee: 150, total: 2850, status: 'paid'));
     final reviews = InMemoryReviewRepository();
     // The service booking (bk1) is already reviewed; the homestay (hb1) is not.
     await reviews.submitReview(Review(targetType: ReviewTargetType.pro, targetId: 'pro1',

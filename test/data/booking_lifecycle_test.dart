@@ -44,11 +44,17 @@ void main() {
     });
     test('requested past check-in is expired', () =>
         expect(stayPhase(_stay(checkIn: DateTime(2026, 7, 18)), _now), BookingPhase.expired));
-    test('accepted is upcoming up to and including checkout day', () =>
-        expect(stayPhase(_stay(status: 'accepted', checkIn: DateTime(2026, 7, 15), checkOut: DateTime(2026, 7, 19)), _now),
+    test('accepted before check-in is awaitingPayment', () =>
+        expect(stayPhase(_stay(status: 'accepted', checkIn: DateTime(2026, 7, 21)), _now),
+            BookingPhase.awaitingPayment));
+    test('accepted past check-in (never paid) is expired', () =>
+        expect(stayPhase(_stay(status: 'accepted', checkIn: DateTime(2026, 7, 18)), _now),
+            BookingPhase.expired));
+    test('paid is upcoming up to and including checkout day', () =>
+        expect(stayPhase(_stay(status: 'paid', checkIn: DateTime(2026, 7, 15), checkOut: DateTime(2026, 7, 19)), _now),
             BookingPhase.upcoming));
-    test('accepted past checkout is completed', () =>
-        expect(stayPhase(_stay(status: 'accepted', checkIn: DateTime(2026, 7, 10), checkOut: DateTime(2026, 7, 18)), _now),
+    test('paid past checkout is completed', () =>
+        expect(stayPhase(_stay(status: 'paid', checkIn: DateTime(2026, 7, 10), checkOut: DateTime(2026, 7, 18)), _now),
             BookingPhase.completed));
   });
 
@@ -76,6 +82,19 @@ void main() {
       expect(canDecide(_stay(checkIn: DateTime(2026, 7, 19)), _now), isTrue);
       expect(canDecide(_stay(checkIn: DateTime(2026, 7, 18)), _now), isFalse); // expired
       expect(canDecide(_stay(status: 'accepted'), _now), isFalse);
+    });
+  });
+
+  group('canPay + paid no-cancel', () {
+    test('canPay only for accepted before check-in', () {
+      expect(canPay(_stay(status: 'accepted', checkIn: DateTime(2026, 7, 20)), _now), isTrue);
+      expect(canPay(_stay(status: 'accepted', checkIn: DateTime(2026, 7, 19)), _now), isTrue); // check-in today ok
+      expect(canPay(_stay(status: 'accepted', checkIn: DateTime(2026, 7, 18)), _now), isFalse); // past
+      expect(canPay(_stay(status: 'requested', checkIn: DateTime(2026, 7, 20)), _now), isFalse);
+      expect(canPay(_stay(status: 'paid', checkIn: DateTime(2026, 7, 20)), _now), isFalse);
+    });
+    test('a paid stay is not cancellable', () {
+      expect(canCancelStay(_stay(status: 'paid', checkIn: DateTime(2026, 7, 25)), _now), isFalse);
     });
   });
 }

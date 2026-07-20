@@ -16,6 +16,7 @@ class PhaseChip extends StatelessWidget {
       BookingPhase.completed => (const Color(0x1A34B27B), const Color(0xFF34B27B)),
       BookingPhase.declined => (const Color(0x1AE5484D), const Color(0xFFE5484D)),
       BookingPhase.pending ||
+      BookingPhase.awaitingPayment ||
       BookingPhase.cancelled ||
       BookingPhase.expired => (c.border, c.muted),
     };

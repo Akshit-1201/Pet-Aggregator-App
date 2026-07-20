@@ -6,6 +6,7 @@ import 'homestay_booking.dart';
 
 enum BookingPhase {
   pending('Pending'),
+  awaitingPayment('Pay to confirm'),
   upcoming('Upcoming'),
   completed('Completed'),
   declined('Declined'),
@@ -31,8 +32,10 @@ BookingPhase stayPhase(HomestayBooking b, DateTime now) {
       return BookingPhase.declined;
     case 'cancelled':
       return BookingPhase.cancelled;
-    case 'accepted':
+    case 'paid':
       return _day(b.checkOut).isBefore(_day(now)) ? BookingPhase.completed : BookingPhase.upcoming;
+    case 'accepted':
+      return _day(b.checkIn).isBefore(_day(now)) ? BookingPhase.expired : BookingPhase.awaitingPayment;
     default: // 'requested'
       return _day(b.checkIn).isBefore(_day(now)) ? BookingPhase.expired : BookingPhase.pending;
   }
@@ -48,6 +51,9 @@ bool canCancelService(Booking b, DateTime now) {
 bool canCancelStay(HomestayBooking b, DateTime now) =>
     (b.status == 'requested' && !_day(b.checkIn).isBefore(_day(now))) ||
     (b.status == 'accepted' && _day(now).isBefore(_day(b.checkIn)));
+
+bool canPay(HomestayBooking b, DateTime now) =>
+    b.status == 'accepted' && !_day(b.checkIn).isBefore(_day(now));
 
 bool canDecide(HomestayBooking b, DateTime now) =>
     b.status == 'requested' && !_day(b.checkIn).isBefore(_day(now));
