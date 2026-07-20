@@ -71,8 +71,11 @@ class _HostSetupScreenState extends ConsumerState<HostSetupScreen> {
           area: profile?.area ?? '', about: _about.text.trim(), homeType: _homeType,
           ratePerNight: rate, amenities: _amenities.toList(),
           verified: _verified, rating: _rating, reviewCount: _reviewCount));
-    if (mounted) context.go(Routes.homestay);
+    if (mounted) _exit();
   }
+
+  void _exit() =>
+      context.go(widget.fromOnboarding ? Routes.home : Routes.homestay);
 
   @override
   Widget build(BuildContext context) {
@@ -90,7 +93,9 @@ class _HostSetupScreenState extends ConsumerState<HostSetupScreen> {
         child: Column(children: [
           PgAppBar(
             title: 'List your home',
-            onBack: () => context.canPop() ? context.pop() : context.go(Routes.homestay),
+            onBack: () => widget.fromOnboarding
+                ? _exit()
+                : (context.canPop() ? context.pop() : context.go(Routes.homestay)),
           ),
           Expanded(
             child: ListView(
@@ -138,8 +143,17 @@ class _HostSetupScreenState extends ConsumerState<HostSetupScreen> {
           Container(
             decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
             padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
-            child: PgPrimaryButton(label: _saving ? 'Saving…' : 'List my home',
-              onPressed: _saving ? () {} : _save),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              PgPrimaryButton(label: _saving ? 'Saving…' : 'List my home',
+                onPressed: _saving ? () {} : _save),
+              if (widget.fromOnboarding) ...[
+                const SizedBox(height: 6),
+                TextButton(
+                  onPressed: _saving ? null : () => context.go(Routes.home),
+                  child: Text('Set up later',
+                    style: PgText.inter(13.5, FontWeight.w600, color: context.pg.muted))),
+              ],
+            ]),
           ),
         ]),
       ),
