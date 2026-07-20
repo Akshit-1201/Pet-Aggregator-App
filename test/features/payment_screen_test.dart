@@ -18,6 +18,7 @@ void main() {
     await pumpPgApp(tester, overrides: [
       authRepositoryProvider.overrideWithValue(auth),
       bookingRepositoryProvider.overrideWithValue(bookings),
+      paymentServiceProvider.overrideWithValue(FakePaymentService.success()),
     ], initialLocation: Routes.payment, extra: _draft);
     await tester.pumpAndSettle();
 
@@ -27,6 +28,7 @@ void main() {
 
     final mine = await bookings.watchMyBookings('uid_me@x.com').first;
     expect(mine.single.petName, 'Bruno');
+    expect(mine.single.paymentId, 'pay_fake123');
     expect(find.text('Booking confirmed! 🎉'), findsOneWidget);
   });
 }

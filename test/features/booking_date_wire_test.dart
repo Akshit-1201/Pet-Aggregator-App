@@ -20,6 +20,7 @@ void main() {
       authRepositoryProvider.overrideWithValue(auth),
       petRepositoryProvider.overrideWithValue(InMemoryPetRepository(fixturePets(uid))),
       bookingRepositoryProvider.overrideWithValue(bookings),
+      paymentServiceProvider.overrideWithValue(FakePaymentService.success()),
     ], initialLocation: Routes.booking, extra: _pro);
     await tester.pumpAndSettle();
 
