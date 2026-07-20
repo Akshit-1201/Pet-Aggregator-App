@@ -38,7 +38,12 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       return;
     }
     if (!mounted) return;
-    final role = ref.read(currentUserProfileProvider).value?.role ?? Role.petParent;
+    // Read the role deterministically (await the first snapshot) rather than a
+    // synchronous read that races the profile stream — same pattern as the
+    // pro/host setup _save methods.
+    final profile = await ref.read(userRepositoryProvider).watchUser(uid).first;
+    if (!mounted) return;
+    final role = profile?.role ?? Role.petParent;
     final target = switch (role) {
       Role.petParent => Routes.createPet,
       Role.servicePro => Routes.proSetup,
@@ -49,10 +54,6 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Warm currentUserProfileProvider (a StreamProvider) so its first value
-    // has arrived by the time _continue() reads the role synchronously —
-    // an unwatched StreamProvider's first ref.read is AsyncLoading.
-    ref.watch(currentUserProfileProvider);
     final c = context.pg;
     return Scaffold(
       backgroundColor: c.surface,
