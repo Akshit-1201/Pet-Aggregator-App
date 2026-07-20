@@ -25,6 +25,8 @@ import 'preferences_repository.dart';
 import 'review_repository.dart';
 import 'storage_repository.dart';
 import '../services/image_picker_service.dart';
+import '../services/payment_service.dart';
+import '../services/razorpay_payment_service.dart';
 import 'firebase/firebase_auth_repository.dart';
 import 'firebase/firestore_user_repository.dart';
 import 'firebase/firestore_pet_repository.dart';
@@ -212,3 +214,6 @@ final storageRepositoryProvider =
 
 final imagePickerServiceProvider =
     Provider<ImagePickerService>((ref) => ImagePickerServiceImpl());
+
+final paymentServiceProvider =
+    Provider<PaymentService>((ref) => RazorpayPaymentService());
