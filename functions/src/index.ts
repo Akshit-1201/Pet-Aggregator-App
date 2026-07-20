@@ -1,5 +1,6 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {defineSecret} from "firebase-functions/params";
+import * as logger from "firebase-functions/logger";
 import * as crypto from "crypto";
 import Razorpay from "razorpay";
 
@@ -26,6 +27,7 @@ export const createBookingOrder = onCall(
       });
       return {orderId: order.id, amountPaise: order.amount, keyId: razorpayKeyId.value()};
     } catch (e) {
+      logger.error("createBookingOrder failed", e);
       throw new HttpsError("internal", "order-failed");
     }
   });

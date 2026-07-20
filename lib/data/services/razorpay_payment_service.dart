@@ -49,28 +49,32 @@ class RazorpayPaymentService implements PaymentService {
     }
 
     final razorpay = Razorpay();
-    razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS,
-        (PaymentSuccessResponse r) => _verify(razorpay, r));
-    razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, (PaymentFailureResponse r) {
-      _finishError(
-          razorpay,
-          r.code == Razorpay.PAYMENT_CANCELLED
-              ? const PaymentException(PaymentErrorType.cancelled, 'cancelled')
-              : PaymentException(PaymentErrorType.failed, r.message ?? 'failed'));
-    });
-    razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, (ExternalWalletResponse r) {
-      _finishError(razorpay,
-          const PaymentException(PaymentErrorType.failed, 'external-wallet-unsupported'));
-    });
-    razorpay.open({
-      'key': order['keyId'],
-      'order_id': order['orderId'],
-      'amount': order['amountPaise'],
-      'currency': 'INR',
-      'name': 'Pawgo',
-      'description': description,
-      'theme': {'color': '#F59E2E'},
-    });
+    try {
+      razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS,
+          (PaymentSuccessResponse r) => _verify(razorpay, r));
+      razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, (PaymentFailureResponse r) {
+        _finishError(
+            razorpay,
+            r.code == Razorpay.PAYMENT_CANCELLED
+                ? const PaymentException(PaymentErrorType.cancelled, 'cancelled')
+                : PaymentException(PaymentErrorType.failed, r.message ?? 'failed'));
+      });
+      razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, (ExternalWalletResponse r) {
+        _finishError(razorpay,
+            const PaymentException(PaymentErrorType.failed, 'external-wallet-unsupported'));
+      });
+      razorpay.open({
+        'key': order['keyId'],
+        'order_id': order['orderId'],
+        'amount': order['amountPaise'],
+        'currency': 'INR',
+        'name': 'Pawgo',
+        'description': description,
+        'theme': {'color': '#F59E2E'},
+      });
+    } catch (_) {
+      _finishError(razorpay, const PaymentException(PaymentErrorType.failed, 'open-failed'));
+    }
     return completer.future;
   }
 
