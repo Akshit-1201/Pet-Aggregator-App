@@ -26,6 +26,7 @@ import 'package:pet_aggregator_app/data/models/review.dart';
 import 'package:pet_aggregator_app/data/repositories/review_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/storage_repository.dart';
 import 'package:pet_aggregator_app/data/services/image_picker_service.dart';
+import 'package:pet_aggregator_app/data/services/payment_service.dart';
 
 class FakeAuthRepository implements AuthRepository {
   final _controller = StreamController<AppUser?>.broadcast();
@@ -552,5 +553,30 @@ class FakeImagePickerService implements ImagePickerService {
     calls++;
     if (shouldThrow) throw Exception('picker failed');
     return next;
+  }
+}
+
+class FakePaymentService implements PaymentService {
+  final PaymentResult? result;
+  final PaymentException? error;
+  final Completer<PaymentResult>? gate;
+  final List<int> chargedAmounts = [];
+  FakePaymentService({this.result, this.error, this.gate});
+
+  factory FakePaymentService.success() => FakePaymentService(
+      result: const PaymentResult(paymentId: 'pay_fake123', orderId: 'order_fake123'));
+
+  @override
+  Future<PaymentResult> payForBooking({
+    required int amountRupees,
+    required String description,
+    void Function()? onVerifying,
+  }) async {
+    chargedAmounts.add(amountRupees);
+    if (gate != null) return gate!.future;
+    if (error != null) throw error!;
+    onVerifying?.call();
+    return result ??
+        (throw const PaymentException(PaymentErrorType.failed, 'not-configured'));
   }
 }
