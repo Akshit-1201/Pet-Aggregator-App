@@ -18,6 +18,8 @@ void main() {
       authRepositoryProvider.overrideWithValue(auth),
       userRepositoryProvider.overrideWithValue(users),
       petRepositoryProvider.overrideWithValue(InMemoryPetRepository()),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
     ], initialLocation: Routes.location);
     await tester.pumpAndSettle();
 

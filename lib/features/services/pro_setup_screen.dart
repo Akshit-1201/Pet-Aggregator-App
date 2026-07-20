@@ -11,7 +11,8 @@ import '../../data/models/pro.dart';
 import '../../data/repositories/providers.dart';
 
 class ProSetupScreen extends ConsumerStatefulWidget {
-  const ProSetupScreen({super.key});
+  final bool fromOnboarding;
+  const ProSetupScreen({super.key, this.fromOnboarding = false});
   @override
   ConsumerState<ProSetupScreen> createState() => _ProSetupScreenState();
 }

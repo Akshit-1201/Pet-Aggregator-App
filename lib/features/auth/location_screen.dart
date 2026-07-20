@@ -6,7 +6,9 @@ import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_buttons.dart';
+import '../../data/models/role.dart';
 import '../../data/repositories/providers.dart';
+import 'onboarding_arg.dart';
 
 class LocationScreen extends ConsumerStatefulWidget {
   const LocationScreen({super.key});
@@ -35,11 +37,22 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       }
       return;
     }
-    if (mounted) context.go(Routes.createPet);
+    if (!mounted) return;
+    final role = ref.read(currentUserProfileProvider).value?.role ?? Role.petParent;
+    final target = switch (role) {
+      Role.petParent => Routes.createPet,
+      Role.servicePro => Routes.proSetup,
+      Role.homestayHost => Routes.hostSetup,
+    };
+    context.go(target, extra: const OnboardingArg(fromOnboarding: true));
   }
 
   @override
   Widget build(BuildContext context) {
+    // Warm currentUserProfileProvider (a StreamProvider) so its first value
+    // has arrived by the time _continue() reads the role synchronously —
+    // an unwatched StreamProvider's first ref.read is AsyncLoading.
+    ref.watch(currentUserProfileProvider);
     final c = context.pg;
     return Scaffold(
       backgroundColor: c.surface,

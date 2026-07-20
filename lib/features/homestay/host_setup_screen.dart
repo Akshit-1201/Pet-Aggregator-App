@@ -11,7 +11,8 @@ import '../../data/models/homestay.dart';
 import '../../data/repositories/providers.dart';
 
 class HostSetupScreen extends ConsumerStatefulWidget {
-  const HostSetupScreen({super.key});
+  final bool fromOnboarding;
+  const HostSetupScreen({super.key, this.fromOnboarding = false});
   @override
   ConsumerState<HostSetupScreen> createState() => _HostSetupScreenState();
 }

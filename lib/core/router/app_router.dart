@@ -36,6 +36,7 @@ import '../../features/pets/create_pet_screen.dart';
 import '../../features/pets/pet_profile_detail_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/profile/settings_screen.dart';
+import '../../features/auth/onboarding_arg.dart';
 import '../../features/bookings/my_bookings_screen.dart';
 import '../../features/reviews/rate_review_screen.dart';
 import '../../features/services/booking_confirmed_screen.dart';
@@ -80,15 +81,18 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.welcome, builder: (_, _) => const WelcomeScreen()),
       GoRoute(path: Routes.signup, builder: (_, _) => const SignupScreen()),
       GoRoute(path: Routes.location, builder: (_, _) => const LocationScreen()),
-      GoRoute(path: Routes.createPet, builder: (_, _) => const CreatePetScreen()),
+      GoRoute(path: Routes.createPet, builder: (_, state) =>
+          CreatePetScreen(fromOnboarding: (state.extra as OnboardingArg?)?.fromOnboarding ?? false)),
       GoRoute(path: Routes.woofMatch, builder: (_, state) => WoofMatchScreen(pet: state.extra as PetProfile?)),
       GoRoute(path: Routes.nearby, builder: (_, _) => const NearbyMapScreen()),
-      GoRoute(path: Routes.proSetup, builder: (_, _) => const ProSetupScreen()),
+      GoRoute(path: Routes.proSetup, builder: (_, state) =>
+          ProSetupScreen(fromOnboarding: (state.extra as OnboardingArg?)?.fromOnboarding ?? false)),
       GoRoute(path: Routes.servicePro, builder: (_, state) => ProProfileScreen(pro: state.extra as Pro?)),
       GoRoute(path: Routes.booking, builder: (_, state) => BookingScreen(pro: state.extra as Pro?)),
       GoRoute(path: Routes.payment, builder: (_, state) => PaymentScreen(draft: state.extra as Booking?)),
       GoRoute(path: Routes.bookingConfirmed, builder: (_, state) => BookingConfirmedScreen(booking: state.extra as Booking?)),
-      GoRoute(path: Routes.hostSetup, builder: (_, _) => const HostSetupScreen()),
+      GoRoute(path: Routes.hostSetup, builder: (_, state) =>
+          HostSetupScreen(fromOnboarding: (state.extra as OnboardingArg?)?.fromOnboarding ?? false)),
       GoRoute(path: Routes.homestay, builder: (_, _) => const HomestayListScreen()),
       GoRoute(path: Routes.host, builder: (_, state) => HostProfileScreen(homestay: state.extra as Homestay?)),
       GoRoute(path: Routes.hostRequest, builder: (_, state) => HomestayRequestScreen(homestay: state.extra as Homestay?)),

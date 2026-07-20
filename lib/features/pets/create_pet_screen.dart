@@ -14,7 +14,8 @@ import '../../data/models/pet_profile.dart';
 import '../../data/repositories/providers.dart';
 
 class CreatePetScreen extends ConsumerStatefulWidget {
-  const CreatePetScreen({super.key});
+  final bool fromOnboarding;
+  const CreatePetScreen({super.key, this.fromOnboarding = false});
   @override
   ConsumerState<CreatePetScreen> createState() => _CreatePetScreenState();
 }
