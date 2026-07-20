@@ -29,9 +29,11 @@
   "storage": {
     "rules": "storage.rules"
   },
+  "functions": { "source": "functions", "predeploy": ["npm --prefix functions run build"] },
   "emulators": {
     "auth": { "port": 9099 },
     "firestore": { "port": 8080 },
+    "functions": { "port": 5001 },
     "ui": { "enabled": false },
     "singleProjectMode": true
   }
