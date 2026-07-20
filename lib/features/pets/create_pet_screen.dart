@@ -28,6 +28,7 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
   bool _vaccinated = true;
   bool _saving = false;
   Uint8List? _photoBytes;
+  String? _nameError;
 
   static const _speciesLabel = {
     Species.dog: '🐶 Dog', Species.cat: '🐱 Cat', Species.other: '🐦 Other',
@@ -60,9 +61,13 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
   Future<void> _finish() async {
     final uid = ref.read(authRepositoryProvider).currentUser?.uid;
     if (uid == null) return;
-    setState(() => _saving = true);
-    final area = ref.read(currentUserProfileProvider).value?.area ?? '';
     final name = _name.text.trim();
+    if (name.isEmpty) {
+      setState(() => _nameError = "Please enter your pet's name.");
+      return;
+    }
+    setState(() { _saving = true; _nameError = null; });
+    final area = ref.read(currentUserProfileProvider).value?.area ?? '';
 
     var photoUrl = '';
     final bytes = _photoBytes;
@@ -110,7 +115,10 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
       backgroundColor: c.surface,
       body: SafeArea(
         child: Column(children: [
-          PgAppBar(title: 'Add your pet', onBack: () => context.go(Routes.signup)),
+          PgAppBar(title: 'Add your pet',
+            onBack: () => widget.fromOnboarding
+                ? context.go(Routes.location)
+                : (context.canPop() ? context.pop() : context.go(Routes.home))),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
@@ -131,6 +139,10 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
                 ])),
                 const SizedBox(height: 14),
                 PgTextField(label: 'Pet name', controller: _name, hint: 'Bruno'),
+                if (_nameError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, left: 4),
+                    child: Text(_nameError!, style: PgText.inter(13, FontWeight.w600, color: c.heart))),
                 const SizedBox(height: 14),
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Expanded(child: PgTextField(label: 'Breed', controller: _breed, hint: 'Labrador')),
@@ -178,9 +190,18 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
           Container(
             decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
             padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
-            child: PgPrimaryButton(
-              label: _saving ? 'Saving…' : 'Finish & explore Pawgo',
-              onPressed: _saving ? () {} : _finish),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              PgPrimaryButton(
+                label: _saving ? 'Saving…' : 'Finish & explore Pawgo',
+                onPressed: _saving ? () {} : _finish),
+              if (widget.fromOnboarding) ...[
+                const SizedBox(height: 6),
+                TextButton(
+                  onPressed: _saving ? null : () => context.go(Routes.home),
+                  child: Text('Skip for now',
+                    style: PgText.inter(13.5, FontWeight.w600, color: c.muted))),
+              ],
+            ]),
           ),
         ]),
       ),
