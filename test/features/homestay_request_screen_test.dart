@@ -40,7 +40,7 @@ void main() {
     expect(find.text('Request sent! 🎉'), findsOneWidget); // navigated to Host-accepted
   });
 
-  testWidgets('empty pets disables Send', (tester) async {
+  testWidgets('empty pets shows the Add a pet CTA instead of Send', (tester) async {
     final auth = FakeAuthRepository();
     await auth.signUp(email: 'me@x.com', password: 'secret1');
     final bookings = InMemoryHomestayBookingRepository();
@@ -51,8 +51,8 @@ void main() {
     ], initialLocation: Routes.hostRequest, extra: _meera);
     await tester.pumpAndSettle();
     expect(find.text('Add a pet to book'), findsOneWidget);
-    await tester.tap(find.textContaining('Send request to Meera'));
-    await tester.pumpAndSettle();
+    expect(find.text('Add a pet'), findsOneWidget);
+    expect(find.textContaining('Send request to Meera'), findsNothing);
     expect(await bookings.watchMyHomestayBookings(auth.currentUser!.uid).first, isEmpty);
   });
 

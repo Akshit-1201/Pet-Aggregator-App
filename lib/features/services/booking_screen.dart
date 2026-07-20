@@ -169,9 +169,11 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
           Container(
             decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
             padding: const EdgeInsets.fromLTRB(22, 13, 22, 18),
-            child: PgPrimaryButton(
-              label: 'Continue to payment',
-              onPressed: pets.isEmpty ? () {} : () => _continue(pro, pets)),
+            child: pets.isEmpty
+                ? PgPrimaryButton(
+                    label: 'Add a pet', onPressed: () => context.push(Routes.createPet))
+                : PgPrimaryButton(
+                    label: 'Continue to payment', onPressed: () => _continue(pro, pets)),
           ),
         ]),
       ),

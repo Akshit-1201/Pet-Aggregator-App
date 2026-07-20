@@ -196,9 +196,12 @@ class _HomestayRequestScreenState extends ConsumerState<HomestayRequestScreen> {
           Container(
             decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
             padding: const EdgeInsets.fromLTRB(22, 13, 22, 18),
-            child: PgPrimaryButton(
-              label: _saving ? 'Sending…' : 'Send request to $hostFirst',
-              onPressed: (pets.isEmpty || _saving) ? () {} : () => _send(h, pets)),
+            child: pets.isEmpty
+                ? PgPrimaryButton(
+                    label: 'Add a pet', onPressed: () => context.push(Routes.createPet))
+                : PgPrimaryButton(
+                    label: _saving ? 'Sending…' : 'Send request to $hostFirst',
+                    onPressed: _saving ? () {} : () => _send(h, pets)),
           ),
         ]),
       ),
