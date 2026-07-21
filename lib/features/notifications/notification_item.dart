@@ -114,6 +114,14 @@ List<NotificationItem> buildNotifications({
           title: "${s.petName}'s stay was cancelled",
           body: '${s.homeName} · ${s.nights} nights',
           timestamp: ts, route: Routes.bookings, extra: 1, read: !unread(ts)));
+    } else if (s.status == 'paid') {
+      final ts = _eventTs(s.updatedAt, s.createdAt);
+      items.add(NotificationItem(
+          type: PgNotificationType.homestay,
+          icon: '💰', accent: const Color(0xFF34B27B),
+          title: "${s.petName}'s stay is confirmed & paid",
+          body: '${s.homeName} · ${HomestayBooking.fmtDay(s.checkIn)} · ${s.nights} nights',
+          timestamp: ts, route: Routes.bookings, extra: 1, read: !unread(ts)));
     }
   }
 
