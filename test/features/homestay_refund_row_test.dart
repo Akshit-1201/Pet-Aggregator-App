@@ -14,7 +14,8 @@ HomestayBooking _stay(String uid, {required String status, required int checkInH
         checkIn: DateTime.now().add(Duration(hours: checkInHours)),
         checkOut: DateTime.now().add(Duration(hours: checkInHours + 72)),
         nights: 3, subtotal: 2700, fee: 150, total: 2850, status: status,
-        paymentId: 'pay_x', refundAmount: refundAmount);
+        paymentId: 'pay_x', refundAmount: refundAmount,
+        createdAt: DateTime.now().millisecondsSinceEpoch);
 
 // Note: FakePaymentService.refundStay only records the call + returns the result
 // (it models the CLIENT calling the function); the actual paid->cancelled write is
@@ -95,5 +96,48 @@ void main() {
     final uid = auth.currentUser!.uid;
     await _pump(tester, _stay(uid, status: 'cancelled', checkInHours: 120, refundAmount: 900));
     expect(find.textContaining('₹900 refunded'), findsOneWidget);
+  });
+
+  testWidgets('tapping Keep dismisses the dialog and refunds nothing', (tester) async {
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    final uid = auth.currentUser!.uid;
+    final payments = FakePaymentService(
+        refundResult: const RefundResult(refundAmount: 2700, refundId: 'rfnd_1'));
+    final (_, p) = await _pump(tester, _stay(uid, status: 'paid', checkInHours: 120), payments: payments);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Keep'));
+    await tester.pumpAndSettle();
+    expect(p.refundedBookingIds, isEmpty);
+    expect(find.text('Cancel this stay?'), findsNothing);
+  });
+
+  testWidgets('a post-claim refund failure says the stay was cancelled', (tester) async {
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    final uid = auth.currentUser!.uid;
+    final payments = FakePaymentService(
+        refundError: const PaymentException(PaymentErrorType.failed, 'refund-failed'));
+    await _pump(tester, _stay(uid, status: 'paid', checkInHours: 120), payments: payments);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel & refund'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Stay cancelled, but the refund'), findsOneWidget);
+  });
+
+  testWidgets('a pre-claim failure says nothing happened', (tester) async {
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    final uid = auth.currentUser!.uid;
+    final payments = FakePaymentService(
+        refundError: const PaymentException(PaymentErrorType.failed, 'cancel-failed'));
+    await _pump(tester, _stay(uid, status: 'paid', checkInHours: 120), payments: payments);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel & refund'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("Couldn't cancel the stay"), findsOneWidget);
   });
 }

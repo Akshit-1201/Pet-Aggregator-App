@@ -22,20 +22,10 @@ class HomestayBooking {
       ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   static String fmtDay(DateTime d) => '${_weekdays[d.weekday - 1]}, ${d.day} ${_months[d.month - 1]}';
 
-  // Date-only when at exact midnight (keeps the short calendar-date format
-  // most bookings use); full ISO-8601 otherwise, so a time-of-day (e.g. a
-  // check-in a few hours from now) survives a toMap/fromMap round-trip.
-  // The 24h refund cutoff (refund_policy.dart) and canCancelPaidStay need
-  // that precision — a date-only round-trip would silently floor any
-  // same-day check-in to midnight and misclassify it as already past.
-  static String _iso(DateTime d) {
-    final date = '${d.year.toString().padLeft(4, '0')}-'
-        '${d.month.toString().padLeft(2, '0')}-'
-        '${d.day.toString().padLeft(2, '0')}';
-    final atMidnight =
-        d.hour == 0 && d.minute == 0 && d.second == 0 && d.millisecond == 0 && d.microsecond == 0;
-    return atMidnight ? date : d.toIso8601String();
-  }
+  static String _iso(DateTime d) =>
+      '${d.year.toString().padLeft(4, '0')}-'
+      '${d.month.toString().padLeft(2, '0')}-'
+      '${d.day.toString().padLeft(2, '0')}';
 
   Map<String, dynamic> toMap() => {
         'guestId': guestId,
