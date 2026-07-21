@@ -31,11 +31,11 @@ service cloud.firestore {
                       || resource.data.proId == request.auth.uid);
       allow create: if request.auth != null
                   && request.resource.data.parentId == request.auth.uid
-                  && request.resource.data.status == 'confirmed';
+                  && request.resource.data.status == 'pending';
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
                     && resource.data.parentId == request.auth.uid
-                    && resource.data.status == 'confirmed'
+                    && resource.data.status in ['pending', 'confirmed']
                     && request.resource.data.status == 'cancelled';
       allow delete: if false;
     }
@@ -52,23 +52,16 @@ service cloud.firestore {
       allow create: if request.auth != null
                   && request.resource.data.guestId == request.auth.uid
                   && request.resource.data.status == 'requested';
-      allow update: if request.auth != null && (
-          ( request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
-            && (
-              (resource.data.hostId == request.auth.uid
-                && resource.data.status == 'requested'
-                && request.resource.data.status in ['accepted', 'declined'])
-              || (resource.data.guestId == request.auth.uid
-                && resource.data.status in ['requested', 'accepted']
-                && request.resource.data.status == 'cancelled')
-            )
-          )
-          || ( resource.data.guestId == request.auth.uid
-            && resource.data.status == 'accepted'
-            && request.resource.data.status == 'paid'
-            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'paymentId'])
-          )
-        );
+      allow update: if request.auth != null
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
+                    && (
+                      (resource.data.hostId == request.auth.uid
+                        && resource.data.status == 'requested'
+                        && request.resource.data.status in ['accepted', 'declined'])
+                      || (resource.data.guestId == request.auth.uid
+                        && resource.data.status in ['requested', 'accepted']
+                        && request.resource.data.status == 'cancelled')
+                    );
       allow delete: if false;
     }
     match /posts/{postId} {
