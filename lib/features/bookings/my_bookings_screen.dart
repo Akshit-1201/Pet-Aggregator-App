@@ -112,6 +112,9 @@ class _MyBookingsTab extends ConsumerWidget {
               phase: servicePhase(b, now),
               rated: rated.contains(b.id),
               canCancel: canCancelService(b, now),
+              canPay: false,
+              onPay: null,
+              showContactHost: false,
               onCancel: () => confirmAndRun(context,
                   title: 'Cancel this booking?',
                   message: "This can't be undone.",
@@ -133,6 +136,9 @@ class _MyBookingsTab extends ConsumerWidget {
               phase: stayPhase(s, now),
               rated: rated.contains(s.id),
               canCancel: canCancelStay(s, now),
+              canPay: canPay(s, now),
+              showContactHost: stayPhase(s, now) == BookingPhase.upcoming,
+              onPay: () => context.push(Routes.homestayPayment, extra: s),
               onCancel: () => confirmAndRun(context,
                   title: 'Cancel this booking?',
                   message: "This can't be undone.",
@@ -152,11 +158,13 @@ class _MyBookingsTab extends ConsumerWidget {
 class _MyBookingRow extends StatelessWidget {
   final String emoji, name, detail;
   final BookingPhase phase;
-  final bool rated, canCancel;
+  final bool rated, canCancel, canPay, showContactHost;
   final VoidCallback onRate, onCancel;
+  final VoidCallback? onPay;
   const _MyBookingRow(
       {required this.emoji, required this.name, required this.detail, required this.phase,
-      required this.rated, required this.canCancel, required this.onRate, required this.onCancel});
+      required this.rated, required this.canCancel, required this.onRate, required this.onCancel,
+      this.canPay = false, this.onPay, this.showContactHost = false});
 
   @override
   Widget build(BuildContext context) {
@@ -201,6 +209,17 @@ class _MyBookingRow extends StatelessWidget {
                         borderRadius: BorderRadius.circular(20)),
                     child: Text('Rate',
                         style: PgText.poppins(13, FontWeight.w700, color: Colors.white)))),
+          ] else if (canPay) ...[
+            const SizedBox(height: 6),
+            GestureDetector(
+                onTap: onPay,
+                child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: [c.brand, c.brand2]),
+                        borderRadius: BorderRadius.circular(20)),
+                    child: Text('Pay to confirm',
+                        style: PgText.poppins(12.5, FontWeight.w700, color: Colors.white)))),
           ],
           if (canCancel) ...[
             const SizedBox(height: 6),
@@ -208,6 +227,11 @@ class _MyBookingRow extends StatelessWidget {
                 onTap: onCancel,
                 child: Text('Cancel',
                     style: PgText.inter(12.5, FontWeight.w600, color: c.muted))),
+          ],
+          if (showContactHost) ...[
+            const SizedBox(height: 6),
+            Text('Contact host to cancel',
+                style: PgText.inter(11.5, FontWeight.w500, color: c.faint)),
           ],
         ]),
       ]),
