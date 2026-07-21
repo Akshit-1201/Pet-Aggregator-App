@@ -2,7 +2,7 @@
 //
 // Verifies the payment callables against the Functions emulator. Run with:
 //   npm --prefix functions run build
-//   firebase emulators:start --only auth,functions --project pet-aggregator-app
+//   firebase emulators:start --only auth,firestore,functions --project pet-aggregator-app
 //   flutter test integration_test/functions_test.dart -d emulator-5554
 // Requires functions/.secret.local containing RAZORPAY_KEY_SECRET=test_secret
 // (git-ignored; recreate on a fresh clone).
@@ -100,12 +100,14 @@ void main() {
     // A requested (unpaid) booking owned by the guest -> not-paid.
     await stays.createHomestayBooking(HomestayBooking(guestId: guest.uid, hostId: 'host_$stamp',
         homeName: 'H', hostName: 'M', petId: 'p', petName: 'Bruno', ratePerNight: 900,
-        checkIn: DateTime.now().add(const Duration(hours: 12)),
-        checkOut: DateTime.now().add(const Duration(hours: 84)), nights: 3,
+        checkIn: DateTime.now().add(const Duration(days: 1)),
+        checkOut: DateTime.now().add(const Duration(days: 4)), nights: 3,
         subtotal: 2700, fee: 150, total: 2850));
     final reqId = (await stays.watchMyHomestayBookings(guest.uid).firstWhere((l) => l.isNotEmpty)).single.id;
     await expectLater(fns.httpsCallable('refundBookingPayment').call({'bookingId': reqId}),
-        throwsA(isA<FirebaseFunctionsException>().having((e) => e.code, 'code', 'failed-precondition')));
+        throwsA(isA<FirebaseFunctionsException>()
+            .having((e) => e.code, 'code', 'failed-precondition')
+            .having((e) => e.message, 'message', 'not-paid')));
 
     // Drive it to paid (checkIn ~12h away -> the 0-refund path): host accepts, guest pays.
     await auth.signOut();
@@ -116,8 +118,8 @@ void main() {
     await auth.signIn(email: 'rf_$stamp@x.com', password: 'secret1');
     await stays.createHomestayBooking(HomestayBooking(guestId: guest.uid, hostId: host.uid,
         homeName: 'H2', hostName: 'M', petId: 'p', petName: 'Bruno', ratePerNight: 900,
-        checkIn: DateTime.now().add(const Duration(hours: 12)),
-        checkOut: DateTime.now().add(const Duration(hours: 84)), nights: 3,
+        checkIn: DateTime.now().add(const Duration(days: 1)),
+        checkOut: DateTime.now().add(const Duration(days: 4)), nights: 3,
         subtotal: 2700, fee: 150, total: 2850));
     final payId = (await stays.watchMyHomestayBookings(guest.uid)
         .firstWhere((l) => l.any((s) => s.hostId == host.uid))).firstWhere((s) => s.hostId == host.uid).id;
@@ -127,6 +129,16 @@ void main() {
     await auth.signOut();
     await auth.signIn(email: 'rf_$stamp@x.com', password: 'secret1');
     await stays.markPaid(payId, 'pay_rf_$stamp');
+
+    // The host must NOT be able to refund the guest's booking (admin-privileged
+    // function — this guest-ownership check is the only barrier).
+    await auth.signOut();
+    await auth.signIn(email: 'rfh_$stamp@x.com', password: 'secret1');
+    await expectLater(fns.httpsCallable('refundBookingPayment').call({'bookingId': payId}),
+        throwsA(isA<FirebaseFunctionsException>()
+            .having((e) => e.code, 'code', 'permission-denied')));
+    await auth.signOut();
+    await auth.signIn(email: 'rf_$stamp@x.com', password: 'secret1');
 
     // Guest cancels < 24h out -> 0 refund, no Razorpay call, booking cancelled.
     final res = await fns.httpsCallable('refundBookingPayment').call<Map<Object?, Object?>>({'bookingId': payId});

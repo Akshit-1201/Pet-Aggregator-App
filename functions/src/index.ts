@@ -78,34 +78,52 @@ export const refundBookingPayment = onCall(
       if (b.status !== "paid") throw new HttpsError("failed-precondition", "not-paid");
       // checkIn is a date (YYYY-MM-DD); interpret at IST midnight (Mumbai market).
       const checkIn = new Date(`${b.checkIn}T00:00:00+05:30`);
+      if (!Number.isFinite(checkIn.getTime())) {
+        throw new HttpsError("failed-precondition", "bad-checkin");
+      }
       const now = new Date();
       if (now.getTime() >= checkIn.getTime()) {
         throw new HttpsError("failed-precondition", "after-checkin");
       }
       const hours = (checkIn.getTime() - now.getTime()) / 3600000;
       const refundAmount = hours >= 24 ? (b.subtotal as number) : 0;
+      const paymentId = (b.paymentId as string) || "";
+      // A refund needs a payment to refund against — assert BEFORE claiming so
+      // this failure is genuinely pre-claim (booking left untouched).
+      if (refundAmount > 0 && !paymentId) {
+        throw new HttpsError("failed-precondition", "no-payment-id");
+      }
       tx.update(ref, {status: "cancelled", updatedAt: Date.now(), refundAmount});
-      return {refundAmount, paymentId: (b.paymentId as string) || ""};
+      return {refundAmount, paymentId};
     });
 
     let refundId = "";
     if (claim.refundAmount > 0) {
-      if (!claim.paymentId) throw new HttpsError("failed-precondition", "no-payment-id");
+      let r;
       try {
         const rzp = new Razorpay({
           key_id: razorpayKeyId.value(),
           key_secret: razorpayKeySecret.value(),
         });
-        const r = await rzp.payments.refund(claim.paymentId,
+        r = await rzp.payments.refund(claim.paymentId,
           {amount: claim.refundAmount * 100, speed: "normal"});
-        refundId = r.id;
-        await ref.update({refundId});
       } catch (e) {
-        // The booking is already cancelled with refundAmount set; refundId stays
-        // '' (a tracked reconciliation case). Signal distinctly so the client
-        // shows an honest "cancelled but refund failed" message.
+        // Pre-money failure: the booking is already cancelled with refundAmount
+        // set but no refund was issued (refundId stays '') — a reconciliation
+        // case the client surfaces honestly as "cancelled but refund failed".
         logger.error("refundBookingPayment refund failed", e);
         throw new HttpsError("internal", "refund-failed");
+      }
+      refundId = r.id;
+      // The money HAS moved — persist outside the Razorpay try so a Firestore
+      // failure is never reported as a failed refund. Log the id loudly so it
+      // stays recoverable.
+      try {
+        await ref.update({refundId});
+      } catch (e) {
+        logger.error(
+          "refundBookingPayment: refund SUCCEEDED but persisting refundId failed",
+          {bookingId, refundId, error: e});
       }
     }
     return {refundAmount: claim.refundAmount, refundId};
