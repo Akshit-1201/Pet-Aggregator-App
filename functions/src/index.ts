@@ -10,23 +10,85 @@ admin.initializeApp();
 const razorpayKeyId = defineSecret("RAZORPAY_KEY_ID");
 const razorpayKeySecret = defineSecret("RAZORPAY_KEY_SECRET");
 
+type Kind = "service" | "homestay";
+
+/** Reads the booking, asserts ownership + payable state, and recomputes the
+ *  authoritative price from the LISTING (never from client-written fields). */
+async function loadPayable(kind: Kind, bookingId: string, uid: string) {
+  const db = admin.firestore();
+  const col = kind === "service" ? "bookings" : "homestayBookings";
+  const ref = db.collection(col).doc(bookingId);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError("not-found", "no-booking");
+  const b = snap.data() as FirebaseFirestore.DocumentData;
+
+  const ownerField = kind === "service" ? "parentId" : "guestId";
+  if (b[ownerField] !== uid) throw new HttpsError("permission-denied", "not-your-booking");
+  const payableStatus = kind === "service" ? "pending" : "accepted";
+  if (b.status !== payableStatus) throw new HttpsError("failed-precondition", "not-payable");
+
+  let amounts: {total: number; parts: Record<string, number>};
+  if (kind === "service") {
+    const pro = await db.collection("pros").doc(String(b.proId)).get();
+    if (!pro.exists) throw new HttpsError("failed-precondition", "no-listing");
+    const rate = Number(pro.data()?.rate);
+    if (!Number.isFinite(rate) || rate <= 0) throw new HttpsError("failed-precondition", "bad-amount");
+    const fee = Math.round(rate * 0.1);
+    amounts = {total: rate + fee, parts: {rate, fee, total: rate + fee}};
+  } else {
+    const home = await db.collection("homestays").doc(String(b.hostId)).get();
+    if (!home.exists) throw new HttpsError("failed-precondition", "no-listing");
+    const ratePerNight = Number(home.data()?.ratePerNight);
+    // checkIn/checkOut are date-only YYYY-MM-DD at IST midnight (existing contract).
+    const ci = new Date(`${String(b.checkIn).slice(0, 10)}T00:00:00+05:30`);
+    const co = new Date(`${String(b.checkOut).slice(0, 10)}T00:00:00+05:30`);
+    if (!Number.isFinite(ci.getTime()) || !Number.isFinite(co.getTime())) {
+      throw new HttpsError("failed-precondition", "bad-amount");
+    }
+    const nights = Math.round((co.getTime() - ci.getTime()) / 86400000);
+    if (!Number.isFinite(ratePerNight) || ratePerNight <= 0 || nights <= 0) {
+      throw new HttpsError("failed-precondition", "bad-amount");
+    }
+    const subtotal = ratePerNight * nights;
+    const fee = 150;
+    amounts = {total: subtotal + fee, parts: {subtotal, fee, nights, total: subtotal + fee}};
+  }
+  if (amounts.total <= 0) throw new HttpsError("failed-precondition", "bad-amount");
+  // Never surprise-charge: the stored total must match what the server computes.
+  if (Number(b.total) !== amounts.total) {
+    throw new HttpsError("failed-precondition", "amount-mismatch");
+  }
+  return {ref, booking: b, amounts};
+}
+
+function readArgs(data: unknown) {
+  const d = (data ?? {}) as Record<string, unknown>;
+  const kind = d.kind;
+  const bookingId = d.bookingId;
+  if ((kind !== "service" && kind !== "homestay") ||
+      typeof bookingId !== "string" || bookingId === "") {
+    throw new HttpsError("invalid-argument", "bad-args");
+  }
+  return {kind: kind as Kind, bookingId};
+}
+
 export const createBookingOrder = onCall(
   {region: "asia-south1", secrets: [razorpayKeyId, razorpayKeySecret]},
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "sign-in-required");
-    const amountRupees = request.data?.amountRupees;
-    if (!Number.isInteger(amountRupees) || amountRupees < 1 || amountRupees > 100000) {
-      throw new HttpsError("invalid-argument", "bad-amount");
-    }
+    const {kind, bookingId} = readArgs(request.data);
+    const uid = request.auth.uid;
+    const {amounts} = await loadPayable(kind, bookingId, uid);
     const rzp = new Razorpay({
       key_id: razorpayKeyId.value(),
       key_secret: razorpayKeySecret.value(),
     });
     try {
       const order = await rzp.orders.create({
-        amount: amountRupees * 100, // paise
+        amount: amounts.total * 100, // paise — server-computed, never client-supplied
         currency: "INR",
-        receipt: `bk_${request.auth.uid}_${Date.now()}`.slice(0, 40),
+        receipt: `bk_${uid}_${Date.now()}`.slice(0, 40),
+        notes: {bookingId, kind, uid}, // binds this order to this booking
       });
       return {orderId: order.id, amountPaise: order.amount, keyId: razorpayKeyId.value()};
     } catch (e) {
@@ -36,15 +98,20 @@ export const createBookingOrder = onCall(
   });
 
 export const verifyBookingPayment = onCall(
-  {region: "asia-south1", secrets: [razorpayKeySecret]},
+  {region: "asia-south1", secrets: [razorpayKeyId, razorpayKeySecret]},
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "sign-in-required");
-    const {orderId, paymentId, signature} = request.data ?? {};
+    const {kind, bookingId} = readArgs(request.data);
+    const d = request.data as Record<string, unknown>;
+    const {orderId, paymentId, signature} = d;
     if (typeof orderId !== "string" || orderId === "" ||
         typeof paymentId !== "string" || paymentId === "" ||
         typeof signature !== "string" || signature === "") {
       throw new HttpsError("invalid-argument", "bad-args");
     }
+    const uid = request.auth.uid;
+
+    // 1. The signature proves Razorpay issued this payment for this order.
     const expected = crypto.createHmac("sha256", razorpayKeySecret.value())
       .update(`${orderId}|${paymentId}`)
       .digest("hex");
@@ -53,7 +120,43 @@ export const verifyBookingPayment = onCall(
     if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
       throw new HttpsError("permission-denied", "signature-mismatch");
     }
-    return {verified: true};
+
+    // 2. The order's notes prove it was created for THIS booking and caller —
+    //    without this a payment for booking A could confirm booking B.
+    let order;
+    try {
+      const rzp = new Razorpay({
+        key_id: razorpayKeyId.value(),
+        key_secret: razorpayKeySecret.value(),
+      });
+      order = await rzp.orders.fetch(orderId);
+    } catch (e) {
+      logger.error("verifyBookingPayment order fetch failed", e);
+      throw new HttpsError("internal", "order-fetch-failed");
+    }
+    const notes = (order?.notes ?? {}) as Record<string, unknown>;
+    if (notes.bookingId !== bookingId || notes.kind !== kind || notes.uid !== uid) {
+      throw new HttpsError("permission-denied", "order-booking-mismatch");
+    }
+
+    // 3. Re-validate (state may have changed since the order) and write.
+    const {ref, amounts} = await loadPayable(kind, bookingId, uid);
+    const payableStatus = kind === "service" ? "pending" : "accepted";
+    const paidStatus = kind === "service" ? "confirmed" : "paid";
+    await admin.firestore().runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists) throw new HttpsError("not-found", "no-booking");
+      if (snap.data()?.status !== payableStatus) {
+        throw new HttpsError("failed-precondition", "not-payable");
+      }
+      tx.update(ref, {
+        ...amounts.parts, // server-authoritative amounts
+        status: paidStatus,
+        paymentId,
+        updatedAt: Date.now(),
+      });
+    });
+    return {confirmed: true, paymentId};
   });
 
 export const refundBookingPayment = onCall(
