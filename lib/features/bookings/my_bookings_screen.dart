@@ -200,10 +200,13 @@ Future<void> _confirmCancelPaid(
                 : 'Stay cancelled.'))));
   } on PaymentException catch (e) {
     messenger.showSnackBar(SnackBar(
+        // Only 'cancel-failed' is provably "nothing happened", so it is the
+        // explicit arm; anything unrecognised falls through to the
+        // non-asserting message rather than claiming the stay is untouched.
         content: Text(switch (e.message) {
       'refund-failed' => "Stay cancelled, but the refund didn't go through — contact support.",
-      'unconfirmed' => "We couldn't confirm this cancellation — check My bookings before trying again.",
-      _ => "Couldn't cancel the stay — try again.",
+      'cancel-failed' => "Couldn't cancel the stay — try again.",
+      _ => "We couldn't confirm this cancellation — check My bookings before trying again.",
     })));
   }
 }
