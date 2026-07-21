@@ -353,6 +353,12 @@ void main() {
     // Guest pays the accepted stay: accepted -> paid with a paymentId.
     await auth.signOut();
     await auth.signIn(email: 'lg_$stamp@x.com', password: 'secret1');
+    // A valid accepted->paid transition that also touches another field is denied
+    // by the hasOnly(['status','updatedAt','paymentId']) guard (stay still accepted here).
+    await expectLater(
+        db.collection('homestayBookings').doc(stayId).update(
+            {'status': 'paid', 'total': 1, 'updatedAt': 5, 'paymentId': 'p'}),
+        throwsA(isA<FirebaseException>()));
     await stays.markPaid(stayId, 'pay_ok');
     final paid = (await stays.watchMyHomestayBookings(guest.uid).firstWhere(
             (l) => l.any((s) => s.id == stayId && s.status == 'paid')))
@@ -363,11 +369,6 @@ void main() {
     // A paid stay can no longer be cancelled by the guest (no matching branch).
     await expectLater(
         db.collection('homestayBookings').doc(stayId).update({'status': 'cancelled', 'updatedAt': 4}),
-        throwsA(isA<FirebaseException>()));
-    // The pay branch cannot smuggle an extra field.
-    await expectLater(
-        db.collection('homestayBookings').doc(stayId).update(
-            {'status': 'paid', 'total': 1, 'updatedAt': 5, 'paymentId': 'p'}),
         throwsA(isA<FirebaseException>()));
 
     // Separate stay: the guest-cancel-of-accepted arrow is still covered (the
