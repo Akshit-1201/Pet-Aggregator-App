@@ -1,7 +1,7 @@
 class HomestayBooking {
-  final String id, guestId, hostId, homeName, hostName, petId, petName, note, status, paymentId;
+  final String id, guestId, hostId, homeName, hostName, petId, petName, note, status, paymentId, refundId;
   final DateTime checkIn, checkOut;
-  final int ratePerNight, nights, subtotal, fee, total, createdAt, updatedAt;
+  final int ratePerNight, nights, subtotal, fee, total, createdAt, updatedAt, refundAmount;
 
   const HomestayBooking({
     this.id = '',
@@ -9,7 +9,7 @@ class HomestayBooking {
     required this.hostName, required this.petId, required this.petName,
     required this.ratePerNight, required this.checkIn, required this.checkOut,
     required this.nights, required this.subtotal, required this.fee, required this.total,
-    this.note = '', this.paymentId = '', this.status = 'requested', this.createdAt = 0, this.updatedAt = 0,
+    this.note = '', this.paymentId = '', this.refundAmount = 0, this.refundId = '', this.status = 'requested', this.createdAt = 0, this.updatedAt = 0,
   });
 
   static const int serviceFee = 150;
@@ -43,6 +43,8 @@ class HomestayBooking {
         'total': total,
         'note': note,
         'paymentId': paymentId,
+        'refundAmount': refundAmount,
+        'refundId': refundId,
         'status': status,
         'createdAt': createdAt,
         'updatedAt': updatedAt,
@@ -65,6 +67,8 @@ class HomestayBooking {
         total: (m['total'] ?? 0) as int,
         note: (m['note'] ?? '') as String,
         paymentId: (m['paymentId'] ?? '') as String,
+        refundAmount: (m['refundAmount'] ?? 0) as int,
+        refundId: (m['refundId'] ?? '') as String,
         status: (m['status'] ?? 'requested') as String,
         createdAt: (m['createdAt'] is int) ? m['createdAt'] as int : 0,
         updatedAt: (m['updatedAt'] is int) ? m['updatedAt'] as int : 0,
