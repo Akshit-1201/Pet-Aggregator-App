@@ -344,14 +344,53 @@ void main() {
         db.collection('homestayBookings').doc(stayId).update({'total': 1, 'updatedAt': 2}),
         throwsA(isA<FirebaseException>()));
 
-    // Guest can cancel the accepted stay.
+    // Host cannot mark the stay paid (only the guest pays).
+    await expectLater(
+        db.collection('homestayBookings').doc(stayId).update(
+            {'status': 'paid', 'updatedAt': 3, 'paymentId': 'pay_h'}),
+        throwsA(isA<FirebaseException>()));
+
+    // Guest pays the accepted stay: accepted -> paid with a paymentId.
     await auth.signOut();
     await auth.signIn(email: 'lg_$stamp@x.com', password: 'secret1');
-    await stays.cancelStay(stayId);
+    await stays.markPaid(stayId, 'pay_ok');
+    final paid = (await stays.watchMyHomestayBookings(guest.uid).firstWhere(
+            (l) => l.any((s) => s.id == stayId && s.status == 'paid')))
+        .firstWhere((s) => s.id == stayId);
+    expect(paid.paymentId, 'pay_ok');
+    expect(paid.updatedAt, greaterThan(0));
+
+    // A paid stay can no longer be cancelled by the guest (no matching branch).
+    await expectLater(
+        db.collection('homestayBookings').doc(stayId).update({'status': 'cancelled', 'updatedAt': 4}),
+        throwsA(isA<FirebaseException>()));
+    // The pay branch cannot smuggle an extra field.
+    await expectLater(
+        db.collection('homestayBookings').doc(stayId).update(
+            {'status': 'paid', 'total': 1, 'updatedAt': 5, 'paymentId': 'p'}),
+        throwsA(isA<FirebaseException>()));
+
+    // Separate stay: the guest-cancel-of-accepted arrow is still covered (the
+    // first stay above was consumed by the pay path instead).
+    await stays.createHomestayBooking(HomestayBooking(guestId: guest.uid, hostId: host.uid,
+        homeName: 'H2', hostName: 'M', petId: 'p', petName: 'Bruno', ratePerNight: 900,
+        checkIn: DateTime(2027, 2, 10), checkOut: DateTime(2027, 2, 13), nights: 3,
+        subtotal: 2700, fee: 150, total: 2850));
+    final stayId2 = (await stays.watchMyHomestayBookings(guest.uid).firstWhere((l) => l.length >= 2))
+        .firstWhere((s) => s.id != stayId)
+        .id;
+
+    await auth.signOut();
+    await auth.signIn(email: 'lh_$stamp@x.com', password: 'secret1');
+    await stays.acceptRequest(stayId2);
+
+    await auth.signOut();
+    await auth.signIn(email: 'lg_$stamp@x.com', password: 'secret1');
+    await stays.cancelStay(stayId2);
     final cancelled = await stays
         .watchMyHomestayBookings(guest.uid)
-        .firstWhere((l) => l.any((s) => s.id == stayId && s.status == 'cancelled'));
-    expect(cancelled.firstWhere((s) => s.id == stayId).status, 'cancelled');
+        .firstWhere((l) => l.any((s) => s.id == stayId2 && s.status == 'cancelled'));
+    expect(cancelled.firstWhere((s) => s.id == stayId2).status, 'cancelled');
 
     // Service booking: parent cancels; pro-side stream sees it; invalid targets rejected.
     await bookings.createBooking(Booking(parentId: guest.uid, proId: host.uid, proName: 'Aarav',
