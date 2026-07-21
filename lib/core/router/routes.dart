@@ -22,6 +22,7 @@ class Routes {
   static const hostSetup = '/host-setup';
   static const hostRequest = '/host-request';
   static const hostAccepted = '/host-accepted';
+  static const homestayPayment = '/homestay-payment';
   static const newPost = '/new-post';
   static const thread = '/thread';
   static const postLive = '/post-live';
