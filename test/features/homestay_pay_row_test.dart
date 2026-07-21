@@ -47,11 +47,15 @@ void main() {
     expect(find.text('🔒 Secured by Razorpay — UPI, cards & netbanking'), findsOneWidget); // payment screen
   });
 
-  testWidgets('paid/upcoming stay shows no Cancel, shows Contact host to cancel', (tester) async {
+  // Mid-stay (already checked in): Slice 14 lets a guest cancel a paid stay
+  // for a refund up until check-in (see homestay_refund_row_test.dart), so
+  // "Contact host to cancel" now only applies once check-in has passed —
+  // hence checkInDays: -1 rather than the pre-Slice-14 default of 5.
+  testWidgets('paid/mid-stay (past check-in) shows no Cancel, shows Contact host to cancel', (tester) async {
     final auth = FakeAuthRepository();
     await auth.signUp(email: 'me@x.com', password: 'secret1');
     final uid = auth.currentUser!.uid;
-    await _pump(tester, _stay(uid, status: 'paid'));
+    await _pump(tester, _stay(uid, status: 'paid', checkInDays: -1));
     expect(find.text('Contact host to cancel'), findsOneWidget);
     expect(find.text('Cancel'), findsNothing);
     expect(find.text('Pay to confirm'), findsNothing);

@@ -10,8 +10,10 @@ import '../../core/widgets/pg_image_slot.dart';
 import '../../data/models/booking.dart';
 import '../../data/models/booking_lifecycle.dart';
 import '../../data/models/homestay_booking.dart';
+import '../../data/models/refund_policy.dart';
 import '../../data/models/review.dart';
 import '../../data/repositories/providers.dart';
+import '../../data/services/payment_service.dart';
 import 'booking_dialogs.dart';
 import 'phase_chip.dart';
 import 'received_tab.dart';
@@ -114,6 +116,8 @@ class _MyBookingsTab extends ConsumerWidget {
               canCancel: canCancelService(b, now),
               canPay: false,
               onPay: null,
+              canCancelPaid: false,
+              onCancelPaid: null,
               showContactHost: false,
               onCancel: () => confirmAndRun(context,
                   title: 'Cancel this booking?',
@@ -132,13 +136,16 @@ class _MyBookingsTab extends ConsumerWidget {
             _MyBookingRow(
               emoji: '🏡',
               name: s.homeName,
-              detail: '${s.hostName} · ${HomestayBooking.fmtDay(s.checkIn)} · ${s.nights} nights',
+              detail: '${s.hostName} · ${HomestayBooking.fmtDay(s.checkIn)} · ${s.nights} nights'
+                  '${s.refundAmount > 0 ? ' · ₹${s.refundAmount} refunded' : ''}',
               phase: stayPhase(s, now),
               rated: rated.contains(s.id),
               canCancel: canCancelStay(s, now),
               canPay: canPay(s, now),
-              showContactHost: stayPhase(s, now) == BookingPhase.upcoming,
+              canCancelPaid: canCancelPaidStay(s, now),
+              showContactHost: stayPhase(s, now) == BookingPhase.upcoming && !canCancelPaidStay(s, now),
               onPay: () => context.push(Routes.homestayPayment, extra: s),
+              onCancelPaid: () => _confirmCancelPaid(context, ref, s, now),
               onCancel: () => confirmAndRun(context,
                   title: 'Cancel this booking?',
                   message: "This can't be undone.",
@@ -155,16 +162,62 @@ class _MyBookingsTab extends ConsumerWidget {
   }
 }
 
+Future<void> _confirmCancelPaid(
+    BuildContext context, WidgetRef ref, HomestayBooking s, DateTime now) async {
+  final c = context.pg;
+  final refund = refundRupees(s, now);
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (dctx) => AlertDialog(
+      backgroundColor: c.surface,
+      title: Text('Cancel this stay?', style: PgText.poppins(16, FontWeight.w700, color: c.text)),
+      content: Text(
+          refund > 0
+              ? "You'll be refunded ₹$refund of ₹${s.total}. Refunds take 5–7 business days. "
+                  "The ₹150 service fee isn't refundable."
+              : "Cancellations within 24 hours of check-in aren't refundable — you'll be refunded ₹0.",
+          style: PgText.inter(13.5, FontWeight.w400, color: c.muted)),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(dctx, false),
+            child: Text('Keep', style: PgText.inter(13.5, FontWeight.w600, color: c.muted))),
+        TextButton(
+            onPressed: () => Navigator.pop(dctx, true),
+            child: Text(refund > 0 ? 'Cancel & refund' : 'Cancel anyway',
+                style: PgText.inter(13.5, FontWeight.w700, color: c.brand))),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return;
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    final result = await ref.read(paymentServiceProvider).refundStay(bookingId: s.id);
+    if (!context.mounted) return;
+    messenger.showSnackBar(SnackBar(
+        content: Text(result.refundAmount > 0
+            ? 'Stay cancelled. ₹${result.refundAmount} will be refunded in 5–7 days.'
+            : 'Stay cancelled.')));
+  } on PaymentException catch (e) {
+    if (!context.mounted) return;
+    messenger.showSnackBar(SnackBar(
+        content: Text(e.message == 'refund-failed'
+            ? "Stay cancelled, but the refund didn't go through — contact support."
+            : "Couldn't cancel the stay — try again.")));
+  }
+}
+
 class _MyBookingRow extends StatelessWidget {
   final String emoji, name, detail;
   final BookingPhase phase;
-  final bool rated, canCancel, canPay, showContactHost;
+  final bool rated, canCancel, canPay, showContactHost, canCancelPaid;
   final VoidCallback onRate, onCancel;
   final VoidCallback? onPay;
+  final VoidCallback? onCancelPaid;
   const _MyBookingRow(
       {required this.emoji, required this.name, required this.detail, required this.phase,
       required this.rated, required this.canCancel, required this.onRate, required this.onCancel,
-      this.canPay = false, this.onPay, this.showContactHost = false});
+      this.canPay = false, this.onPay, this.showContactHost = false,
+      this.canCancelPaid = false, this.onCancelPaid});
 
   @override
   Widget build(BuildContext context) {
@@ -227,6 +280,12 @@ class _MyBookingRow extends StatelessWidget {
                 onTap: onCancel,
                 child: Text('Cancel',
                     style: PgText.inter(12.5, FontWeight.w600, color: c.muted))),
+          ],
+          if (canCancelPaid) ...[
+            const SizedBox(height: 6),
+            GestureDetector(
+                onTap: onCancelPaid,
+                child: Text('Cancel', style: PgText.inter(12.5, FontWeight.w600, color: c.muted))),
           ],
           if (showContactHost) ...[
             const SizedBox(height: 6),

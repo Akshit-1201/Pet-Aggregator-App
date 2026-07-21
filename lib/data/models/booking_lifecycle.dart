@@ -55,5 +55,8 @@ bool canCancelStay(HomestayBooking b, DateTime now) =>
 bool canPay(HomestayBooking b, DateTime now) =>
     b.status == 'accepted' && !_day(b.checkIn).isBefore(_day(now));
 
+bool canCancelPaidStay(HomestayBooking b, DateTime now) =>
+    b.status == 'paid' && now.isBefore(b.checkIn);
+
 bool canDecide(HomestayBooking b, DateTime now) =>
     b.status == 'requested' && !_day(b.checkIn).isBefore(_day(now));

@@ -97,4 +97,27 @@ void main() {
       expect(canCancelStay(_stay(status: 'paid', checkIn: DateTime(2026, 7, 25)), _now), isFalse);
     });
   });
+
+  group('canCancelPaidStay', () {
+    final now = DateTime(2026, 7, 19, 12, 0);
+    HomestayBooking paid(DateTime checkIn) => HomestayBooking(id: 'hb1', guestId: 'g', hostId: 'h',
+        homeName: 'H', hostName: 'M', petId: 'x', petName: 'Bruno', ratePerNight: 900,
+        checkIn: checkIn, checkOut: checkIn.add(const Duration(days: 3)), nights: 3,
+        subtotal: 2700, fee: 150, total: 2850, status: 'paid');
+    test('paid + before check-in is cancellable (any distance before check-in)', () {
+      expect(canCancelPaidStay(paid(now.add(const Duration(days: 5))), now), isTrue);
+      expect(canCancelPaidStay(paid(now.add(const Duration(hours: 2))), now), isTrue); // still cancellable (0 refund)
+    });
+    test('paid at/after check-in is not cancellable in-app', () {
+      expect(canCancelPaidStay(paid(now), now), isFalse);
+      expect(canCancelPaidStay(paid(now.subtract(const Duration(days: 1))), now), isFalse);
+    });
+    test('non-paid stays are not covered by canCancelPaidStay', () {
+      final accepted = HomestayBooking(id: 'hb1', guestId: 'g', hostId: 'h', homeName: 'H',
+          hostName: 'M', petId: 'x', petName: 'B', ratePerNight: 900,
+          checkIn: now.add(const Duration(days: 5)), checkOut: now.add(const Duration(days: 8)),
+          nights: 3, subtotal: 2700, fee: 150, total: 2850, status: 'accepted');
+      expect(canCancelPaidStay(accepted, now), isFalse);
+    });
+  });
 }
