@@ -6,7 +6,7 @@ import 'homestay_booking.dart';
 
 enum BookingPhase {
   pending('Pending'),
-  awaitingPayment('Pay to confirm'),
+  awaitingPayment('Awaiting payment'),
   upcoming('Upcoming'),
   completed('Completed'),
   declined('Declined'),

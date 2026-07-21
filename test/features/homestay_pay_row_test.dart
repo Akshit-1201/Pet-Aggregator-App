@@ -31,15 +31,16 @@ Future<void> _pump(WidgetTester tester, HomestayBooking stay) async {
 }
 
 void main() {
-  testWidgets('accepted stay shows Pay to confirm + Cancel; Pay opens payment', (tester) async {
+  testWidgets('accepted stay shows Awaiting payment chip + Pay to confirm button + Cancel; Pay opens payment', (tester) async {
     final auth = FakeAuthRepository();
     await auth.signUp(email: 'me@x.com', password: 'secret1');
     final uid = auth.currentUser!.uid;
     await _pump(tester, _stay(uid, status: 'accepted'));
-    // The BookingPhase.awaitingPayment chip label is also literally 'Pay to
-    // confirm' (see booking_lifecycle.dart), so the phrase legitimately
-    // appears twice: the status chip + the tappable CTA button below it.
-    expect(find.text('Pay to confirm'), findsNWidgets(2));
+    // The BookingPhase.awaitingPayment chip label is 'Awaiting payment' (a
+    // neutral state descriptor); the separate CTA button below it is the
+    // guest-facing action 'Pay to confirm'. State vs action — not redundant.
+    expect(find.text('Awaiting payment'), findsOneWidget);
+    expect(find.text('Pay to confirm'), findsOneWidget);
     expect(find.text('Cancel'), findsOneWidget);
     await tester.tap(find.widgetWithText(GestureDetector, 'Pay to confirm'));
     await tester.pumpAndSettle();
