@@ -569,8 +569,11 @@ class FakePaymentService implements PaymentService {
   final PaymentResult? result;
   final PaymentException? error;
   final Completer<PaymentResult>? gate;
+  final RefundResult? refundResult;
+  final PaymentException? refundError;
   final List<int> chargedAmounts = [];
-  FakePaymentService({this.result, this.error, this.gate});
+  final List<String> refundedBookingIds = [];
+  FakePaymentService({this.result, this.error, this.gate, this.refundResult, this.refundError});
 
   factory FakePaymentService.success() => FakePaymentService(
       result: const PaymentResult(paymentId: 'pay_fake123', orderId: 'order_fake123'));
@@ -587,5 +590,12 @@ class FakePaymentService implements PaymentService {
     onVerifying?.call();
     return result ??
         (throw const PaymentException(PaymentErrorType.failed, 'not-configured'));
+  }
+
+  @override
+  Future<RefundResult> refundStay({required String bookingId}) async {
+    refundedBookingIds.add(bookingId);
+    if (refundError != null) throw refundError!;
+    return refundResult ?? const RefundResult(refundAmount: 0, refundId: '');
   }
 }

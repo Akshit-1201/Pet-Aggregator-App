@@ -112,4 +112,25 @@ class RazorpayPaymentService implements PaymentService {
     _onVerifying = null;
     if (c != null && !c.isCompleted) c.completeError(e);
   }
+
+  @override
+  Future<RefundResult> refundStay({required String bookingId}) async {
+    try {
+      final res = await _functions
+          .httpsCallable('refundBookingPayment')
+          .call<Map<Object?, Object?>>({'bookingId': bookingId});
+      final data = Map<String, dynamic>.from(res.data);
+      return RefundResult(
+          refundAmount: (data['refundAmount'] ?? 0) as int,
+          refundId: (data['refundId'] ?? '') as String);
+    } on FirebaseFunctionsException catch (e) {
+      // 'refund-failed' means the booking was already cancelled but the Razorpay
+      // refund didn't go through (post-claim) — never conflate with a pre-claim
+      // failure, which leaves the booking unchanged.
+      throw PaymentException(PaymentErrorType.failed,
+          e.message == 'refund-failed' ? 'refund-failed' : 'cancel-failed');
+    } catch (_) {
+      throw const PaymentException(PaymentErrorType.failed, 'cancel-failed');
+    }
+  }
 }
