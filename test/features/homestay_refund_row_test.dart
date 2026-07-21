@@ -8,13 +8,13 @@ import '../support/fakes.dart';
 import '../support/pump.dart';
 
 HomestayBooking _stay(String uid, {required String status, required int checkInHours,
-        int refundAmount = 0}) =>
+        int refundAmount = 0, String refundId = ''}) =>
     HomestayBooking(id: 'hb1', guestId: uid, hostId: 'host1', homeName: "Meera's Home",
         hostName: 'Meera', petId: 'p1', petName: 'Bruno', ratePerNight: 900,
         checkIn: DateTime.now().add(Duration(hours: checkInHours)),
         checkOut: DateTime.now().add(Duration(hours: checkInHours + 72)),
         nights: 3, subtotal: 2700, fee: 150, total: 2850, status: status,
-        paymentId: 'pay_x', refundAmount: refundAmount,
+        paymentId: 'pay_x', refundAmount: refundAmount, refundId: refundId,
         createdAt: DateTime.now().millisecondsSinceEpoch);
 
 // Note: FakePaymentService.refundStay only records the call + returns the result
@@ -94,8 +94,18 @@ void main() {
     final auth = FakeAuthRepository();
     await auth.signUp(email: 'me@x.com', password: 'secret1');
     final uid = auth.currentUser!.uid;
-    await _pump(tester, _stay(uid, status: 'cancelled', checkInHours: 120, refundAmount: 900));
+    await _pump(tester,
+        _stay(uid, status: 'cancelled', checkInHours: 120, refundAmount: 900, refundId: 'rfnd_1'));
     expect(find.textContaining('₹900 refunded'), findsOneWidget);
+  });
+
+  testWidgets('a claimed-but-unrefunded stay shows refund pending, not refunded', (tester) async {
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    final uid = auth.currentUser!.uid;
+    await _pump(tester, _stay(uid, status: 'cancelled', checkInHours: 120, refundAmount: 900));
+    expect(find.textContaining('₹900 refund pending'), findsOneWidget);
+    expect(find.textContaining('₹900 refunded'), findsNothing);
   });
 
   testWidgets('tapping Keep dismisses the dialog and refunds nothing', (tester) async {
@@ -125,6 +135,21 @@ void main() {
     await tester.tap(find.text('Cancel & refund'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Stay cancelled, but the refund'), findsOneWidget);
+  });
+
+  testWidgets('an ambiguous/unconfirmed refund failure tells the user to check bookings',
+      (tester) async {
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    final uid = auth.currentUser!.uid;
+    final payments = FakePaymentService(
+        refundError: const PaymentException(PaymentErrorType.failed, 'unconfirmed'));
+    await _pump(tester, _stay(uid, status: 'paid', checkInHours: 120), payments: payments);
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel & refund'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining("couldn't confirm this cancellation"), findsOneWidget);
   });
 
   testWidgets('a pre-claim failure says nothing happened', (tester) async {

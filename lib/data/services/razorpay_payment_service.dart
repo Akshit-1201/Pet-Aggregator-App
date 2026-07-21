@@ -124,13 +124,22 @@ class RazorpayPaymentService implements PaymentService {
           refundAmount: (data['refundAmount'] ?? 0) as int,
           refundId: (data['refundId'] ?? '') as String);
     } on FirebaseFunctionsException catch (e) {
-      // 'refund-failed' means the booking was already cancelled but the Razorpay
-      // refund didn't go through (post-claim) — never conflate with a pre-claim
-      // failure, which leaves the booking unchanged.
+      // Pre-claim codes are provably "nothing happened" (the transaction never
+      // committed). An explicit 'refund-failed' means the booking WAS cancelled
+      // but the refund did not go through. Anything else (unavailable,
+      // deadline-exceeded, unknown...) is ambiguous — never claim either way.
+      const preClaim = {
+        'unauthenticated', 'invalid-argument', 'not-found',
+        'permission-denied', 'failed-precondition',
+      };
+      if (preClaim.contains(e.code)) {
+        throw const PaymentException(PaymentErrorType.failed, 'cancel-failed');
+      }
       throw PaymentException(PaymentErrorType.failed,
-          e.message == 'refund-failed' ? 'refund-failed' : 'cancel-failed');
+          e.message == 'refund-failed' ? 'refund-failed' : 'unconfirmed');
     } catch (_) {
-      throw const PaymentException(PaymentErrorType.failed, 'cancel-failed');
+      // e.g. decoding a 200 response failed — the refund may well have succeeded.
+      throw const PaymentException(PaymentErrorType.failed, 'unconfirmed');
     }
   }
 }

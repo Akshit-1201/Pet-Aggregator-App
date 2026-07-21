@@ -137,7 +137,7 @@ class _MyBookingsTab extends ConsumerWidget {
               emoji: '🏡',
               name: s.homeName,
               detail: '${s.hostName} · ${HomestayBooking.fmtDay(s.checkIn)} · ${s.nights} nights'
-                  '${s.refundAmount > 0 ? ' · ₹${s.refundAmount} refunded' : ''}',
+                  '${s.refundAmount > 0 ? (s.refundId.isNotEmpty ? ' · ₹${s.refundAmount} refunded' : ' · ₹${s.refundAmount} refund pending') : ''}',
               phase: stayPhase(s, now),
               rated: rated.contains(s.id),
               canCancel: canCancelStay(s, now),
@@ -192,17 +192,19 @@ Future<void> _confirmCancelPaid(
   final messenger = ScaffoldMessenger.of(context);
   try {
     final result = await ref.read(paymentServiceProvider).refundStay(bookingId: s.id);
-    if (!context.mounted) return;
     messenger.showSnackBar(SnackBar(
         content: Text(result.refundAmount > 0
             ? 'Stay cancelled. ₹${result.refundAmount} will be refunded in 5–7 days.'
-            : 'Stay cancelled.')));
+            : (refund > 0
+                ? 'Stay cancelled. No refund applied — the 24-hour window had passed.'
+                : 'Stay cancelled.'))));
   } on PaymentException catch (e) {
-    if (!context.mounted) return;
     messenger.showSnackBar(SnackBar(
-        content: Text(e.message == 'refund-failed'
-            ? "Stay cancelled, but the refund didn't go through — contact support."
-            : "Couldn't cancel the stay — try again.")));
+        content: Text(switch (e.message) {
+      'refund-failed' => "Stay cancelled, but the refund didn't go through — contact support.",
+      'unconfirmed' => "We couldn't confirm this cancellation — check My bookings before trying again.",
+      _ => "Couldn't cancel the stay — try again.",
+    })));
   }
 }
 

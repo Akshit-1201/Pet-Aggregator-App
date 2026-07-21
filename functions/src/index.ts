@@ -77,7 +77,7 @@ export const refundBookingPayment = onCall(
       if (b.guestId !== uid) throw new HttpsError("permission-denied", "not-your-booking");
       if (b.status !== "paid") throw new HttpsError("failed-precondition", "not-paid");
       // checkIn is a date (YYYY-MM-DD); interpret at IST midnight (Mumbai market).
-      const checkIn = new Date(`${b.checkIn}T00:00:00+05:30`);
+      const checkIn = new Date(`${String(b.checkIn).slice(0, 10)}T00:00:00+05:30`);
       if (!Number.isFinite(checkIn.getTime())) {
         throw new HttpsError("failed-precondition", "bad-checkin");
       }
