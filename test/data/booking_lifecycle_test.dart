@@ -120,4 +120,32 @@ void main() {
       expect(canCancelPaidStay(accepted, now), isFalse);
     });
   });
+
+  group('service pending (unpaid)', () {
+    test('pending before the date is awaitingPayment', () =>
+        expect(servicePhase(_svc(status: 'pending', date: '2026-07-21'), _now),
+            BookingPhase.awaitingPayment));
+    test('pending on the date is awaitingPayment', () =>
+        expect(servicePhase(_svc(status: 'pending', date: '2026-07-19'), _now),
+            BookingPhase.awaitingPayment));
+    test('pending past the date is expired (never paid)', () =>
+        expect(servicePhase(_svc(status: 'pending', date: '2026-07-18'), _now),
+            BookingPhase.expired));
+    test('confirmed is unchanged (upcoming / completed)', () {
+      expect(servicePhase(_svc(date: '2026-07-21'), _now), BookingPhase.upcoming);
+      expect(servicePhase(_svc(date: '2026-07-18'), _now), BookingPhase.completed);
+    });
+    test('canPayService only for pending, not past the date', () {
+      expect(canPayService(_svc(status: 'pending', date: '2026-07-21'), _now), isTrue);
+      expect(canPayService(_svc(status: 'pending', date: '2026-07-19'), _now), isTrue);
+      expect(canPayService(_svc(status: 'pending', date: '2026-07-18'), _now), isFalse);
+      expect(canPayService(_svc(date: '2026-07-21'), _now), isFalse);          // confirmed
+      expect(canPayService(_svc(status: 'pending'), _now), isFalse);           // legacy, no date
+    });
+    test('canCancelService covers pending and confirmed before the date', () {
+      expect(canCancelService(_svc(status: 'pending', date: '2026-07-21'), _now), isTrue);
+      expect(canCancelService(_svc(date: '2026-07-21'), _now), isTrue);
+      expect(canCancelService(_svc(status: 'pending', date: '2026-07-18'), _now), isFalse);
+    });
+  });
 }
