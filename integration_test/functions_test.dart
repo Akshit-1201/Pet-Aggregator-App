@@ -35,49 +35,48 @@ void main() {
     FirebaseFirestore.instance.useFirestoreEmulator('10.0.2.2', 8080);
   });
 
-  testWidgets('verifyBookingPayment: auth gate, valid HMAC accepted, tampering rejected',
+  testWidgets('verifyBookingPayment: auth, args, and signature gates',
       (tester) async {
     final fns = FirebaseFunctions.instanceFor(region: 'asia-south1');
     final stamp = DateTime.now().millisecondsSinceEpoch;
 
-    // Unauthenticated calls are rejected by both callables.
+    // Unauthenticated calls are rejected by both callables (auth is checked first,
+    // before any argument validation).
     await expectLater(
-        fns.httpsCallable('verifyBookingPayment')
-            .call({'orderId': 'o', 'paymentId': 'p', 'signature': 's'}),
+        fns.httpsCallable('verifyBookingPayment').call(
+            {'kind': 'service', 'bookingId': 'x', 'orderId': 'o', 'paymentId': 'p', 'signature': 's'}),
         throwsA(isA<FirebaseFunctionsException>()
             .having((e) => e.code, 'code', 'unauthenticated')));
     await expectLater(
-        fns.httpsCallable('createBookingOrder').call({'amountRupees': 275}),
+        fns.httpsCallable('createBookingOrder').call({'kind': 'service', 'bookingId': 'x'}),
         throwsA(isA<FirebaseFunctionsException>()
             .having((e) => e.code, 'code', 'unauthenticated')));
 
     await FirebaseAuth.instance
         .createUserWithEmailAndPassword(email: 'fn_$stamp@x.com', password: 'secret1');
 
-    // A valid signature (dummy secret matches functions/.secret.local).
-    const secret = 'test_secret';
-    const orderId = 'order_test1';
-    const paymentId = 'pay_test1';
-    final valid = Hmac(sha256, utf8.encode(secret))
-        .convert(utf8.encode('$orderId|$paymentId'))
-        .toString();
-    final ok = await fns.httpsCallable('verifyBookingPayment').call<Map<Object?, Object?>>(
-        {'orderId': orderId, 'paymentId': paymentId, 'signature': valid});
-    expect(ok.data['verified'], true);
-
-    // A tampered signature is rejected.
-    final tampered = valid.replaceRange(0, 1, valid[0] == 'a' ? 'b' : 'a');
+    // Missing kind/bookingId -> bad-args (readArgs), before any Razorpay call.
     await expectLater(
         fns.httpsCallable('verifyBookingPayment')
-            .call({'orderId': orderId, 'paymentId': paymentId, 'signature': tampered}),
-        throwsA(isA<FirebaseFunctionsException>()
-            .having((e) => e.code, 'code', 'permission-denied')));
-
-    // createBookingOrder input validation (no Razorpay network needed to reject).
-    await expectLater(
-        fns.httpsCallable('createBookingOrder').call({'amountRupees': 0}),
+            .call({'orderId': 'o', 'paymentId': 'p', 'signature': 's'}),
         throwsA(isA<FirebaseFunctionsException>()
             .having((e) => e.code, 'code', 'invalid-argument')));
+
+    // A bogus signature is rejected at the HMAC gate. That gate precedes the order
+    // fetch and loadPayable, so this needs neither a real Razorpay order nor an
+    // existing booking — 'deadbeef' (8 chars) can never equal the 64-hex expected
+    // digest, so the length guard rejects it deterministically for any secret.
+    await expectLater(
+        fns.httpsCallable('verifyBookingPayment').call(
+            {'kind': 'service', 'bookingId': 'nope_$stamp', 'orderId': 'order_x',
+             'paymentId': 'pay_x', 'signature': 'deadbeef'}),
+        throwsA(isA<FirebaseFunctionsException>()
+            .having((e) => e.code, 'code', 'permission-denied')
+            .having((e) => e.message, 'message', 'signature-mismatch')));
+
+    // The full "valid signature accepted -> paid written" path now requires a real
+    // Razorpay order (verify fetches it to check notes), so it moves to the
+    // on-device exploit test below rather than a dummy-secret assertion here.
 
     await FirebaseAuth.instance.signOut();
   });
@@ -171,8 +170,11 @@ void main() {
     await auth.signOut();
   });
 
-  // Skipped: needs real rzp_test_ secrets in functions/.secret.local + an
-  // on-device run; placeholder keys cannot create a live Razorpay order.
+  // Skipped: needs real rzp_test_ secrets in functions/.secret.local AND the same
+  // secret passed to the test via --dart-define=RZP_SECRET=<that secret> (used to
+  // forge a signature that PASSES the HMAC gate so the order<->booking binding is
+  // the only thing left to reject the replay); placeholder keys cannot create a
+  // live Razorpay order. Run on-device once those are in place.
   testWidgets('verifyBookingPayment: a payment for booking A cannot confirm booking B',
       (tester) async {
     final fns = FirebaseFunctions.instanceFor(region: 'asia-south1');
@@ -201,15 +203,30 @@ void main() {
         .call<Map<Object?, Object?>>({'kind': 'service', 'bookingId': a.id});
     final orderId = Map<String, dynamic>.from(orderRes.data)['orderId'] as String;
 
-    // Attempting to verify that order against booking B is rejected by the
-    // order<->booking binding, even before any signature could be valid.
+    // The real exploit replays a GENUINELY VALID payment+signature for order A
+    // against booking B. We must forge a signature that PASSES the HMAC gate
+    // (step 1 of verifyBookingPayment) — otherwise the call fails there and never
+    // reaches the order<->booking binding (step 2), which is the defense under
+    // test. Compute HMAC-SHA256(secret, "orderId|paymentId") with the same
+    // test-mode secret the emulator loaded (RAZORPAY_KEY_SECRET), supplied here
+    // via --dart-define=RZP_SECRET. paymentId need not be a real payment: the
+    // Function verifies the signature, not the payment's existence.
+    const secret = String.fromEnvironment('RZP_SECRET');
+    const paymentId = 'pay_replay_a_to_b';
+    final signature = Hmac(sha256, utf8.encode(secret))
+        .convert(utf8.encode('$orderId|$paymentId'))
+        .toString();
+
+    // The signature is valid, so the ONLY thing rejecting this is the notes
+    // binding: order A's notes.bookingId != booking B -> order-booking-mismatch.
     await expectLater(
         fns.httpsCallable('verifyBookingPayment').call({
           'kind': 'service', 'bookingId': b.id, 'orderId': orderId,
-          'paymentId': 'pay_fake_$stamp', 'signature': 'deadbeef',
+          'paymentId': paymentId, 'signature': signature,
         }),
         throwsA(isA<FirebaseFunctionsException>()
-            .having((e) => e.code, 'code', 'permission-denied')));
+            .having((e) => e.code, 'code', 'permission-denied')
+            .having((e) => e.message, 'message', 'order-booking-mismatch')));
 
     await auth.signOut();
   }, skip: true);
