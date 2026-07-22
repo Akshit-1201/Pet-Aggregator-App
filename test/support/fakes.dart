@@ -238,6 +238,14 @@ class InMemoryBookingRepository implements BookingRepository {
   final List<Booking> _bookings = [];
   final _controller = StreamController<List<Booking>>.broadcast();
 
+  // Seeding bypasses createBooking's forced 'pending' status — fixtures use
+  // this to represent bookings a server would have already confirmed/paid,
+  // since the client-facing createBooking (matching production/Firestore
+  // rules) can never write anything but 'pending'.
+  InMemoryBookingRepository([List<Booking>? seed]) {
+    if (seed != null) _bookings.addAll(seed);
+  }
+
   @override
   Future<Booking> createBooking(Booking booking) async {
     final id = booking.id.isEmpty ? 'bk${_bookings.length + 1}' : booking.id;

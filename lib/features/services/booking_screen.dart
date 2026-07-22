@@ -31,16 +31,32 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
   List<DateTime> get _days => List.generate(4, (i) => DateTime.now().add(Duration(days: i)));
   String _label(DateTime d) => '${_weekdays[d.weekday - 1]} ${d.day} ${_months[d.month - 1]}';
 
-  void _continue(Pro pro, List<PetProfile> pets) {
+  bool _starting = false;
+
+  Future<void> _continue(Pro pro, List<PetProfile> pets) async {
     final me = ref.read(authRepositoryProvider).currentUser;
+    if (me == null || _starting) return;
     final pet = pets.firstWhere((p) => p.id == _petId, orElse: () => pets.first);
-    if (me == null) return;
     final fee = Booking.feeFor(pro.rate);
-    context.push(Routes.payment, extra: Booking(
-      parentId: me.uid, proId: pro.uid, proName: pro.name, petId: pet.id, petName: pet.name,
-      serviceType: pro.serviceType, rate: pro.rate, fee: fee, total: pro.rate + fee,
-      dateLabel: _label(_days[_dateIndex]), timeSlot: _times[_timeIndex],
-      date: Booking.isoDate(_days[_dateIndex])));
+    final day = _days[_dateIndex];
+    final draft = Booking(
+        parentId: me.uid, proId: pro.uid, proName: pro.name, petId: pet.id, petName: pet.name,
+        serviceType: pro.serviceType, rate: pro.rate, fee: fee, total: pro.rate + fee,
+        dateLabel: _label(day), timeSlot: _times[_timeIndex],
+        date: Booking.isoDate(day), status: 'pending');
+    setState(() => _starting = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final created = await ref.read(bookingRepositoryProvider).createBooking(draft);
+      if (!mounted) return;
+      setState(() => _starting = false);
+      context.push(Routes.payment, extra: created);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _starting = false);
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Couldn\'t start this booking — try again.')));
+    }
   }
 
   @override
@@ -173,7 +189,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                 ? PgPrimaryButton(
                     label: 'Add a pet', onPressed: () => context.push(Routes.createPet))
                 : PgPrimaryButton(
-                    label: 'Continue to payment', onPressed: () => _continue(pro, pets)),
+                    label: _starting ? 'Starting…' : 'Continue to payment',
+                    onPressed: (pets.isEmpty || _starting) ? () {} : () => _continue(pro, pets)),
           ),
         ]),
       ),

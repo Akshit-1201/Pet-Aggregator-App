@@ -12,15 +12,6 @@ HomestayBooking _accepted(String uid) => HomestayBooking(
     checkOut: DateTime.now().add(const Duration(days: 8)), nights: 3, subtotal: 2700, fee: 150,
     total: 2850, status: 'accepted');
 
-class _FailOnceHomestayRepo extends InMemoryHomestayBookingRepository {
-  int _left = 1;
-  @override
-  Future<void> markPaid(String id, String paymentId) {
-    if (_left > 0) { _left--; throw Exception('write-failed'); }
-    return super.markPaid(id, paymentId);
-  }
-}
-
 Future<(InMemoryHomestayBookingRepository, FakePaymentService)> _pump(WidgetTester tester,
     {FakePaymentService? payments, InMemoryHomestayBookingRepository? repo}) async {
   final auth = FakeAuthRepository();
@@ -51,14 +42,12 @@ void main() {
     expect(find.text('Pay ₹2850'), findsOneWidget);
   });
 
-  testWidgets('success: charged the total, marks paid with paymentId, navigates', (tester) async {
-    final (repo, payments) = await _pump(tester);
+  testWidgets('success: pays for the stay by booking id and kind', (tester) async {
+    final (_, payments) = await _pump(tester);
     await tester.tap(find.text('Pay ₹2850'));
     await tester.pumpAndSettle();
-    expect(payments.chargedAmounts, [2850]);
-    final s = (await repo.watchMyHomestayBookings('uid_me@x.com').first).single;
-    expect(s.status, 'paid');
-    expect(s.paymentId, 'pay_fake123');
+    expect(payments.paidBookingIds, ['hb1']);
+    expect(payments.paidKinds, [PaymentKind.homestay]);
   });
 
   testWidgets('cancelled: not paid, honest snackbar, button idle', (tester) async {
@@ -67,6 +56,8 @@ void main() {
     await tester.tap(find.text('Pay ₹2850'));
     await tester.pumpAndSettle();
     expect(find.text("Payment cancelled — you haven't been charged."), findsOneWidget);
+    expect(find.text('Pay ₹2850'), findsOneWidget);
+    // The server flips status to paid; the client never writes it — the fake stays as seeded.
     expect((await repo.watchMyHomestayBookings('uid_me@x.com').first).single.status, 'accepted');
   });
 
@@ -78,17 +69,5 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('pay_z9'), findsOneWidget);
     expect((await repo.watchMyHomestayBookings('uid_me@x.com').first).single.status, 'accepted');
-  });
-
-  testWidgets('write-fails-after-pay: Retry saving marks paid without a second charge', (tester) async {
-    final repo = _FailOnceHomestayRepo();
-    final (_, payments) = await _pump(tester, repo: repo);
-    await tester.tap(find.text('Pay ₹2850'));
-    await tester.pumpAndSettle();
-    expect(find.text('Retry saving'), findsOneWidget);
-    await tester.tap(find.text('Retry saving'));
-    await tester.pumpAndSettle();
-    expect(payments.chargedAmounts, [2850]); // one charge across both taps
-    expect((await repo.watchMyHomestayBookings('uid_me@x.com').first).single.status, 'paid');
   });
 }

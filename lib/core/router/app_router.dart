@@ -90,7 +90,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
           ProSetupScreen(fromOnboarding: (state.extra as OnboardingArg?)?.fromOnboarding ?? false)),
       GoRoute(path: Routes.servicePro, builder: (_, state) => ProProfileScreen(pro: state.extra as Pro?)),
       GoRoute(path: Routes.booking, builder: (_, state) => BookingScreen(pro: state.extra as Pro?)),
-      GoRoute(path: Routes.payment, builder: (_, state) => PaymentScreen(draft: state.extra as Booking?)),
+      GoRoute(path: Routes.payment, builder: (_, state) => PaymentScreen(booking: state.extra as Booking?)),
       GoRoute(path: Routes.bookingConfirmed, builder: (_, state) => BookingConfirmedScreen(booking: state.extra as Booking?)),
       GoRoute(path: Routes.hostSetup, builder: (_, state) =>
           HostSetupScreen(fromOnboarding: (state.extra as OnboardingArg?)?.fromOnboarding ?? false)),

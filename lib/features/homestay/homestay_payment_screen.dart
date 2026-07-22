@@ -9,7 +9,7 @@ import '../../data/models/homestay_booking.dart';
 import '../../data/repositories/providers.dart';
 import '../../data/services/payment_service.dart';
 
-enum _PayPhase { idle, opening, verifying, saving, retrySave }
+enum _PayPhase { idle, opening, verifying }
 
 class HomestayPaymentScreen extends ConsumerStatefulWidget {
   final HomestayBooking? stay;
@@ -20,55 +20,39 @@ class HomestayPaymentScreen extends ConsumerStatefulWidget {
 
 class _HomestayPaymentScreenState extends ConsumerState<HomestayPaymentScreen> {
   _PayPhase _phase = _PayPhase.idle;
-  PaymentResult? _paid; // kept across a failed markPaid so retry never re-charges
 
-  bool get _busy =>
-      _phase == _PayPhase.opening || _phase == _PayPhase.verifying || _phase == _PayPhase.saving;
+  bool get _busy => _phase != _PayPhase.idle;
 
   String _label(int total) => switch (_phase) {
         _PayPhase.idle => 'Pay ₹$total',
         _PayPhase.opening => 'Opening…',
         _PayPhase.verifying => 'Verifying…',
-        _PayPhase.saving => 'Saving…',
-        _PayPhase.retrySave => 'Retry saving',
       };
 
   Future<void> _pay(HomestayBooking stay) async {
     final messenger = ScaffoldMessenger.of(context);
-    if (_paid == null) {
-      setState(() => _phase = _PayPhase.opening);
-      try {
-        _paid = await ref.read(paymentServiceProvider).payForBooking(
-              amountRupees: stay.total,
-              description: '${stay.homeName} · ${stay.nights} nights',
-              onVerifying: () {
-                if (mounted) setState(() => _phase = _PayPhase.verifying);
-              },
-            );
-      } on PaymentException catch (e) {
-        if (!mounted) return;
-        setState(() => _phase = _PayPhase.idle);
-        messenger.showSnackBar(_snack(switch (e.type) {
-          PaymentErrorType.cancelled => "Payment cancelled — you haven't been charged.",
-          PaymentErrorType.failed => "Payment failed — you haven't been charged. Try again.",
-          PaymentErrorType.unverified =>
-            "Payment couldn't be verified — note payment id ${e.paymentId} and contact support.",
-        }));
-        return;
-      }
-      if (!mounted) return;
-    }
-    setState(() => _phase = _PayPhase.saving);
-    final paid = _paid!;
+    setState(() => _phase = _PayPhase.opening);
     try {
-      await ref.read(homestayBookingRepositoryProvider).markPaid(stay.id, paid.paymentId);
-      if (mounted) context.go(Routes.bookings);
-    } catch (_) {
+      await ref.read(paymentServiceProvider).payForBooking(
+            bookingId: stay.id,
+            kind: PaymentKind.homestay,
+            description: '${stay.homeName} · ${stay.nights} nights',
+            onVerifying: () {
+              if (mounted) setState(() => _phase = _PayPhase.verifying);
+            },
+          );
+    } on PaymentException catch (e) {
       if (!mounted) return;
-      setState(() => _phase = _PayPhase.retrySave);
-      messenger.showSnackBar(_snack('Payment received (id ${paid.paymentId}) but saving the '
-          'booking failed — try again or contact support.'));
+      setState(() => _phase = _PayPhase.idle);
+      messenger.showSnackBar(_snack(switch (e.type) {
+        PaymentErrorType.cancelled => "Payment cancelled — you haven't been charged.",
+        PaymentErrorType.failed => "Payment failed — you haven't been charged. Try again.",
+        PaymentErrorType.unverified =>
+          "Payment couldn't be verified — note payment id ${e.paymentId} and contact support.",
+      }));
+      return;
     }
+    if (mounted) context.go(Routes.bookings);
   }
 
   SnackBar _snack(String message) => SnackBar(
