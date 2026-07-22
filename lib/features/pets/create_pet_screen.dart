@@ -67,7 +67,11 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
       return;
     }
     setState(() { _saving = true; _nameError = null; });
-    final area = ref.read(currentUserProfileProvider).value?.area ?? '';
+    // Await the profile rather than cold-reading currentUserProfileProvider:
+    // arriving here straight from onboarding, that provider is still
+    // AsyncLoading, so `.value?.area` silently yielded '' and the pet was
+    // saved with no area (which then reads as a blank "· " subtitle).
+    final area = (await ref.read(userRepositoryProvider).watchUser(uid).first)?.area ?? '';
 
     var photoUrl = '';
     final bytes = _photoBytes;
