@@ -143,10 +143,9 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
                 ]),
               ),
             ),
-            const Spacer(),
-            _sheet(c, pets, pros, homestays),
           ]),
         ),
+        _sheet(c, pets, pros, homestays),
       ]),
     );
   }
@@ -162,45 +161,70 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
       NearbyLayer.homestays => ('homestays nearby', homestays.length),
     };
 
-    return Container(
-      decoration: BoxDecoration(
-        color: c.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
-        boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 30, offset: Offset(0, -10))]),
-      padding: EdgeInsets.fromLTRB(20, 10, 20, 20 + MediaQuery.of(context).padding.bottom),
-      child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Center(child: Container(width: 40, height: 5, margin: const EdgeInsets.only(bottom: 14),
-          decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(3)))),
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text('$count $header', style: PgText.poppins(16, FontWeight.w700, color: c.text)),
-          if (_layer == NearbyLayer.pets)
-            GestureDetector(onTap: () => context.go(Routes.discover),
-              child: Text('Swipe view →', style: PgText.inter(12.5, FontWeight.w700, color: c.brand))),
+    // Draggable so the map stays usable: 25% peek -> 40% default -> 60% max.
+    // The list is fully scrollable, so every result is reachable (it used to be
+    // a fixed-height container hard-capped at 4 rows).
+    return DraggableScrollableSheet(
+      initialChildSize: 0.40,
+      minChildSize: 0.25,
+      maxChildSize: 0.60,
+      snap: true,
+      snapSizes: const [0.25, 0.40, 0.60],
+      builder: (context, scrollController) => Container(
+        decoration: BoxDecoration(
+          color: c.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+          boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 30, offset: Offset(0, -10))]),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          // Header stays pinned; only the list below it scrolls.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Center(child: Container(width: 40, height: 5, margin: const EdgeInsets.only(bottom: 14),
+                decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(3)))),
+              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                Text('$count $header', style: PgText.poppins(16, FontWeight.w700, color: c.text)),
+                if (_layer == NearbyLayer.pets)
+                  GestureDetector(onTap: () => context.go(Routes.discover),
+                    child: Text('Swipe view →', style: PgText.inter(12.5, FontWeight.w700, color: c.brand))),
+              ]),
+              const SizedBox(height: 12),
+            ]),
+          ),
+          Expanded(
+            child: ListView(
+              // Must be the sheet's own controller so dragging the list past its
+              // top edge collapses the sheet instead of over-scrolling.
+              controller: scrollController,
+              padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.of(context).padding.bottom),
+              children: [
+                if (_layer == NearbyLayer.pets)
+                  for (final p in filteredPets)
+                    _row(c, emoji: '🐾', imageUrl: p.photoUrl, title: p.name,
+                      subtitle: '${p.breed} · ${p.area}',
+                      onTap: () => context.push(Routes.petProfile, extra: p),
+                      trailing: GestureDetector(
+                        onTap: () => _woof(p),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 9),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(colors: [c.brand, c.brand2]),
+                            borderRadius: BorderRadius.circular(12)),
+                          child: Text('Woof!', style: PgText.poppins(12.5, FontWeight.w700, color: Colors.white))))),
+                if (_layer == NearbyLayer.pros)
+                  for (final p in pros)
+                    _row(c, emoji: '🧑', imageUrl: null, title: p.name,
+                      subtitle: '${p.serviceType.label} · ₹${p.rate}/${p.unit}',
+                      onTap: () => context.push(Routes.servicePro, extra: p)),
+                if (_layer == NearbyLayer.homestays)
+                  for (final h in homestays)
+                    _row(c, emoji: '🏡', imageUrl: null, title: h.homeName,
+                      subtitle: '${h.hostName} · ₹${h.ratePerNight}/night',
+                      onTap: () => context.push(Routes.host, extra: h)),
+              ],
+            ),
+          ),
         ]),
-        const SizedBox(height: 12),
-        if (_layer == NearbyLayer.pets)
-          for (final p in filteredPets.take(4))
-            _row(c, emoji: '🐾', imageUrl: p.photoUrl, title: p.name,
-              subtitle: '${p.breed} · ${p.area}',
-              onTap: () => context.push(Routes.petProfile, extra: p),
-              trailing: GestureDetector(
-                onTap: () => _woof(p),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 9),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: [c.brand, c.brand2]),
-                    borderRadius: BorderRadius.circular(12)),
-                  child: Text('Woof!', style: PgText.poppins(12.5, FontWeight.w700, color: Colors.white))))),
-        if (_layer == NearbyLayer.pros)
-          for (final p in pros.take(4))
-            _row(c, emoji: '🧑', imageUrl: null, title: p.name,
-              subtitle: '${p.serviceType.label} · ₹${p.rate}/${p.unit}',
-              onTap: () => context.push(Routes.servicePro, extra: p)),
-        if (_layer == NearbyLayer.homestays)
-          for (final h in homestays.take(4))
-            _row(c, emoji: '🏡', imageUrl: null, title: h.homeName,
-              subtitle: '${h.hostName} · ₹${h.ratePerNight}/night',
-              onTap: () => context.push(Routes.host, extra: h)),
-      ]),
+      ),
     );
   }
 

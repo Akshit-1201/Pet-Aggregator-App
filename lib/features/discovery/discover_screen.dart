@@ -67,7 +67,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
                     borderRadius: BorderRadius.circular(13)),
-                  child: Text('⚙ Filters', style: PgText.inter(13, FontWeight.w600, color: c.text))),
+                  child: Text('🗺 Map view', style: PgText.inter(13, FontWeight.w600, color: c.text))),
               ),
             ]),
           ),
