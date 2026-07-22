@@ -14,6 +14,28 @@ import '../../data/models/swipe.dart';
 import '../../data/repositories/providers.dart';
 import 'nearby_markers.dart';
 
+/// Fixed-height pinned header for the results sheet. Living inside the sheet's
+/// CustomScrollView is what makes the grab handle actually drag the sheet.
+class _SheetHeader extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final Color background;
+  final double height;
+  const _SheetHeader({required this.child, required this.background, required this.height});
+
+  @override
+  double get minExtent => height;
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) =>
+      Container(color: background, height: height, child: child);
+
+  @override
+  bool shouldRebuild(_SheetHeader old) =>
+      old.child != child || old.background != background || old.height != height;
+}
+
 /// Builds the map view — swapped for a stub in widget tests (GoogleMap is a
 /// platform view that cannot render under flutter_test).
 typedef MapViewBuilder = Widget Function(CameraPosition initialCamera, Set<Marker> markers);
@@ -171,59 +193,69 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
       snap: true,
       snapSizes: const [0.25, 0.40, 0.60],
       builder: (context, scrollController) => Container(
+        clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           color: c.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
           boxShadow: const [BoxShadow(color: Color(0x1A000000), blurRadius: 30, offset: Offset(0, -10))]),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          // Header stays pinned; only the list below it scrolls.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Center(child: Container(width: 40, height: 5, margin: const EdgeInsets.only(bottom: 14),
-                decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(3)))),
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text('$count $header', style: PgText.poppins(16, FontWeight.w700, color: c.text)),
-                if (_layer == NearbyLayer.pets)
-                  GestureDetector(onTap: () => context.go(Routes.discover),
-                    child: Text('Swipe view →', style: PgText.inter(12.5, FontWeight.w700, color: c.brand))),
-              ]),
-              const SizedBox(height: 12),
-            ]),
-          ),
-          Expanded(
-            child: ListView(
-              // Must be the sheet's own controller so dragging the list past its
-              // top edge collapses the sheet instead of over-scrolling.
-              controller: scrollController,
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 20 + MediaQuery.of(context).padding.bottom),
-              children: [
-                if (_layer == NearbyLayer.pets)
-                  for (final p in filteredPets)
-                    _row(c, emoji: '🐾', imageUrl: p.photoUrl, title: p.name,
-                      subtitle: '${p.breed} · ${p.area}',
-                      onTap: () => context.push(Routes.petProfile, extra: p),
-                      trailing: GestureDetector(
-                        onTap: () => _woof(p),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 9),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(colors: [c.brand, c.brand2]),
-                            borderRadius: BorderRadius.circular(12)),
-                          child: Text('Woof!', style: PgText.poppins(12.5, FontWeight.w700, color: Colors.white))))),
-                if (_layer == NearbyLayer.pros)
-                  for (final p in pros)
-                    _row(c, emoji: '🧑', imageUrl: null, title: p.name,
-                      subtitle: '${p.serviceType.label} · ₹${p.rate}/${p.unit}',
-                      onTap: () => context.push(Routes.servicePro, extra: p)),
-                if (_layer == NearbyLayer.homestays)
-                  for (final h in homestays)
-                    _row(c, emoji: '🏡', imageUrl: null, title: h.homeName,
-                      subtitle: '${h.hostName} · ₹${h.ratePerNight}/night',
-                      onTap: () => context.push(Routes.host, extra: h)),
-              ],
+        // One CustomScrollView driven by the sheet's own controller, so a drag
+        // anywhere — including the grab handle — resizes the sheet. (A header
+        // outside the scrollable looks draggable but isn't.) The header is a
+        // pinned sliver so it still stays put while the rows scroll under it.
+        child: CustomScrollView(
+          controller: scrollController,
+          slivers: [
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _SheetHeader(
+                height: 66,
+                background: c.surface,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 0),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Center(child: Container(width: 40, height: 5, margin: const EdgeInsets.only(bottom: 14),
+                      decoration: BoxDecoration(color: c.border, borderRadius: BorderRadius.circular(3)))),
+                    Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                      Text('$count $header', style: PgText.poppins(16, FontWeight.w700, color: c.text)),
+                      if (_layer == NearbyLayer.pets)
+                        GestureDetector(onTap: () => context.go(Routes.discover),
+                          child: Text('Swipe view →', style: PgText.inter(12.5, FontWeight.w700, color: c.brand))),
+                    ]),
+                  ]),
+                ),
+              ),
             ),
-          ),
-        ]),
+            SliverPadding(
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + MediaQuery.of(context).padding.bottom),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  if (_layer == NearbyLayer.pets)
+                    for (final p in filteredPets)
+                      _row(c, emoji: '🐾', imageUrl: p.photoUrl, title: p.name,
+                        subtitle: '${p.breed} · ${p.area}',
+                        onTap: () => context.push(Routes.petProfile, extra: p),
+                        trailing: GestureDetector(
+                          onTap: () => _woof(p),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 9),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: [c.brand, c.brand2]),
+                              borderRadius: BorderRadius.circular(12)),
+                            child: Text('Woof!', style: PgText.poppins(12.5, FontWeight.w700, color: Colors.white))))),
+                  if (_layer == NearbyLayer.pros)
+                    for (final p in pros)
+                      _row(c, emoji: '🧑', imageUrl: null, title: p.name,
+                        subtitle: '${p.serviceType.label} · ₹${p.rate}/${p.unit}',
+                        onTap: () => context.push(Routes.servicePro, extra: p)),
+                  if (_layer == NearbyLayer.homestays)
+                    for (final h in homestays)
+                      _row(c, emoji: '🏡', imageUrl: null, title: h.homeName,
+                        subtitle: '${h.hostName} · ₹${h.ratePerNight}/night',
+                        onTap: () => context.push(Routes.host, extra: h)),
+                ]),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
