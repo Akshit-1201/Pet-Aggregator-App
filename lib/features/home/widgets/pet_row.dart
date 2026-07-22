@@ -26,13 +26,13 @@ class PetRow extends StatelessWidget {
           const SizedBox(width: 13),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Row(children: [
-              Text(pet.name, style: PgText.poppins(15, FontWeight.w700, color: c.text)),
+              Text(pet.displayName, style: PgText.poppins(15, FontWeight.w700, color: c.text)),
               const SizedBox(width: 6),
               Container(width: 7, height: 7,
                 decoration: BoxDecoration(color: pet.accentColor, shape: BoxShape.circle)),
             ]),
             const SizedBox(height: 2),
-            Text('${pet.breed} · ${pet.ageLabel} · ${pet.area}',
+            Text(PetProfile.detailLine([pet.breed, pet.ageLabel, pet.area]),
               maxLines: 1, overflow: TextOverflow.ellipsis,
               style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
           ])),

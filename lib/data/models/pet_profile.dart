@@ -25,6 +25,15 @@ class PetProfile {
     this.photoUrl = '',
   });
 
+  /// Joins [parts] with ' · ', skipping blanks. Pet docs legitimately carry
+  /// empty fields (a skipped breed, or an area lost to the old cold-read bug),
+  /// and naive interpolation rendered those as a dangling separator.
+  static String detailLine(List<String> parts) =>
+      parts.where((p) => p.trim().isNotEmpty).join(' · ');
+
+  /// Never render an empty title — some legacy docs have no name at all.
+  String get displayName => name.trim().isEmpty ? 'Unnamed pet' : name;
+
   Map<String, dynamic> toMap() => {
         'ownerId': ownerId,
         'name': name,

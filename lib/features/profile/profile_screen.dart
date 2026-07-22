@@ -106,8 +106,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   PgImageSlot(size: 52, circle: true, emoji: '🐾', imageUrl: pets.first.photoUrl),
                   const SizedBox(width: 13),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(pets.first.name, style: PgText.poppins(15, FontWeight.w700, color: c.text)),
-                    Text('${pets.first.breed} · View profile →', style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
+                    Text(pets.first.displayName, style: PgText.poppins(15, FontWeight.w700, color: c.text)),
+                    Text(PetProfile.detailLine([pets.first.breed, 'View profile →']),
+                        style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
                   ])),
                 ]),
               ),

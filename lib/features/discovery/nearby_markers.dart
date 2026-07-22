@@ -46,7 +46,8 @@ List<PinSpec> buildPins({
       final filtered = pets.where((p) => matchesPetFilter(p, petFilter));
       return [
         for (final p in filtered)
-          _spec('pet_${p.id}', p.name, '${p.breed} · ${p.area}', Routes.petProfile, p,
+          _spec('pet_${p.id}', p.displayName, PetProfile.detailLine([p.breed, p.area]),
+              Routes.petProfile, p,
               p.area, p.id, petHue),
       ];
     case NearbyLayer.pros:

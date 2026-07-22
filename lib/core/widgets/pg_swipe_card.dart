@@ -115,12 +115,13 @@ class _PgSwipeCardState extends State<PgSwipeCard> with SingleTickerProviderStat
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(crossAxisAlignment: CrossAxisAlignment.baseline,
                     textBaseline: TextBaseline.alphabetic, children: [
-                    Text(widget.pet.name, style: PgText.poppins(24, FontWeight.w800, color: c.text, ls: -0.4)),
+                    Text(widget.pet.displayName, style: PgText.poppins(24, FontWeight.w800, color: c.text, ls: -0.4)),
                     const SizedBox(width: 8),
                     Text(widget.pet.ageLabel, style: PgText.inter(16, FontWeight.w600, color: c.muted)),
                   ]),
                   const SizedBox(height: 5),
-                  Text('${widget.pet.breed} · ${widget.pet.sex} · ${widget.pet.area}',
+                  Text(PetProfile.detailLine(
+                      [widget.pet.breed, widget.pet.sex, widget.pet.area]),
                     maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: PgText.inter(14, FontWeight.w400, color: c.muted)),
                 ]),

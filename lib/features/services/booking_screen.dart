@@ -152,8 +152,8 @@ class _BookingScreenState extends ConsumerState<BookingScreen> {
                             const PgImageSlot(size: 44, circle: true),
                             const SizedBox(width: 12),
                             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                              Text(p.name, style: PgText.poppins(14, FontWeight.w700, color: c.text)),
-                              Text('${p.breed} · ${p.ageLabel}',
+                              Text(p.displayName, style: PgText.poppins(14, FontWeight.w700, color: c.text)),
+                              Text(PetProfile.detailLine([p.breed, p.ageLabel]),
                                 style: PgText.inter(12, FontWeight.w400, color: c.muted)),
                             ])),
                             if (_petId == p.id) Icon(Icons.check_circle, color: c.brand, size: 22),

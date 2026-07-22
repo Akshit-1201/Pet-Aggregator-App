@@ -230,8 +230,8 @@ class _NearbyMapScreenState extends ConsumerState<NearbyMapScreen> {
                 delegate: SliverChildListDelegate([
                   if (_layer == NearbyLayer.pets)
                     for (final p in filteredPets)
-                      _row(c, emoji: '🐾', imageUrl: p.photoUrl, title: p.name,
-                        subtitle: '${p.breed} · ${p.area}',
+                      _row(c, emoji: '🐾', imageUrl: p.photoUrl, title: p.displayName,
+                        subtitle: PetProfile.detailLine([p.breed, p.area]),
                         onTap: () => context.push(Routes.petProfile, extra: p),
                         trailing: GestureDetector(
                           onTap: () => _woof(p),

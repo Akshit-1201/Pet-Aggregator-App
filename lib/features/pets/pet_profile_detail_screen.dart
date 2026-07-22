@@ -60,13 +60,13 @@ class PetProfileDetailScreen extends ConsumerWidget {
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Row(children: [
-                        Flexible(child: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis,
+                        Flexible(child: Text(p.displayName, maxLines: 1, overflow: TextOverflow.ellipsis,
                           style: PgText.poppins(22, FontWeight.w800, color: c.text))),
                         const SizedBox(width: 7),
                         Text(sexSymbol, style: PgText.poppins(18, FontWeight.w700, color: c.muted)),
                       ]),
                       const SizedBox(height: 3),
-                      Text('${p.breed} · ${p.ageLabel} · ${p.area}',
+                      Text(PetProfile.detailLine([p.breed, p.ageLabel, p.area]),
                         style: PgText.inter(13, FontWeight.w400, color: c.muted)),
                     ])),
                     if (p.vaccinated)
