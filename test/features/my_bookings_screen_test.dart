@@ -51,6 +51,36 @@ void main() {
     expect(find.text('Submit review'), findsOneWidget);
   });
 
+  testWidgets('an unpaid pending service booking offers Pay to confirm and resumes payment',
+      (tester) async {
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    final uid = auth.currentUser!.uid;
+    final bookings = InMemoryBookingRepository();
+    // createBooking forces status:'pending'; a future date makes it payable
+    // (awaitingPayment) rather than expired — the "abandon checkout, pay later" case.
+    await bookings.createBooking(Booking(id: 'bk1', parentId: uid, proId: 'pro1', proName: 'Aarav Sharma',
+        petId: 'p1', petName: 'Bruno', serviceType: ServiceType.walker, rate: 250, fee: 25, total: 275,
+        dateLabel: 'Tue 15 Jul', timeSlot: '5:00 PM', date: '2030-01-10'));
+
+    await pumpPgApp(tester, overrides: [
+      authRepositoryProvider.overrideWithValue(auth),
+      bookingRepositoryProvider.overrideWithValue(bookings),
+      homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
+      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
+      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
+    ], initialLocation: Routes.bookings);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pay to confirm'), findsOneWidget);
+    await tester.tap(find.text('Pay to confirm'));
+    await tester.pumpAndSettle();
+
+    // Navigated to the payment screen for this booking (pays by id, no re-charge risk).
+    expect(find.text('Pay ₹275'), findsOneWidget);
+  });
+
   testWidgets('a reviewed booking shows ★ Rated instead of Rate', (tester) async {
     final auth = FakeAuthRepository();
     await auth.signUp(email: 'me@x.com', password: 'secret1');
