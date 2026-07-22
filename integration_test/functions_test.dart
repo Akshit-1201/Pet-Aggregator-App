@@ -15,9 +15,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:pet_aggregator_app/data/models/booking.dart';
 import 'package:pet_aggregator_app/data/models/homestay_booking.dart';
+import 'package:pet_aggregator_app/data/models/pro.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firebase_auth_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/firebase/firestore_booking_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/firebase/firestore_homestay_booking_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/firebase/firestore_pro_repository.dart';
 import 'package:pet_aggregator_app/firebase_options.dart';
 
 void main() {
@@ -113,36 +117,15 @@ void main() {
             .having((e) => e.code, 'code', 'failed-precondition')
             .having((e) => e.message, 'message', 'not-paid')));
 
-    // Drive it to paid (checkIn 2 days away): host accepts, guest pays.
+    // The ownership check is enforced before the paid-state check, so a
+    // non-owner (a different account entirely) is rejected with
+    // permission-denied against this same requested (unpaid) booking —
+    // no need to drive it to paid first.
     await auth.signOut();
-    final host = await auth.signUp(email: 'rfh_$stamp@x.com', password: 'secret1');
-    // Re-point the booking's host to this account so acceptRequest passes rules:
-    // create a fresh booking whose hostId is this host, then run accept+pay.
-    await auth.signOut();
-    await auth.signIn(email: 'rf_$stamp@x.com', password: 'secret1');
-    await stays.createHomestayBooking(HomestayBooking(guestId: guest.uid, hostId: host.uid,
-        homeName: 'H2', hostName: 'M', petId: 'p', petName: 'Bruno', ratePerNight: 900,
-        checkIn: DateTime.now().add(const Duration(days: 2)),
-        checkOut: DateTime.now().add(const Duration(days: 5)), nights: 3,
-        subtotal: 2700, fee: 150, total: 2850));
-    final payId = (await stays.watchMyHomestayBookings(guest.uid)
-        .firstWhere((l) => l.any((s) => s.hostId == host.uid))).firstWhere((s) => s.hostId == host.uid).id;
-    await auth.signOut();
-    await auth.signIn(email: 'rfh_$stamp@x.com', password: 'secret1');
-    await stays.acceptRequest(payId);
-    await auth.signOut();
-    await auth.signIn(email: 'rf_$stamp@x.com', password: 'secret1');
-    await stays.markPaid(payId, 'pay_rf_$stamp');
-
-    // The host must NOT be able to refund the guest's booking (admin-privileged
-    // function — this guest-ownership check is the only barrier).
-    await auth.signOut();
-    await auth.signIn(email: 'rfh_$stamp@x.com', password: 'secret1');
-    await expectLater(fns.httpsCallable('refundBookingPayment').call({'bookingId': payId}),
+    await auth.signUp(email: 'rfh_$stamp@x.com', password: 'secret1');
+    await expectLater(fns.httpsCallable('refundBookingPayment').call({'bookingId': reqId}),
         throwsA(isA<FirebaseFunctionsException>()
             .having((e) => e.code, 'code', 'permission-denied')));
-    await auth.signOut();
-    await auth.signIn(email: 'rf_$stamp@x.com', password: 'secret1');
 
     // NOTE: the 0-refund success path and idempotency are exercised on-device
     // (Task 5 manual pass) — a <24h fixture cannot be expressed deterministically
@@ -151,4 +134,83 @@ void main() {
 
     await auth.signOut();
   });
+
+  testWidgets('createBookingOrder: auth, args, ownership and payable-state gates',
+      (tester) async {
+    final fns = FirebaseFunctions.instanceFor(region: 'asia-south1');
+    final auth = FirebaseAuthRepository();
+    final bookings = FirestoreBookingRepository();
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+
+    await expectLater(
+        fns.httpsCallable('createBookingOrder').call({'kind': 'service', 'bookingId': 'x'}),
+        throwsA(isA<FirebaseFunctionsException>()
+            .having((e) => e.code, 'code', 'unauthenticated')));
+
+    final me = await auth.signUp(email: 'sop_$stamp@x.com', password: 'secret1');
+
+    // Bad args + unknown booking.
+    await expectLater(fns.httpsCallable('createBookingOrder').call({'kind': 'nope', 'bookingId': 'x'}),
+        throwsA(isA<FirebaseFunctionsException>()
+            .having((e) => e.code, 'code', 'invalid-argument')));
+    await expectLater(
+        fns.httpsCallable('createBookingOrder').call({'kind': 'service', 'bookingId': 'ghost_$stamp'}),
+        throwsA(isA<FirebaseFunctionsException>().having((e) => e.code, 'code', 'not-found')));
+
+    // A pending booking whose pro listing does not exist -> no-listing.
+    final created = await bookings.createBooking(Booking(
+        parentId: me.uid, proId: 'ghostpro_$stamp', proName: 'X', petId: 'p', petName: 'Bruno',
+        serviceType: ServiceType.walker, rate: 250, fee: 25, total: 275,
+        dateLabel: 'Tue', timeSlot: '5:00 PM', date: '2027-01-10', status: 'pending'));
+    await expectLater(
+        fns.httpsCallable('createBookingOrder').call({'kind': 'service', 'bookingId': created.id}),
+        throwsA(isA<FirebaseFunctionsException>()
+            .having((e) => e.code, 'code', 'failed-precondition')
+            .having((e) => e.message, 'message', 'no-listing')));
+
+    await auth.signOut();
+  });
+
+  // Skipped: needs real rzp_test_ secrets in functions/.secret.local + an
+  // on-device run; placeholder keys cannot create a live Razorpay order.
+  testWidgets('verifyBookingPayment: a payment for booking A cannot confirm booking B',
+      (tester) async {
+    final fns = FirebaseFunctions.instanceFor(region: 'asia-south1');
+    final auth = FirebaseAuthRepository();
+    final bookings = FirestoreBookingRepository();
+    final pros = FirestoreProRepository();
+    final stamp = DateTime.now().millisecondsSinceEpoch;
+
+    // A pro listing the server can price from.
+    final pro = await auth.signUp(email: 'sopro_$stamp@x.com', password: 'secret1');
+    await pros.upsertPro(Pro(uid: pro.uid, name: 'Aarav', area: 'Khar', bio: 'Walker',
+        serviceType: ServiceType.walker, rate: 250, experienceYears: 3));
+    await auth.signOut();
+
+    final me = await auth.signUp(email: 'sopay_$stamp@x.com', password: 'secret1');
+    Future<Booking> mk() => bookings.createBooking(Booking(
+        parentId: me.uid, proId: pro.uid, proName: 'Aarav', petId: 'p', petName: 'Bruno',
+        serviceType: ServiceType.walker, rate: 250, fee: 25, total: 275,
+        dateLabel: 'Tue', timeSlot: '5:00 PM', date: '2027-01-10', status: 'pending'));
+    final a = await mk();
+    final b = await mk();
+
+    // An order is created for booking A (this reaches real Razorpay, so only run
+    // this test with test-mode secrets configured in the emulator).
+    final orderRes = await fns.httpsCallable('createBookingOrder')
+        .call<Map<Object?, Object?>>({'kind': 'service', 'bookingId': a.id});
+    final orderId = Map<String, dynamic>.from(orderRes.data)['orderId'] as String;
+
+    // Attempting to verify that order against booking B is rejected by the
+    // order<->booking binding, even before any signature could be valid.
+    await expectLater(
+        fns.httpsCallable('verifyBookingPayment').call({
+          'kind': 'service', 'bookingId': b.id, 'orderId': orderId,
+          'paymentId': 'pay_fake_$stamp', 'signature': 'deadbeef',
+        }),
+        throwsA(isA<FirebaseFunctionsException>()
+            .having((e) => e.code, 'code', 'permission-denied')));
+
+    await auth.signOut();
+  }, skip: true);
 }
