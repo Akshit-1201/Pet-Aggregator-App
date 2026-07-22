@@ -127,9 +127,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
           const SizedBox(height: 16),
-          _menuGroup(context, c, const [
-            ('🗓️', 'My bookings'), ('🏡', 'My homestays'),
-            ('💳', 'Payments & wallet'), ('🎒', 'Become a pro or host'),
+          _menuGroup(c, [
+            ('🗓️', 'My bookings', () => context.push(Routes.bookings)),
+            // Received (tab 1) is where a host sees the stays booked with them.
+            ('🏡', 'My homestays', () => context.push(Routes.bookings, extra: 1)),
+            ('💳', 'Payments & wallet', () => showComingSoon(context, 'Payments & wallet')),
+            ('🎒', 'Become a pro or host', () => showComingSoon(context, 'Become a pro or host')),
           ]),
           const SizedBox(height: 14),
           Container(
@@ -151,12 +154,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         Text(label, style: PgText.inter(11.5, FontWeight.w400, color: c.faint)),
       ]);
 
-  Widget _menuGroup(BuildContext context, PgColors c, List<(String, String)> items) => Container(
+  Widget _menuGroup(PgColors c, List<(String, String, VoidCallback)> items) => Container(
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border), borderRadius: BorderRadius.circular(18)),
         child: Column(children: [
           for (var i = 0; i < items.length; i++)
-            _row(c, items[i].$1, items[i].$2, () => showComingSoon(context, items[i].$2), border: i != items.length - 1),
+            _row(c, items[i].$1, items[i].$2, items[i].$3, border: i != items.length - 1),
         ]),
       );
 
