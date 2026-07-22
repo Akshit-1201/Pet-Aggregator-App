@@ -23,6 +23,10 @@ BookingPhase servicePhase(Booking b, DateTime now) {
   if (b.status == 'cancelled') return BookingPhase.cancelled;
   final d = DateTime.tryParse(b.date);
   if (d == null) return BookingPhase.completed; // legacy: no machine date, grandfathered
+  if (b.status == 'pending') {
+    // Unpaid: awaiting the guest's payment until the date passes, then expired.
+    return _day(d).isBefore(_day(now)) ? BookingPhase.expired : BookingPhase.awaitingPayment;
+  }
   return _day(d).isBefore(_day(now)) ? BookingPhase.completed : BookingPhase.upcoming;
 }
 
@@ -45,7 +49,14 @@ bool canRate(BookingPhase p) => p == BookingPhase.completed;
 
 bool canCancelService(Booking b, DateTime now) {
   final d = DateTime.tryParse(b.date);
-  return b.status == 'confirmed' && d != null && _day(now).isBefore(_day(d));
+  return (b.status == 'confirmed' || b.status == 'pending') &&
+      d != null &&
+      _day(now).isBefore(_day(d));
+}
+
+bool canPayService(Booking b, DateTime now) {
+  final d = DateTime.tryParse(b.date);
+  return b.status == 'pending' && d != null && !_day(d).isBefore(_day(now));
 }
 
 bool canCancelStay(HomestayBooking b, DateTime now) =>

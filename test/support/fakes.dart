@@ -238,12 +238,23 @@ class InMemoryBookingRepository implements BookingRepository {
   final List<Booking> _bookings = [];
   final _controller = StreamController<List<Booking>>.broadcast();
 
+  // Seeding bypasses createBooking's forced 'pending' status — fixtures use
+  // this to represent bookings a server would have already confirmed/paid,
+  // since the client-facing createBooking (matching production/Firestore
+  // rules) can never write anything but 'pending'.
+  InMemoryBookingRepository([List<Booking>? seed]) {
+    if (seed != null) _bookings.addAll(seed);
+  }
+
   @override
-  Future<void> createBooking(Booking booking) async {
-    final stamped = booking.createdAt != 0 ? booking
-        : Booking.fromMap(booking.id, {...booking.toMap(), 'createdAt': DateTime.now().millisecondsSinceEpoch});
+  Future<Booking> createBooking(Booking booking) async {
+    final id = booking.id.isEmpty ? 'bk${_bookings.length + 1}' : booking.id;
+    final map = {...booking.toMap(), 'status': 'pending'};
+    if ((map['createdAt'] ?? 0) == 0) map['createdAt'] = DateTime.now().millisecondsSinceEpoch;
+    final stamped = Booking.fromMap(id, map);
     _bookings.add(stamped);
     _controller.add(List.of(_bookings));
+    return stamped;
   }
 
   @override
@@ -359,15 +370,6 @@ class InMemoryHomestayBookingRepository implements HomestayBookingRepository {
 
   @override
   Future<void> cancelStay(String id) => _setStatus(id, 'cancelled');
-
-  @override
-  Future<void> markPaid(String id, String paymentId) async {
-    final i = _bookings.indexWhere((b) => b.id == id);
-    if (i == -1) return;
-    _bookings[i] = HomestayBooking.fromMap(id, {..._bookings[i].toMap(),
-        'status': 'paid', 'updatedAt': DateTime.now().millisecondsSinceEpoch, 'paymentId': paymentId});
-    _controller.add(List.of(_bookings));
-  }
 }
 
 class InMemoryPostRepository implements PostRepository {
@@ -571,7 +573,8 @@ class FakePaymentService implements PaymentService {
   final Completer<PaymentResult>? gate;
   final RefundResult? refundResult;
   final PaymentException? refundError;
-  final List<int> chargedAmounts = [];
+  final List<String> paidBookingIds = [];
+  final List<PaymentKind> paidKinds = [];
   final List<String> refundedBookingIds = [];
   FakePaymentService({this.result, this.error, this.gate, this.refundResult, this.refundError});
 
@@ -580,11 +583,13 @@ class FakePaymentService implements PaymentService {
 
   @override
   Future<PaymentResult> payForBooking({
-    required int amountRupees,
+    required String bookingId,
+    required PaymentKind kind,
     required String description,
     void Function()? onVerifying,
   }) async {
-    chargedAmounts.add(amountRupees);
+    paidBookingIds.add(bookingId);
+    paidKinds.add(kind);
     if (gate != null) return gate!.future;
     if (error != null) throw error!;
     onVerifying?.call();

@@ -90,11 +90,12 @@ void main() {
     final pros = InMemoryProRepository();
     await pros.upsertPro(Pro(uid: uid, name: 'Me', area: 'Khar', bio: '',
         serviceType: ServiceType.walker, rate: 250, experienceYears: 2));
-    final bookings = InMemoryBookingRepository();
-    await bookings.createBooking(Booking(id: 'bk1', parentId: 'guest1', proId: uid,
+    // Seeded directly (not via createBooking, which forces 'pending' to match
+    // production) to represent a booking the server has already confirmed.
+    final bookings = InMemoryBookingRepository([Booking(id: 'bk1', parentId: 'guest1', proId: uid,
         proName: 'Me', petId: 'p1', petName: 'Bruno', serviceType: ServiceType.walker,
         rate: 250, fee: 25, total: 275, dateLabel: 'Tue', timeSlot: '5:00 PM',
-        date: Booking.isoDate(DateTime.now().add(const Duration(days: 2)))));
+        date: Booking.isoDate(DateTime.now().add(const Duration(days: 2))))]);
 
     await _pumpAsHost(tester, auth: auth,
         hbookings: InMemoryHomestayBookingRepository(), bookings: bookings, pros: pros);

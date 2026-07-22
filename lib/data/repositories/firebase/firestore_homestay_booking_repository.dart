@@ -41,11 +41,4 @@ class FirestoreHomestayBookingRepository implements HomestayBookingRepository {
 
   @override
   Future<void> cancelStay(String id) => _setStatus(id, 'cancelled');
-
-  @override
-  Future<void> markPaid(String id, String paymentId) => _col.doc(id).update({
-        'status': 'paid',
-        'updatedAt': DateTime.now().millisecondsSinceEpoch,
-        'paymentId': paymentId,
-      });
 }

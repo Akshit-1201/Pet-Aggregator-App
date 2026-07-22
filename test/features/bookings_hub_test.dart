@@ -44,11 +44,12 @@ void main() {
 
   testWidgets('chips reflect phases; Rate hidden until completed', (tester) async {
     final (auth, uid) = await _me();
-    final bookings = InMemoryBookingRepository();
-    await bookings.createBooking(Booking(id: 'bk1', parentId: uid, proId: 'pro1',
+    // Seeded directly (not via createBooking, which forces 'pending' to match
+    // production) to represent a booking the server has already confirmed.
+    final bookings = InMemoryBookingRepository([Booking(id: 'bk1', parentId: uid, proId: 'pro1',
         proName: 'Aarav Sharma', petId: 'p1', petName: 'Bruno', serviceType: ServiceType.walker,
         rate: 250, fee: 25, total: 275, dateLabel: 'Tue', timeSlot: '5:00 PM',
-        date: Booking.isoDate(DateTime.now().add(const Duration(days: 2)))));
+        date: Booking.isoDate(DateTime.now().add(const Duration(days: 2))))]);
     final hbookings = InMemoryHomestayBookingRepository();
     await hbookings.createHomestayBooking(_stay('hb1', uid));                       // Pending
     await hbookings.createHomestayBooking(_stay('hb2', uid, status: 'declined'));   // Declined

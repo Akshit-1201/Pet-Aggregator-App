@@ -19,10 +19,13 @@ class RazorpayPaymentService implements PaymentService {
 
   Completer<PaymentResult>? _inFlight;
   void Function()? _onVerifying;
+  String? _bookingId;
+  PaymentKind? _kind;
 
   @override
   Future<PaymentResult> payForBooking({
-    required int amountRupees,
+    required String bookingId,
+    required PaymentKind kind,
     required String description,
     void Function()? onVerifying,
   }) async {
@@ -35,12 +38,14 @@ class RazorpayPaymentService implements PaymentService {
     final completer = Completer<PaymentResult>();
     _inFlight = completer;
     _onVerifying = onVerifying;
+    _bookingId = bookingId;
+    _kind = kind;
 
     final Map<String, dynamic> order;
     try {
       final res = await _functions
           .httpsCallable('createBookingOrder')
-          .call<Map<Object?, Object?>>({'amountRupees': amountRupees});
+          .call<Map<Object?, Object?>>({'kind': kind.name, 'bookingId': bookingId});
       order = Map<String, dynamic>.from(res.data);
     } catch (_) {
       _inFlight = null;
@@ -83,6 +88,8 @@ class RazorpayPaymentService implements PaymentService {
     final paymentId = r.paymentId ?? '';
     try {
       await _functions.httpsCallable('verifyBookingPayment').call<Map<Object?, Object?>>({
+        'kind': _kind?.name,
+        'bookingId': _bookingId,
         'orderId': r.orderId,
         'paymentId': r.paymentId,
         'signature': r.signature,
@@ -102,6 +109,8 @@ class RazorpayPaymentService implements PaymentService {
     final c = _inFlight;
     _inFlight = null;
     _onVerifying = null;
+    _bookingId = null;
+    _kind = null;
     if (c != null && !c.isCompleted) c.complete(result);
   }
 
@@ -110,6 +119,8 @@ class RazorpayPaymentService implements PaymentService {
     final c = _inFlight;
     _inFlight = null;
     _onVerifying = null;
+    _bookingId = null;
+    _kind = null;
     if (c != null && !c.isCompleted) c.completeError(e);
   }
 

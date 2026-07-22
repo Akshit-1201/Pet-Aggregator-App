@@ -350,25 +350,16 @@ void main() {
             {'status': 'paid', 'updatedAt': 3, 'paymentId': 'pay_h'}),
         throwsA(isA<FirebaseException>()));
 
-    // Guest pays the accepted stay: accepted -> paid with a paymentId.
+    // The guest can no longer write paid — that transition is server-only now
+    // (verifyBookingPayment writes it with admin after binding the order).
     await auth.signOut();
     await auth.signIn(email: 'lg_$stamp@x.com', password: 'secret1');
-    // A valid accepted->paid transition that also touches another field is denied
-    // by the hasOnly(['status','updatedAt','paymentId']) guard (stay still accepted here).
     await expectLater(
         db.collection('homestayBookings').doc(stayId).update(
-            {'status': 'paid', 'total': 1, 'updatedAt': 5, 'paymentId': 'p'}),
+            {'status': 'paid', 'updatedAt': 5, 'paymentId': 'pay_client'}),
         throwsA(isA<FirebaseException>()));
-    await stays.markPaid(stayId, 'pay_ok');
-    final paid = (await stays.watchMyHomestayBookings(guest.uid).firstWhere(
-            (l) => l.any((s) => s.id == stayId && s.status == 'paid')))
-        .firstWhere((s) => s.id == stayId);
-    expect(paid.paymentId, 'pay_ok');
-    expect(paid.updatedAt, greaterThan(0));
-
-    // A paid stay can no longer be cancelled by the guest (no matching branch).
     await expectLater(
-        db.collection('homestayBookings').doc(stayId).update({'status': 'cancelled', 'updatedAt': 4}),
+        db.collection('homestayBookings').doc(stayId).update({'status': 'paid', 'updatedAt': 5}),
         throwsA(isA<FirebaseException>()));
 
     // Separate stay: the guest-cancel-of-accepted arrow is still covered (the
@@ -394,9 +385,14 @@ void main() {
     expect(cancelled.firstWhere((s) => s.id == stayId2).status, 'cancelled');
 
     // Service booking: parent cancels; pro-side stream sees it; invalid targets rejected.
+    // A client can no longer mint a confirmed (paid) service booking.
+    await expectLater(
+        db.collection('bookings').add({'parentId': guest.uid, 'proId': host.uid, 'status': 'confirmed'}),
+        throwsA(isA<FirebaseException>()));
     await bookings.createBooking(Booking(parentId: guest.uid, proId: host.uid, proName: 'Aarav',
         petId: 'p', petName: 'Bruno', serviceType: ServiceType.walker, rate: 250, fee: 25,
-        total: 275, dateLabel: 'Tue 15 Jul', timeSlot: '5:00 PM', date: '2027-01-10'));
+        total: 275, dateLabel: 'Tue 15 Jul', timeSlot: '5:00 PM', date: '2027-01-10',
+        status: 'pending'));
     final bkId = (await bookings.watchMyBookings(guest.uid).firstWhere((l) => l.isNotEmpty)).single.id;
     await expectLater(
         db.collection('bookings').doc(bkId).update({'status': 'paused', 'updatedAt': 1}),

@@ -9,10 +9,12 @@ class FirestoreBookingRepository implements BookingRepository {
   CollectionReference<Map<String, dynamic>> get _col => _db.collection('bookings');
 
   @override
-  Future<void> createBooking(Booking booking) {
+  Future<Booking> createBooking(Booking booking) async {
     final map = booking.toMap();
     if ((map['createdAt'] ?? 0) == 0) map['createdAt'] = DateTime.now().millisecondsSinceEpoch;
-    return _col.add(map);
+    map['status'] = 'pending'; // paid state is server-written (verifyBookingPayment)
+    final doc = await _col.add(map);
+    return Booking.fromMap(doc.id, map);
   }
 
   @override

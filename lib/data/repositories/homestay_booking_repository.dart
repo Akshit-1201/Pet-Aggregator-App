@@ -7,5 +7,4 @@ abstract interface class HomestayBookingRepository {
   Future<void> acceptRequest(String id);
   Future<void> declineRequest(String id);
   Future<void> cancelStay(String id);
-  Future<void> markPaid(String id, String paymentId);
 }

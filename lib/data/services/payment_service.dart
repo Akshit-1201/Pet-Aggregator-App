@@ -18,11 +18,16 @@ class RefundResult {
   const RefundResult({required this.refundAmount, required this.refundId});
 }
 
+enum PaymentKind { service, homestay }
+
 abstract interface class PaymentService {
+  /// Pays for an EXISTING booking. The server prices it and writes the paid
+  /// state — the client never supplies an amount.
   Future<PaymentResult> payForBooking({
-    required int amountRupees,
+    required String bookingId,
+    required PaymentKind kind,
     required String description,
-    void Function()? onVerifying, // fires when the gateway succeeded and verification starts
+    void Function()? onVerifying,
   });
 
   Future<RefundResult> refundStay({required String bookingId});
