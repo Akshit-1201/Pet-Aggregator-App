@@ -5,7 +5,6 @@ import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
-import '../../core/widgets/pg_snackbar.dart';
 import '../../data/models/booking.dart';
 import '../../data/models/pet_profile.dart';
 import '../../data/repositories/providers.dart';
@@ -41,6 +40,55 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted && _uploading) setState(() => _uploading = false);
     }
   }
+
+  // "Become a pro or host" — the two setup flows already exist; offer a choice
+  // and push into the right one (fromOnboarding:false, so Save/back returns the
+  // user to the Services/Homestay list exactly as the in-app "set up" banners do).
+  void _showBecomeProOrHost(BuildContext context) {
+    final c = context.pg;
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: c.surface,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      builder: (sheetCtx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
+          child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('Start earning on Pawgo', style: PgText.poppins(18, FontWeight.w800, color: c.text)),
+            const SizedBox(height: 4),
+            Text('Pick how you want to help pets nearby.',
+                style: PgText.inter(13, FontWeight.w400, color: c.muted)),
+            const SizedBox(height: 16),
+            _earnOption(sheetCtx, c, '🐾', 'Become a pro', 'Offer walking, sitting & grooming',
+                () { Navigator.of(sheetCtx).pop(); context.push(Routes.proSetup); }),
+            const SizedBox(height: 10),
+            _earnOption(sheetCtx, c, '🏡', 'Become a host', 'Board pets at your place',
+                () { Navigator.of(sheetCtx).pop(); context.push(Routes.hostSetup); }),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _earnOption(BuildContext context, PgColors c, String emoji, String title, String subtitle, VoidCallback onTap) =>
+      GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Container(
+          padding: const EdgeInsets.all(15),
+          decoration: BoxDecoration(color: c.brandSoft, border: Border.all(color: c.border), borderRadius: BorderRadius.circular(16)),
+          child: Row(children: [
+            Text(emoji, style: const TextStyle(fontSize: 22)),
+            const SizedBox(width: 13),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: PgText.poppins(15, FontWeight.w700, color: c.text)),
+              Text(subtitle, style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
+            ])),
+            Icon(Icons.chevron_right, color: c.faint, size: 20),
+          ]),
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -132,8 +180,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             ('🗓️', 'My bookings', () => context.push(Routes.bookings)),
             // Received (tab 1) is where a host sees the stays booked with them.
             ('🏡', 'My homestays', () => context.push(Routes.bookings, extra: 1)),
-            ('💳', 'Payments & wallet', () => showComingSoon(context, 'Payments & wallet')),
-            ('🎒', 'Become a pro or host', () => showComingSoon(context, 'Become a pro or host')),
+            ('🧾', 'Payments', () => context.push(Routes.payments)),
+            ('🎒', 'Become a pro or host', () => _showBecomeProOrHost(context)),
           ]),
           const SizedBox(height: 14),
           Container(

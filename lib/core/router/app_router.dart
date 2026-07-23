@@ -33,6 +33,9 @@ import '../../features/homestay/host_setup_screen.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/onboarding/splash_screen.dart';
 import '../../features/onboarding/onboarding_screen.dart';
+import '../../features/payments/payments_screen.dart';
+import '../../features/payments/receipt_screen.dart';
+import '../../data/models/payment_record.dart';
 import '../../features/pets/create_pet_screen.dart';
 import '../../features/pets/pet_profile_detail_screen.dart';
 import '../../features/profile/profile_screen.dart';
@@ -65,6 +68,7 @@ const _protected = {
   Routes.chatList, Routes.chat,
   Routes.bookings, Routes.rate,
   Routes.notifications,
+  Routes.payments, Routes.receipt,
 };
 
 GoRouter buildRouter({required AuthRepository auth, String initialLocation = Routes.splash}) {
@@ -108,6 +112,8 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.chat, builder: (_, state) => ChatConversationScreen(chat: state.extra as Chat?)),
       GoRoute(path: Routes.chatList, builder: (_, _) => const ChatListScreen()),
       GoRoute(path: Routes.notifications, builder: (_, _) => const NotificationsScreen()),
+      GoRoute(path: Routes.payments, builder: (_, _) => const PaymentsScreen()),
+      GoRoute(path: Routes.receipt, builder: (_, state) => ReceiptScreen(record: state.extra as PaymentRecord?)),
       GoRoute(path: Routes.rate, builder: (_, state) => RateReviewScreen(target: state.extra as ReviewTarget?)),
       GoRoute(path: Routes.bookings, builder: (_, state) =>
           MyBookingsScreen(initialTab: state.extra is int ? state.extra as int : 0)),

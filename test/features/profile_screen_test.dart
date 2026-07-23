@@ -24,6 +24,8 @@ Future<void> _pumpProfile(WidgetTester tester, FakeAuthRepository auth) async {
     petRepositoryProvider.overrideWithValue(pets),
     swipeRepositoryProvider.overrideWithValue(swipes),
     bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
+    homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
+    proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
   ], initialLocation: Routes.profile);
   await tester.pumpAndSettle();
 }
@@ -49,5 +51,27 @@ void main() {
     await tester.tap(find.text('Bruno'));
     await tester.pumpAndSettle();
     expect(find.text('Pet parent'), findsOneWidget); // owner card is unique to Pet-profile
+  });
+
+  testWidgets('Payments row opens the Payments screen', (tester) async {
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    await _pumpProfile(tester, auth);
+    await tester.tap(find.text('Payments'));
+    await tester.pumpAndSettle();
+    expect(find.text('No payments yet'), findsOneWidget); // Payments screen, empty
+  });
+
+  testWidgets('Become a pro or host opens a chooser → Pro setup', (tester) async {
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    await _pumpProfile(tester, auth);
+    await tester.tap(find.text('Become a pro or host'));
+    await tester.pumpAndSettle();
+    expect(find.text('Become a pro'), findsOneWidget);
+    expect(find.text('Become a host'), findsOneWidget);
+    await tester.tap(find.text('Become a pro'));
+    await tester.pumpAndSettle();
+    expect(find.text('Offer your services'), findsOneWidget); // ProSetupScreen app-bar title
   });
 }

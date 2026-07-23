@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_app_bar.dart';
-import '../../core/widgets/pg_snackbar.dart';
 import '../../core/widgets/pg_toggle.dart';
 import '../../data/repositories/providers.dart';
 
@@ -36,14 +35,7 @@ class SettingsScreen extends ConsumerWidget {
             ]),
           ),
           const SizedBox(height: 18),
-          _label(context, 'NOTIFICATIONS'),
-          _comingRow(context, c, 'New Woofs & matches'),
-          _comingRow(context, c, 'Booking updates'),
-          _comingRow(context, c, 'Nearby pet alerts'),
-          const SizedBox(height: 18),
-          _label(context, 'PRIVACY & ACCOUNT'),
-          _comingRow(context, c, 'Location sharing'),
-          _comingRow(context, c, 'Chat safety'),
+          _label(context, 'ABOUT'),
           _staticRow(c, 'About Pawgo', 'v1.0.0'),
         ])),
       ])),
@@ -53,19 +45,6 @@ class SettingsScreen extends ConsumerWidget {
   Widget _label(BuildContext context, String text) => Padding(
         padding: const EdgeInsets.only(bottom: 9, top: 2),
         child: Text(text, style: PgText.inter(12, FontWeight.w700, color: context.pg.faint)),
-      );
-
-  Widget _comingRow(BuildContext context, PgColors c, String title) => GestureDetector(
-        onTap: () => showComingSoon(context, title),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          padding: const EdgeInsets.all(15),
-          decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border), borderRadius: BorderRadius.circular(16)),
-          child: Row(children: [
-            Expanded(child: Text(title, style: PgText.inter(14, FontWeight.w600, color: c.text))),
-            Icon(Icons.chevron_right, color: c.faint, size: 20),
-          ]),
-        ),
       );
 
   Widget _staticRow(PgColors c, String title, String trailing) => Container(

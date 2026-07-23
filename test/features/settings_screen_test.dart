@@ -22,7 +22,7 @@ void main() {
     expect(prefs.themeMode, ThemeMode.dark); // persisted via the notifier
   });
 
-  testWidgets('a coming-soon settings row shows the snackbar', (tester) async {
+  testWidgets('shows only real settings — no coming-soon placeholder rows', (tester) async {
     final auth = FakeAuthRepository();
     await auth.signUp(email: 'me@x.com', password: 'secret1');
     await pumpPgApp(tester, overrides: [
@@ -30,8 +30,10 @@ void main() {
       preferencesRepositoryProvider.overrideWithValue(InMemoryPreferencesRepository()),
     ], initialLocation: Routes.settings);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Booking updates'));
-    await tester.pump();
-    expect(find.textContaining('coming soon'), findsOneWidget);
+    // The unbacked placeholder rows were removed; Dark mode + About remain.
+    expect(find.text('Booking updates'), findsNothing);
+    expect(find.text('Location sharing'), findsNothing);
+    expect(find.text('Chat safety'), findsNothing);
+    expect(find.text('About Pawgo'), findsOneWidget);
   });
 }

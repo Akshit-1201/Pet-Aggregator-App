@@ -33,4 +33,6 @@ class Routes {
   static const bookings = '/bookings';
   static const rate = '/rate';
   static const notifications = '/notifications';
+  static const payments = '/payments';
+  static const receipt = '/receipt';
 }
