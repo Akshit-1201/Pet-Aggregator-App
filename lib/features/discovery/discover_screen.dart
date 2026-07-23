@@ -23,11 +23,16 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final me = ref.read(authRepositoryProvider).currentUser;
     if (me == null) return;
     final swipes = ref.read(swipeRepositoryProvider);
+    // Advance first, then talk to the network. Awaiting the write + reciprocity
+    // read before advancing left the swiped card animated off-screen with only
+    // the empty placeholder showing until Firestore replied — on a real device
+    // that reads as a blank white card that's stuck (matching _onPass, which
+    // never awaited and so always felt instant).
+    setState(() => _index++);
     await swipes.recordSwipe(Swipe(
         fromUid: me.uid, petId: pet.id, ownerId: pet.ownerId, direction: SwipeDirection.woof));
     final matched = await swipes.hasReciprocalWoof(otherUid: pet.ownerId, myUid: me.uid);
     if (!mounted) return;
-    setState(() => _index++);
     if (matched) context.push(Routes.woofMatch, extra: pet);
   }
 

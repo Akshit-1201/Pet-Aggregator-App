@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/pg_image_slot.dart';
 import '../../data/models/homestay.dart';
 import '../../data/models/role.dart';
 import '../../data/repositories/providers.dart';
@@ -21,9 +22,12 @@ class HomestayListScreen extends ConsumerWidget {
     final isHostWithoutListing = profile?.role == Role.homestayHost &&
         currentHomestay.hasValue && currentHomestay.value == null;
 
-    return Container(
-      color: c.bg,
-      child: SafeArea(
+    // Scaffold (not a bare Container): this is a top-level route, so unlike the
+    // bottom-nav branches it has no HomeShell Scaffold above it. Without a
+    // Material ancestor every Text renders with Flutter's yellow double underline.
+    return Scaffold(
+      backgroundColor: c.bg,
+      body: SafeArea(
         bottom: false,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(
@@ -127,9 +131,8 @@ class _HostCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20), boxShadow: c.shadowSm),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Stack(children: [
-            Container(height: 150, width: double.infinity, color: c.surface2,
-              alignment: Alignment.center,
-              child: Text(h.homeType.emoji, style: const TextStyle(fontSize: 40))),
+            SizedBox(height: 150, width: double.infinity,
+              child: PgImageSlot(radius: 0, emoji: h.homeType.emoji, imageUrl: h.coverPhoto)),
             if (h.verified)
               Positioned(top: 12, left: 12, child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

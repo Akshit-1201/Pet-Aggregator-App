@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' show AsyncData;
 import 'package:flutter_riverpod/misc.dart' show Override;
@@ -6,12 +8,39 @@ import 'package:pet_aggregator_app/core/router/routes.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
 import 'package:pet_aggregator_app/data/models/swipe.dart';
 import 'package:pet_aggregator_app/data/repositories/providers.dart';
+import 'package:pet_aggregator_app/data/repositories/swipe_repository.dart';
 import 'package:pet_aggregator_app/features/discovery/nearby_map_screen.dart';
 import '../support/fakes.dart';
 import '../support/pump.dart';
 
+/// A swipe repository whose writes/reads never settle until [gate] completes —
+/// stands in for a slow network so a test can assert the UI does not wait on it.
+class _BlockingSwipeRepository implements SwipeRepository {
+  final Future<void> gate;
+  final InMemorySwipeRepository _inner = InMemorySwipeRepository();
+  _BlockingSwipeRepository(this.gate);
+
+  @override
+  Future<void> recordSwipe(Swipe swipe) async {
+    await gate;
+    return _inner.recordSwipe(swipe);
+  }
+
+  @override
+  Future<bool> hasReciprocalWoof({required String otherUid, required String myUid}) async {
+    await gate;
+    return _inner.hasReciprocalWoof(otherUid: otherUid, myUid: myUid);
+  }
+
+  @override
+  Stream<Set<String>> watchSwipedPetIds(String uid) => _inner.watchSwipedPetIds(uid);
+
+  @override
+  Stream<int> watchMyWoofCount(String uid) => _inner.watchMyWoofCount(uid);
+}
+
 Future<void> _pump(WidgetTester tester,
-    {InMemorySwipeRepository? swipes, List<Override> extraOverrides = const []}) async {
+    {SwipeRepository? swipes, List<Override> extraOverrides = const []}) async {
   final auth = FakeAuthRepository();
   await auth.signUp(email: 'me@x.com', password: 'secret1'); // uid_me@x.com
   await pumpPgApp(tester, overrides: [
@@ -63,6 +92,24 @@ void main() {
     expect(find.text('Mochi'), findsOneWidget);
     final ids = await swipes.watchSwipedPetIds('uid_me@x.com').first;
     expect(ids.contains('p1'), isTrue); // Bruno recorded
+  });
+
+  // Regression: _onWoof used to await recordSwipe + hasReciprocalWoof BEFORE
+  // advancing, so the swiped card sat animated off-screen and the user stared at
+  // the empty placeholder ("blank white card") until the network replied.
+  testWidgets('a Woof advances to the next pet without waiting for the network',
+      (tester) async {
+    final gate = Completer<void>();
+    await _pump(tester, swipes: _BlockingSwipeRepository(gate.future));
+    expect(find.text('Bruno'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('discover-woof')));
+    await tester.pump(); // network call still pending — must not block the deck
+    expect(find.text('Bruno'), findsNothing);
+    expect(find.text('Mochi'), findsOneWidget);
+
+    gate.complete();
+    await tester.pumpAndSettle();
   });
 
   // The chip opened the map all along but was mislabelled "Filters".

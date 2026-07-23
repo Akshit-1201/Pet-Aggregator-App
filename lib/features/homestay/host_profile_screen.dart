@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/pg_image_slot.dart';
 import '../../data/models/homestay.dart';
 import '../reviews/reviews_section.dart';
 
@@ -33,9 +34,16 @@ class HostProfileScreen extends StatelessWidget {
             children: [
               // Home photo header + back button.
               Stack(children: [
-                Container(height: 220, width: double.infinity, color: c.surface2,
-                  alignment: Alignment.center,
-                  child: Text(h.homeType.emoji, style: const TextStyle(fontSize: 56))),
+                // Hosts upload 3–5 photos; let parents swipe through all of them.
+                SizedBox(
+                  height: 220, width: double.infinity,
+                  child: h.photoUrls.isEmpty
+                      ? PgImageSlot(radius: 0, emoji: h.homeType.emoji)
+                      : PageView(children: [
+                          for (final url in h.photoUrls)
+                            PgImageSlot(radius: 0, emoji: h.homeType.emoji, imageUrl: url),
+                        ]),
+                ),
                 Positioned(top: 0, left: 0, child: SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.all(14),

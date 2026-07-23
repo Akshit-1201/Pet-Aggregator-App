@@ -32,19 +32,27 @@ enum Amenity {
 }
 
 class Homestay {
+  /// A listing must show the place: at least [minPhotos], at most [maxPhotos].
+  static const int minPhotos = 3;
+  static const int maxPhotos = 5;
+
   final String uid, homeName, hostName, area, about;
   final HomeType homeType;
   final int ratePerNight, reviewCount;
   final List<Amenity> amenities;
+  final List<String> photoUrls;
   final bool verified;
   final double rating;
 
   const Homestay({
     required this.uid, required this.homeName, required this.hostName,
     required this.area, required this.about, required this.homeType,
-    required this.ratePerNight, this.amenities = const [],
+    required this.ratePerNight, this.amenities = const [], this.photoUrls = const [],
     this.verified = false, this.rating = 0, this.reviewCount = 0,
   });
+
+  /// The image used wherever a single thumbnail represents the home.
+  String get coverPhoto => photoUrls.isEmpty ? '' : photoUrls.first;
 
   Map<String, dynamic> toMap() => {
         'ownerId': uid,
@@ -55,6 +63,7 @@ class Homestay {
         'homeType': homeType.storageKey,
         'ratePerNight': ratePerNight,
         'amenities': amenities.map((a) => a.storageKey).toList(),
+        'photoUrls': photoUrls,
         'verified': verified,
         'rating': rating,
         'reviewCount': reviewCount,
@@ -69,6 +78,7 @@ class Homestay {
         homeType: HomeType.fromStorage((m['homeType'] ?? 'apartment') as String),
         ratePerNight: (m['ratePerNight'] ?? 0) as int,
         amenities: Amenity.fromStorageList((m['amenities'] ?? const []) as List),
+        photoUrls: ((m['photoUrls'] ?? const []) as List).whereType<String>().toList(),
         verified: (m['verified'] ?? false) as bool,
         rating: ((m['rating'] ?? 0) as num).toDouble(),
         reviewCount: (m['reviewCount'] ?? 0) as int,

@@ -7,6 +7,13 @@ service firebase.storage {
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
+    // Homestay listing photos, written only by the host who owns the listing.
+    match /homestays/{uid}/{file} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
     match /pets/{file} {
       allow read: if request.auth != null;
       // pet files are named "{uid}_{millis}.jpg" — enforce the uploader's own prefix
