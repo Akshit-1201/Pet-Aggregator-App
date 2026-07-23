@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show AsyncData;
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pet_aggregator_app/core/router/routes.dart';
+import 'package:pet_aggregator_app/data/models/pet_profile.dart';
 import 'package:pet_aggregator_app/data/models/swipe.dart';
 import 'package:pet_aggregator_app/data/repositories/providers.dart';
 import 'package:pet_aggregator_app/features/discovery/nearby_map_screen.dart';
@@ -25,6 +27,30 @@ Future<void> _pump(WidgetTester tester,
 void main() {
   testWidgets('renders the first nearby pet', (tester) async {
     await _pump(tester);
+    expect(find.text('Bruno'), findsOneWidget);
+  });
+
+  // Regression: the deck used to be seeded ONLY from ref.listen, which fires on a
+  // change (loading→data) and never delivers the current value. When the provider
+  // is already resolved at first build (warm providers, or the State recreated
+  // after the deck resolved once) there is no transition, _deck stayed null, and
+  // the screen buffered on a spinner forever. Seeding from the watched value fixes it.
+  testWidgets('renders the deck when the provider already has a value at first build',
+      (tester) async {
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    final pets = fixturePets('owner-b'); // Bruno, Mochi, …
+    await pumpPgApp(tester, overrides: [
+      authRepositoryProvider.overrideWithValue(auth),
+      userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
+      petRepositoryProvider.overrideWithValue(InMemoryPetRepository(pets)),
+      swipeRepositoryProvider.overrideWithValue(InMemorySwipeRepository()),
+      // Already-resolved before the screen builds → ref.listen sees no transition.
+      discoverDeckProvider.overrideWithValue(AsyncData<List<PetProfile>>(pets)),
+    ], initialLocation: Routes.discover);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(CircularProgressIndicator), findsNothing);
     expect(find.text('Bruno'), findsOneWidget);
   });
 

@@ -44,9 +44,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final c = context.pg;
     final profile = ref.watch(currentUserProfileProvider).value;
     final deckAsync = ref.watch(discoverDeckProvider);
-    ref.listen(discoverDeckProvider, (prev, next) {
-      if (_deck == null && next.hasValue) setState(() => _deck = next.value);
-    });
+    // Seed the deck from the currently-watched value, not from ref.listen: a
+    // change-only listener never fires when the provider is already resolved at
+    // first build (warm providers / State recreated after a prior resolve), which
+    // left the screen spinning forever. Seed once, then freeze so _index walks a
+    // stable list even as the provider re-emits a shrinking deck during swipes.
+    if (_deck == null && deckAsync.hasValue) _deck = deckAsync.value;
 
     return Container(
       color: c.bg,
