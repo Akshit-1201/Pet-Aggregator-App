@@ -8,10 +8,13 @@ class PgPageDots extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = context.pg;
-    return Row(children: List.generate(count, (i) {
+    // Shrink-wrap: a dots indicator must not stretch to fill its parent, or
+    // centring it (e.g. the pill on the homestay gallery) produces a full-width
+    // bar. No trailing gap after the last dot, so the row is symmetric.
+    return Row(mainAxisSize: MainAxisSize.min, children: List.generate(count, (i) {
       final active = i == index;
       return Padding(
-        padding: const EdgeInsets.only(right: 7),
+        padding: EdgeInsets.only(right: i == count - 1 ? 0 : 7),
         child: AnimatedContainer(
           key: const ValueKey('pg-dot'),
           duration: const Duration(milliseconds: 200),

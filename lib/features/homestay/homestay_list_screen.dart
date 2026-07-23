@@ -133,6 +133,14 @@ class _HostCard extends StatelessWidget {
           Stack(children: [
             SizedBox(height: 150, width: double.infinity,
               child: PgImageSlot(radius: 0, emoji: h.homeType.emoji, imageUrl: h.coverPhoto)),
+            // Tells parents there's more to see before they tap in.
+            if (h.photoUrls.length > 1)
+              Positioned(bottom: 12, right: 12, child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Colors.black54, borderRadius: BorderRadius.circular(20)),
+                child: Text('📷 ${h.photoUrls.length}',
+                  style: PgText.inter(11.5, FontWeight.w700, color: Colors.white)))),
             if (h.verified)
               Positioned(top: 12, left: 12, child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),

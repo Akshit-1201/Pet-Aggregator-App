@@ -3,9 +3,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
-import '../../core/widgets/pg_image_slot.dart';
 import '../../data/models/homestay.dart';
 import '../reviews/reviews_section.dart';
+import 'home_gallery.dart';
 
 class HostProfileScreen extends StatelessWidget {
   final Homestay? homestay;
@@ -34,16 +34,12 @@ class HostProfileScreen extends StatelessWidget {
             children: [
               // Home photo header + back button.
               Stack(children: [
-                // Hosts upload 3–5 photos; let parents swipe through all of them.
-                SizedBox(
-                  height: 220, width: double.infinity,
-                  child: h.photoUrls.isEmpty
-                      ? PgImageSlot(radius: 0, emoji: h.homeType.emoji)
-                      : PageView(children: [
-                          for (final url in h.photoUrls)
-                            PgImageSlot(radius: 0, emoji: h.homeType.emoji, imageUrl: url),
-                        ]),
-                ),
+                // Hosts upload 3–5 photos: swipe through them here (counter +
+                // dots make that discoverable), or tap for the full-screen viewer.
+                // dotsBottomInset clears the detail card, which is pulled up 26px
+                // over the bottom of the gallery.
+                HomeGallery(photoUrls: h.photoUrls, emoji: h.homeType.emoji,
+                    dotsBottomInset: 46),
                 Positioned(top: 0, left: 0, child: SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.all(14),
