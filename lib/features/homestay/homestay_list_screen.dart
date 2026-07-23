@@ -131,7 +131,8 @@ class _HostCard extends StatelessWidget {
           borderRadius: BorderRadius.circular(20), boxShadow: c.shadowSm),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Stack(children: [
-            SizedBox(height: 150, width: double.infinity,
+            // Photo-forward: the home itself is what a parent is choosing between.
+            SizedBox(height: 200, width: double.infinity,
               child: PgImageSlot(radius: 0, emoji: h.homeType.emoji, imageUrl: h.coverPhoto)),
             // Tells parents there's more to see before they tap in.
             if (h.photoUrls.length > 1)

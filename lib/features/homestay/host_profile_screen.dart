@@ -36,9 +36,12 @@ class HostProfileScreen extends StatelessWidget {
               Stack(children: [
                 // Hosts upload 3–5 photos: swipe through them here (counter +
                 // dots make that discoverable), or tap for the full-screen viewer.
-                // dotsBottomInset clears the detail card, which is pulled up 26px
-                // over the bottom of the gallery.
+                // A listing sells on its photos, so the hero takes a share of the
+                // screen rather than a fixed strip — clamped so it stays a hero on
+                // a small phone without swallowing a tall one. dotsBottomInset
+                // clears the detail card, which is pulled up 26px over the gallery.
                 HomeGallery(photoUrls: h.photoUrls, emoji: h.homeType.emoji,
+                    height: (MediaQuery.sizeOf(context).height * 0.42).clamp(280.0, 430.0),
                     dotsBottomInset: 46),
                 Positioned(top: 0, left: 0, child: SafeArea(
                   child: Padding(
