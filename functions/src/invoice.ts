@@ -9,6 +9,15 @@ const esc = (s: unknown) => String(s ?? "")
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
   .replace(/"/g, "&quot;");
 
+/// Placeholder written to Secret Manager so the codebase can deploy before a
+/// Resend account exists — the CLI refuses to deploy ANY function while a
+/// declared secret has no value, even ones that don't use it. Treated as "email
+/// is off" rather than firing doomed API calls on every payment.
+export const MAIL_DISABLED = "unset";
+
+export const isMailConfigured = (apiKey: string) =>
+  apiKey.length > 0 && apiKey !== MAIL_DISABLED;
+
 export type InvoiceLine = {label: string; amount: number};
 
 export type InvoiceInput = {
@@ -88,6 +97,11 @@ function invoiceText(i: InvoiceInput): string {
  *  user as a failed booking. */
 export async function sendInvoiceEmail(
   apiKey: string, from: string, input: InvoiceInput): Promise<boolean> {
+  if (!isMailConfigured(apiKey)) {
+    logger.warn("invoice not sent: RESEND_API_KEY is not configured",
+      {bookingId: input.bookingId});
+    return false;
+  }
   if (!input.to) {
     logger.warn("sendInvoiceEmail: no recipient", {bookingId: input.bookingId});
     return false;
@@ -119,6 +133,11 @@ export async function sendRefundEmail(
   apiKey: string, from: string,
   input: {to: string; homeName: string; amount: number; bookingId: string; refundId: string},
 ): Promise<boolean> {
+  if (!isMailConfigured(apiKey)) {
+    logger.warn("refund email not sent: RESEND_API_KEY is not configured",
+      {bookingId: input.bookingId});
+    return false;
+  }
   if (!input.to) return false;
   const html = `<!doctype html>
 <html><body style="margin:0;padding:0;background:#FBF1E8;">

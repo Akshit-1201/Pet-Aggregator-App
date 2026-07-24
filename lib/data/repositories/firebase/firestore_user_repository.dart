@@ -25,6 +25,10 @@ class FirestoreUserRepository implements UserRepository {
   Future<void> setPhotoUrl(String uid, String url) => _col.doc(uid).update({'photoUrl': url});
 
   @override
+  Future<void> setNotificationPrefs(String uid, NotificationPrefs prefs) =>
+      _col.doc(uid).update(prefs.toMap());
+
+  @override
   Stream<UserProfile?> watchUser(String uid) => _col.doc(uid).snapshots().map(
       (doc) => doc.exists ? UserProfile.fromMap(uid, doc.data()!) : null);
 }

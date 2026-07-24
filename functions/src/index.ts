@@ -46,12 +46,32 @@ const REGION = "asia-south1";
  *  `route` travels in the data payload; PushRegistrar deep-links on it.
  *  Failures are logged, never thrown: a push that doesn't send must not roll
  *  back the booking or message that triggered it. */
+/** Push categories, matching the toggles in Settings. The field names are the
+ *  same ones UserProfile writes. */
+type PushCategory = "messages" | "bookings" | "woofs";
+const PREF_FIELD: Record<PushCategory, string> = {
+  messages: "notifyMessages",
+  bookings: "notifyBookings",
+  woofs: "notifyWoofs",
+};
+
 async function sendPushTo(
   uid: string,
   notification: {title: string; body: string},
-  route: string) {
+  route: string,
+  category: PushCategory) {
   if (!uid) return;
   const db = admin.firestore();
+
+  // Preference is checked here, at the source — a toggle that only hid
+  // notifications after delivery would not be a preference at all. Absent field
+  // means "on": accounts created before these flags existed must not go quiet.
+  const profile = (await db.collection("users").doc(uid).get()).data() ?? {};
+  if (profile[PREF_FIELD[category]] === false) {
+    logger.info("push suppressed by preference", {uid, category});
+    return;
+  }
+
   const tokensSnap = await db.collection("users").doc(uid)
     .collection("fcmTokens").get();
   const tokens = tokensSnap.docs.map((d) => d.id);
@@ -110,7 +130,7 @@ export const onChatMessageCreated = onDocumentCreated(
     const senderName = (chat.names ?? {})[senderId] ?? "Someone";
     await sendPushTo(recipient,
       {title: senderName, body: String(msg.text ?? "").slice(0, 140)},
-      "/messages");
+      "/messages", "messages");
   });
 
 /** Homestay lifecycle. The host learns about a new request (revenue-critical —
@@ -132,22 +152,22 @@ export const onHomestayBookingWritten = onDocumentUpdated(
     case "accepted":
       await sendPushTo(guestId,
         {title: "Your stay was accepted", body: `${homeName} can host ${petName}. Pay to confirm.`},
-        "/bookings");
+        "/bookings", "bookings");
       break;
     case "declined":
       await sendPushTo(guestId,
         {title: "Your stay request was declined", body: `${homeName} can't host ${petName} then.`},
-        "/bookings");
+        "/bookings", "bookings");
       break;
     case "paid":
       await sendPushTo(hostId,
         {title: "A stay is confirmed & paid", body: `${petName} is booked in at ${homeName}.`},
-        "/bookings");
+        "/bookings", "bookings");
       break;
     case "cancelled":
       await sendPushTo(hostId,
         {title: "A stay was cancelled", body: `${petName}'s stay at ${homeName} was cancelled.`},
-        "/bookings");
+        "/bookings", "bookings");
       break;
     }
   });
@@ -160,7 +180,7 @@ export const onHomestayBookingCreated = onDocumentCreated(
     await sendPushTo(String(b.hostId ?? ""),
       {title: "New booking request",
         body: `${b.petName ?? "A pet"} needs a place — ${b.nights ?? "?"} nights.`},
-      "/bookings");
+      "/bookings", "bookings");
   });
 
 /** Service bookings: the pro is told when money has actually landed
@@ -178,10 +198,12 @@ export const onServiceBookingWritten = onDocumentUpdated(
     const dateLabel = String(after.dateLabel ?? "");
     if (after.status === "confirmed") {
       await sendPushTo(String(after.proId ?? ""),
-        {title: "New booking, paid", body: `${petName} · ${dateLabel}`}, "/bookings");
+        {title: "New booking, paid", body: `${petName} · ${dateLabel}`},
+        "/bookings", "bookings");
     } else if (after.status === "cancelled") {
       await sendPushTo(String(after.proId ?? ""),
-        {title: "A booking was cancelled", body: `${petName} · ${dateLabel}`}, "/bookings");
+        {title: "A booking was cancelled", body: `${petName} · ${dateLabel}`},
+        "/bookings", "bookings");
     }
   });
 
@@ -207,8 +229,8 @@ export const onSwipeCreated = onDocumentCreated(
 
     const body = "You both woofed. Say hello!";
     await Promise.all([
-      sendPushTo(fromUid, {title: "It's a match! 🐾", body}, "/discover"),
-      sendPushTo(ownerId, {title: "It's a match! 🐾", body}, "/discover"),
+      sendPushTo(fromUid, {title: "It's a match! 🐾", body}, "/discover", "woofs"),
+      sendPushTo(ownerId, {title: "It's a match! 🐾", body}, "/discover", "woofs"),
     ]);
   });
 
@@ -444,7 +466,7 @@ export const onReviewCreated = onDocumentCreated(
       {title: `New ${stars} review`,
         body: String(review.text ?? "").trim() ||
           `${review.authorName ?? "Someone"} rated you.`},
-      "/bookings");
+      "/bookings", "bookings");
   });
 
 const DELETED_NAME = "Deleted user";

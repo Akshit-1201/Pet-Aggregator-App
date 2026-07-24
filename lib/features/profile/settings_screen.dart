@@ -5,7 +5,9 @@ import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_app_bar.dart';
+import '../../core/widgets/pg_snackbar.dart';
 import '../../core/widgets/pg_toggle.dart';
+import '../../data/models/user_profile.dart';
 import '../../data/repositories/providers.dart';
 import 'delete_account_dialog.dart';
 
@@ -36,6 +38,9 @@ class SettingsScreen extends ConsumerWidget {
               PgToggle(value: isDark, onChanged: (v) => ref.read(themeModeProvider.notifier).toggleDark(v)),
             ]),
           ),
+          const SizedBox(height: 18),
+          _label(context, 'NOTIFICATIONS'),
+          _NotificationPrefsCard(),
           const SizedBox(height: 18),
           _label(context, 'PRIVACY & SAFETY'),
           Container(
@@ -95,6 +100,68 @@ class SettingsScreen extends ConsumerWidget {
         child: Row(children: [
           Expanded(child: Text(title, style: PgText.inter(14, FontWeight.w600, color: c.text))),
           Text(trailing, style: PgText.inter(12, FontWeight.w400, color: c.faint)),
+        ]),
+      );
+}
+
+/// The three push categories, each mapping to real server triggers.
+///
+/// The prototype's third row, "Nearby pet alerts", is deliberately absent:
+/// there is no nearby-pet notification anywhere in the app, so the switch would
+/// control nothing. A row for **New messages** takes its place — chat is by far
+/// the highest-volume push, and it would be odd to let someone silence rare
+/// Woof matches but not the notification they actually get every day.
+class _NotificationPrefsCard extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.pg;
+    final profile = ref.watch(currentUserProfileProvider).value;
+    // Absent profile (still loading) shows the defaults rather than flashing
+    // every switch off, which would read as "notifications are disabled".
+    final prefs = profile?.notify ?? const NotificationPrefs();
+
+    Future<void> save(NotificationPrefs next) async {
+      final uid = ref.read(authRepositoryProvider).currentUser?.uid;
+      if (uid == null) return;
+      try {
+        await ref.read(userRepositoryProvider).setNotificationPrefs(uid, next);
+      } catch (_) {
+        if (context.mounted) {
+          showPgSnack(context, "Couldn't save that. Please try again.");
+        }
+      }
+    }
+
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
+          borderRadius: BorderRadius.circular(16)),
+      child: Column(children: [
+        _toggleRow(c, '💬', 'New messages', 'When someone messages you',
+            prefs.messages, (v) => save(prefs.copyWith(messages: v)), border: true),
+        _toggleRow(c, '🗓️', 'Booking updates',
+            'Requests, confirmations, cancellations & reviews',
+            prefs.bookings, (v) => save(prefs.copyWith(bookings: v)), border: true),
+        _toggleRow(c, '🐾', 'New Woofs & matches', 'When you and another pet match',
+            prefs.woofs, (v) => save(prefs.copyWith(woofs: v))),
+      ]),
+    );
+  }
+
+  Widget _toggleRow(PgColors c, String emoji, String title, String subtitle,
+          bool value, ValueChanged<bool> onChanged, {bool border = false}) =>
+      Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+            border: border ? Border(bottom: BorderSide(color: c.border)) : null),
+        child: Row(children: [
+          Text(emoji, style: const TextStyle(fontSize: 18)),
+          const SizedBox(width: 13),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: PgText.inter(14, FontWeight.w600, color: c.text)),
+            Text(subtitle, style: PgText.inter(12, FontWeight.w400, color: c.muted)),
+          ])),
+          PgToggle(value: value, onChanged: onChanged),
         ]),
       );
 }

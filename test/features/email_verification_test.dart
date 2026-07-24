@@ -34,6 +34,7 @@ void main() {
     // but light enough that this test measures the gate, not the Home shell.
     await pumpPgApp(tester, overrides: [
       authRepositoryProvider.overrideWithValue(auth),
+      userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
       preferencesRepositoryProvider.overrideWithValue(InMemoryPreferencesRepository()),
     ], initialLocation: Routes.settings);
     await tester.pumpAndSettle();
