@@ -31,13 +31,28 @@ flutter test                          # all tests
 flutter test test/features/x_test.dart          # one file
 flutter test --plain-name "substring of test"   # a single test by name
 flutter build apk --debug             # full Android build (verifies native plugins compile)
+flutter build apk --release           # signed release build (see the release-build gotcha below)
 ```
+
+## Release signing
+
+`applicationId` is **`com.pawgo.app`** (permanent — Play identifies the app by it forever). Release builds are signed with `android/app/pawgo-release.jks` via `android/key.properties`. **Both files are git-ignored and exist only on the owner's machine** — losing either means never being able to publish an update. A clone without `key.properties` falls back to debug signing so the project still builds; that APK is not publishable.
 
 ## ⚠️ Windows build gotcha (do not remove the fix)
 
 The project lives on `D:\` but the Flutter/Pub cache is on `C:\`. Kotlin's incremental compiler cannot relativise plugin sources across drive letters, so Kotlin-based Firebase plugins (`cloud_functions`, `firebase_app_check`, `firebase_storage`) fail with `IllegalArgumentException: this and base files have different roots` → `Daemon compilation failed`.
 
 The fix is already in `android/gradle.properties`: **`kotlin.incremental=false`**. Keep it. If a newly added Kotlin plugin triggers a "different roots" error, confirm that line is present and run `flutter clean` before rebuilding to clear the half-written caches.
+
+## ⚠️ Release-build gotcha: stale plugin registrant
+
+`flutter pub get` writes `android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java` for **all** plugins including dev-dependencies. Release builds exclude dev-dependency plugins from the Gradle graph, so if that file is left over from a `pub get`, `flutter build apk --release` dies with:
+
+```
+error: package dev.flutter.plugins.integration_test does not exist
+```
+
+Delete the generated file and rebuild — `flutter build --release` regenerates it correctly for the build mode. `flutter clean` does **not** remove it (it lives under `src/main/`, not `build/`), which is what makes this easy to hit right after a clean + pub get.
 
 ## Architecture (the big picture)
 

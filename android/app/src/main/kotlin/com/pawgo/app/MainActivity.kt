@@ -1,4 +1,4 @@
-package com.example.pet_aggregator_app
+package com.pawgo.app
 
 import io.flutter.embedding.android.FlutterActivity
 

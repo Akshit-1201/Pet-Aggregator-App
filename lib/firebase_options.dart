@@ -52,12 +52,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyA8d66Zvu9SJyxClcu6azn9gzz1_saYwHQ',
-    appId: '1:280616341211:android:622cf4f2956d2c258a46fe',
+    appId: '1:280616341211:android:188f290d4eebcc3f8a46fe',
     messagingSenderId: '280616341211',
     projectId: 'pet-aggregator-app',
     storageBucket: 'pet-aggregator-app.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBIToEX4YsvTV6tS79Wu0-EErdG0mx3vSg',
     appId: '1:280616341211:ios:c0d5b3690fb0d7e08a46fe',

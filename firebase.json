@@ -4,7 +4,7 @@
       "android": {
         "default": {
           "projectId": "pet-aggregator-app",
-          "appId": "1:280616341211:android:622cf4f2956d2c258a46fe",
+          "appId": "1:280616341211:android:188f290d4eebcc3f8a46fe",
           "fileOutput": "android/app/google-services.json"
         }
       },
@@ -12,11 +12,7 @@
         "lib/firebase_options.dart": {
           "projectId": "pet-aggregator-app",
           "configurations": {
-            "android": "1:280616341211:android:622cf4f2956d2c258a46fe",
-            "ios": "1:280616341211:ios:c0d5b3690fb0d7e08a46fe",
-            "macos": "1:280616341211:ios:c0d5b3690fb0d7e08a46fe",
-            "web": "1:280616341211:web:2a72cc1695b866e98a46fe",
-            "windows": "1:280616341211:web:3128ec03aa70bb9e8a46fe"
+            "android": "1:280616341211:android:188f290d4eebcc3f8a46fe"
           }
         }
       }

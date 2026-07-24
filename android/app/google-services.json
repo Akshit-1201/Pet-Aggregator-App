@@ -12,7 +12,12 @@
           "package_name": "com.example.pet_aggregator_app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "280616341211-hhutv7vco4ase5s7qm1vmlk50j449aq4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyA8d66Zvu9SJyxClcu6azn9gzz1_saYwHQ"
@@ -20,7 +25,55 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "280616341211-hhutv7vco4ase5s7qm1vmlk50j449aq4.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "280616341211-896ce8t0qk00jbo49l0ftb21b4rkhsv2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.petAggregatorApp"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:280616341211:android:188f290d4eebcc3f8a46fe",
+        "android_client_info": {
+          "package_name": "com.pawgo.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "280616341211-hhutv7vco4ase5s7qm1vmlk50j449aq4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA8d66Zvu9SJyxClcu6azn9gzz1_saYwHQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "280616341211-hhutv7vco4ase5s7qm1vmlk50j449aq4.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "280616341211-896ce8t0qk00jbo49l0ftb21b4rkhsv2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.petAggregatorApp"
+              }
+            }
+          ]
         }
       }
     }
