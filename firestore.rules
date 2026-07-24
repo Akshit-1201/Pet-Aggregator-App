@@ -31,6 +31,13 @@ service cloud.firestore {
       match /blocked/{blockedUid} {
         allow read, write: if request.auth != null && request.auth.uid == uid;
       }
+
+      // Device push tokens. Owner-only: a token is effectively a handle for
+      // sending someone notifications, so it must not be readable by others.
+      // The Functions read these with the Admin SDK, which bypasses rules.
+      match /fcmTokens/{token} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
     }
 
     // Write-only from the app: a client files a report but can never read the

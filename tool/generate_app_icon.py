@@ -130,6 +130,32 @@ def white_on(base_rgba, paw_width):
     return out
 
 
+# --- notification icon ------------------------------------------------------
+
+# Android draws the status-bar icon by taking the ALPHA channel only and filling
+# it with a single colour, so anything with colour or a background renders as a
+# solid grey square. This emits the paw silhouette at the standard densities
+# (24dp base). These go straight into res/ — flutter_launcher_icons has no say
+# in notification icons.
+RES = Path(__file__).resolve().parent.parent / "android" / "app" / "src" / "main" / "res"
+NOTIFICATION_DENSITIES = {
+    "drawable-mdpi": 24, "drawable-hdpi": 36, "drawable-xhdpi": 48,
+    "drawable-xxhdpi": 72, "drawable-xxxhdpi": 96,
+}
+NOTIFICATION_PAW = 0.88   # a little breathing room inside the 24dp box
+
+
+def notification_icons():
+    for folder, px in NOTIFICATION_DENSITIES.items():
+        out_dir = RES / folder
+        out_dir.mkdir(parents=True, exist_ok=True)
+        # Render large and downsample: the paw's toes alias badly at 24px.
+        big = white_on(Image.new("RGBA", (px * 8, px * 8), (255, 255, 255, 0)),
+                       NOTIFICATION_PAW)
+        big.resize((px, px), Image.LANCZOS).save(out_dir / "ic_notification.png")
+        print(f"{folder}/ic_notification.png  {px}x{px}")
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -147,6 +173,8 @@ def main():
     paw_only = white_on(Image.new("RGBA", (SIZE, SIZE), (255, 255, 255, 0)), ADAPTIVE_PAW)
     paw_only.save(OUT / "pawgo_icon_foreground.png")
     paw_only.save(OUT / "pawgo_icon_monochrome.png")
+
+    notification_icons()
 
     for f in sorted(OUT.glob("*.png")):
         print(f"{f.name:32} {f.stat().st_size / 1024:6.1f} KB")

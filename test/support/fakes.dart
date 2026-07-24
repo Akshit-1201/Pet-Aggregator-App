@@ -27,6 +27,8 @@ import 'package:pet_aggregator_app/data/repositories/review_repository.dart';
 import 'package:pet_aggregator_app/data/models/report.dart';
 import 'package:pet_aggregator_app/data/repositories/block_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/report_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/push_token_repository.dart';
+import 'package:pet_aggregator_app/data/services/push_service.dart';
 import 'package:pet_aggregator_app/data/repositories/storage_repository.dart';
 import 'package:pet_aggregator_app/data/services/image_picker_service.dart';
 import 'package:pet_aggregator_app/data/services/payment_service.dart';
@@ -39,7 +41,16 @@ class FakeAuthRepository implements AuthRepository {
   /// If set, the next signUp/signIn throws this and clears it.
   AuthFailure? nextError;
 
-  FakeAuthRepository({AppUser? initialUser}) : _current = initialUser;
+  /// Whether accounts from this fake come back verified. Defaults to true so
+  /// the ordinary "a signed-in user" case stays one line in a test; flip it to
+  /// false to exercise the verification gate.
+  bool emailVerified;
+
+  /// Counts verification emails sent, so tests can assert one went out.
+  int verificationEmailsSent = 0;
+
+  FakeAuthRepository({AppUser? initialUser, this.emailVerified = true})
+      : _current = initialUser;
 
   @override
   AppUser? get currentUser => _current;
@@ -66,7 +77,7 @@ class FakeAuthRepository implements AuthRepository {
       throw const AuthFailure(AuthFailureType.emailInUse, 'That email is already registered.');
     }
     _passwords[email] = password;
-    final u = AppUser(uid: 'uid_$email', email: email);
+    final u = AppUser(uid: 'uid_$email', email: email, emailVerified: emailVerified);
     _set(u);
     return u;
   }
@@ -81,7 +92,7 @@ class FakeAuthRepository implements AuthRepository {
     if (_passwords[email] != password) {
       throw const AuthFailure(AuthFailureType.invalidCredentials, 'Incorrect email or password.');
     }
-    final u = AppUser(uid: 'uid_$email', email: email);
+    final u = AppUser(uid: 'uid_$email', email: email, emailVerified: emailVerified);
     _set(u);
     return u;
   }
@@ -92,6 +103,19 @@ class FakeAuthRepository implements AuthRepository {
   /// Records that deleteAccount ran, so tests can assert the flow reached it
   /// without needing a real backend.
   bool deleted = false;
+
+  @override
+  Future<void> sendVerificationEmail() async => verificationEmailsSent++;
+
+  /// Mirrors the real repo: re-reads the account. Set [emailVerified] to true
+  /// before calling to simulate the person clicking the emailed link.
+  @override
+  Future<bool> refreshEmailVerified() async {
+    final u = _current;
+    if (u == null) return false;
+    _set(AppUser(uid: u.uid, email: u.email, emailVerified: emailVerified));
+    return emailVerified;
+  }
 
   @override
   Future<void> reauthenticate(String password) async {
@@ -144,6 +168,53 @@ class InMemoryReportRepository implements ReportRepository {
 
   @override
   Future<void> submitReport(Report report) async => reports.add(report);
+}
+
+class InMemoryPushTokenRepository implements PushTokenRepository {
+  /// uid -> tokens currently registered for it.
+  final Map<String, Set<String>> saved = {};
+
+  @override
+  Future<void> saveToken(String uid, String token) async =>
+      saved.putIfAbsent(uid, () => <String>{}).add(token);
+
+  @override
+  Future<void> removeToken(String uid, String token) async =>
+      saved[uid]?.remove(token);
+}
+
+class FakePushService implements PushService {
+  FakePushService({this.permissionGranted = true, this.token = 'tok-1'});
+
+  bool permissionGranted;
+  String? token;
+  int permissionRequests = 0;
+
+  final tokenRefreshes = StreamController<String>.broadcast();
+  final foreground = StreamController<Map<String, String>>.broadcast();
+  final taps = StreamController<Map<String, String>>.broadcast();
+  Map<String, String>? initialPayload;
+
+  @override
+  Future<bool> requestPermission() async {
+    permissionRequests++;
+    return permissionGranted;
+  }
+
+  @override
+  Future<String?> currentToken() async => permissionGranted ? token : null;
+
+  @override
+  Stream<String> onTokenRefresh() => tokenRefreshes.stream;
+
+  @override
+  Stream<Map<String, String>> onForegroundMessage() => foreground.stream;
+
+  @override
+  Future<Map<String, String>?> initialTapPayload() async => initialPayload;
+
+  @override
+  Stream<Map<String, String>> onNotificationTap() => taps.stream;
 }
 
 class InMemoryUserRepository implements UserRepository {

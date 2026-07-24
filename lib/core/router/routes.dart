@@ -3,6 +3,7 @@ class Routes {
   static const onboarding = '/onboarding';
   static const welcome = '/welcome';
   static const signup = '/signup';
+  static const verifyEmail = '/verify-email';
   static const location = '/location';
   static const createPet = '/create-pet';
   static const home = '/home';

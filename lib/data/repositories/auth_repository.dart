@@ -37,6 +37,15 @@ abstract interface class AuthRepository {
   Future<AppUser> signIn({required String email, required String password});
   Future<void> signOut();
 
+  /// Emails the account a verification link. Safe to call repeatedly; Firebase
+  /// rate-limits on its side.
+  Future<void> sendVerificationEmail();
+
+  /// Re-fetches the account from Firebase and returns whether the address is
+  /// now verified. Needed because clicking the link happens in a browser —
+  /// nothing pushes that back to the app, so the app has to ask.
+  Future<bool> refreshEmailVerified();
+
   /// Proves the person at the keyboard owns the account, by re-checking the
   /// password. Firebase requires a recent sign-in before deletion anyway, and
   /// it stops a borrowed unlocked phone from wiping someone's account.

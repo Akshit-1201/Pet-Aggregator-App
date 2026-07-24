@@ -31,8 +31,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   Future<void> _login() async {
     setState(() { _loading = true; _error = null; });
     try {
-      await ref.read(authRepositoryProvider)
-          .signIn(email: _email.text.trim(), password: _password.text);
+      final auth = ref.read(authRepositoryProvider);
+      final user = await auth.signIn(email: _email.text.trim(), password: _password.text);
+      // Accounts created before verification existed, or abandoned mid-signup,
+      // land here — send a fresh link rather than a dead end.
+      if (!user.emailVerified) {
+        await auth.sendVerificationEmail();
+        if (mounted) context.go(Routes.verifyEmail);
+        return;
+      }
       if (mounted) context.go(Routes.home);
     } on AuthFailure catch (e) {
       if (mounted) setState(() => _error = e.message);

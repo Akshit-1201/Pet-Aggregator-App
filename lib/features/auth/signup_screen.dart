@@ -51,12 +51,14 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     }
     setState(() { _loading = true; _error = null; });
     try {
-      final user = await ref.read(authRepositoryProvider)
-          .signUp(email: _email.text.trim(), password: _password.text);
+      final auth = ref.read(authRepositoryProvider);
+      final user = await auth.signUp(email: _email.text.trim(), password: _password.text);
       await ref.read(userRepositoryProvider).createUser(UserProfile(
             uid: user.uid, name: _name.text.trim(), email: _email.text.trim(),
             area: '', role: _role));
-      if (mounted) context.go(Routes.location);
+      // The account exists but is inert until the emailed link is clicked.
+      await auth.sendVerificationEmail();
+      if (mounted) context.go(Routes.verifyEmail);
     } on AuthFailure catch (e) {
       if (mounted) setState(() => _error = e.message);
     } finally {

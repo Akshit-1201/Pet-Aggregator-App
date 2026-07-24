@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Android 13+ requires this at runtime; without it every push is dropped
+         silently, with no error anywhere. PushService asks for it on sign-in. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <application
         android:label="Pawgo"
         android:name="${applicationName}"
@@ -30,6 +33,19 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Without an explicit channel, Android 8+ drops notifications that
+             arrive while the app is backgrounded. FCM creates this one on demand. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="pawgo_default" />
+        <!-- The status-bar icon must be a white-on-transparent silhouette; the
+             full-colour launcher icon renders as a grey square. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/pawgo_brand" />
         <!-- ACTION REQUIRED: this key is still restricted to the OLD package
              (com.example.pet_aggregator_app) + the debug SHA-1, so the Nearby map
              will fail to load until the restriction is updated in Google Cloud

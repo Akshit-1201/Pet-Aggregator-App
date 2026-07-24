@@ -11,7 +11,9 @@ class FirebaseAuthRepository implements AuthRepository {
         _functions = functions ??
             FirebaseFunctions.instanceFor(region: 'asia-south1');
 
-  AppUser? _map(User? u) => u == null ? null : AppUser(uid: u.uid, email: u.email);
+  AppUser? _map(User? u) => u == null
+      ? null
+      : AppUser(uid: u.uid, email: u.email, emailVerified: u.emailVerified);
 
   @override
   AppUser? get currentUser => _map(_auth.currentUser);
@@ -41,6 +43,27 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() => _auth.signOut();
+
+  @override
+  Future<void> sendVerificationEmail() async {
+    final user = _auth.currentUser;
+    if (user == null || user.emailVerified) return;
+    try {
+      await user.sendEmailVerification();
+    } on FirebaseAuthException catch (e) {
+      throw AuthFailure.fromCode(e.code);
+    }
+  }
+
+  @override
+  Future<bool> refreshEmailVerified() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    // reload() refetches the account record; currentUser must be re-read after,
+    // because the cached User instance keeps the stale emailVerified value.
+    await user.reload();
+    return _auth.currentUser?.emailVerified ?? false;
+  }
 
   @override
   Future<void> reauthenticate(String password) async {

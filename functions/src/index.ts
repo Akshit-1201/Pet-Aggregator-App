@@ -1,17 +1,216 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
-import {onDocumentCreated} from "firebase-functions/v2/firestore";
+import {onDocumentCreated, onDocumentUpdated} from "firebase-functions/v2/firestore";
 import {defineSecret} from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 import * as crypto from "crypto";
 import Razorpay from "razorpay";
 import * as admin from "firebase-admin";
+import {sendInvoiceEmail, sendRefundEmail, InvoiceLine} from "./invoice";
 
 admin.initializeApp();
 
 const razorpayKeyId = defineSecret("RAZORPAY_KEY_ID");
 const razorpayKeySecret = defineSecret("RAZORPAY_KEY_SECRET");
+const resendApiKey = defineSecret("RESEND_API_KEY");
+
+/** Sender for transactional mail. Must be on a domain verified in Resend, or
+ *  delivery lands in spam (or is rejected outright). Override per-project with
+ *  `firebase functions:config` -> env if the domain changes. */
+const MAIL_FROM = "Pawgo <receipts@pawgo.app>";
+
+/** Receipts go to the address on the auth record, not to anything the client
+ *  passed in — the client could send someone else's. Since signup now requires
+ *  clicking a verification link, that address is also known to be real and
+ *  owned by this user. */
+async function verifiedEmailFor(uid: string): Promise<string> {
+  try {
+    const user = await admin.auth().getUser(uid);
+    return user.emailVerified && user.email ? user.email : "";
+  } catch (e) {
+    logger.error("verifiedEmailFor failed", {uid, error: e});
+    return "";
+  }
+}
 
 type Kind = "service" | "homestay";
+
+const REGION = "asia-south1";
+
+/** Sends one notification to every device a user is signed in on.
+ *
+ *  Tokens live in users/{uid}/fcmTokens/{token}. They expire when an app is
+ *  uninstalled or data-cleared, and FCM rejects those permanently — so dead
+ *  tokens are pruned here. Left alone they accumulate forever and every send
+ *  slows down behind failures that can never succeed.
+ *
+ *  `route` travels in the data payload; PushRegistrar deep-links on it.
+ *  Failures are logged, never thrown: a push that doesn't send must not roll
+ *  back the booking or message that triggered it. */
+async function sendPushTo(
+  uid: string,
+  notification: {title: string; body: string},
+  route: string) {
+  if (!uid) return;
+  const db = admin.firestore();
+  const tokensSnap = await db.collection("users").doc(uid)
+    .collection("fcmTokens").get();
+  const tokens = tokensSnap.docs.map((d) => d.id);
+  if (tokens.length === 0) return;
+
+  let res;
+  try {
+    res = await admin.messaging().sendEachForMulticast({
+      tokens,
+      notification,
+      data: {route},
+      android: {priority: "high", notification: {channelId: "pawgo_default"}},
+    });
+  } catch (e) {
+    logger.error("sendPushTo failed", {uid, error: e});
+    return;
+  }
+
+  const dead: string[] = [];
+  res.responses.forEach((r, i) => {
+    const code = r.error?.code ?? "";
+    if (code === "messaging/registration-token-not-registered" ||
+        code === "messaging/invalid-registration-token") {
+      dead.push(tokens[i]);
+    }
+  });
+  await Promise.all(dead.map((t) =>
+    db.collection("users").doc(uid).collection("fcmTokens").doc(t).delete()
+      .catch(() => undefined)));
+
+  logger.info("sendPushTo", {uid, sent: res.successCount, pruned: dead.length});
+}
+
+/** A new chat message notifies the other participant — but never someone who
+ *  has blocked the sender, which would hand a blocked user a way to keep
+ *  reaching into their notification tray. */
+export const onChatMessageCreated = onDocumentCreated(
+  {region: REGION, document: "chats/{chatId}/messages/{messageId}"},
+  async (event) => {
+    const msg = event.data?.data();
+    if (!msg) return;
+    const senderId = String(msg.senderId ?? "");
+    const db = admin.firestore();
+    const chatSnap = await db.collection("chats").doc(event.params.chatId).get();
+    const chat = chatSnap.data();
+    if (!chat) return;
+
+    const recipient = (chat.participants as string[] ?? [])
+      .find((p) => p !== senderId);
+    if (!recipient) return;
+
+    const blocked = await db.collection("users").doc(recipient)
+      .collection("blocked").doc(senderId).get();
+    if (blocked.exists) return;
+
+    const senderName = (chat.names ?? {})[senderId] ?? "Someone";
+    await sendPushTo(recipient,
+      {title: senderName, body: String(msg.text ?? "").slice(0, 140)},
+      "/messages");
+  });
+
+/** Homestay lifecycle. The host learns about a new request (revenue-critical —
+ *  this is the one that must never be missed) and about payment or a
+ *  cancellation; the guest learns the host's decision. */
+export const onHomestayBookingWritten = onDocumentUpdated(
+  {region: REGION, document: "homestayBookings/{id}"},
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after || before.status === after.status) return;
+
+    const guestId = String(after.guestId ?? "");
+    const hostId = String(after.hostId ?? "");
+    const homeName = String(after.homeName ?? "the home");
+    const petName = String(after.petName ?? "a pet");
+
+    switch (after.status) {
+    case "accepted":
+      await sendPushTo(guestId,
+        {title: "Your stay was accepted", body: `${homeName} can host ${petName}. Pay to confirm.`},
+        "/bookings");
+      break;
+    case "declined":
+      await sendPushTo(guestId,
+        {title: "Your stay request was declined", body: `${homeName} can't host ${petName} then.`},
+        "/bookings");
+      break;
+    case "paid":
+      await sendPushTo(hostId,
+        {title: "A stay is confirmed & paid", body: `${petName} is booked in at ${homeName}.`},
+        "/bookings");
+      break;
+    case "cancelled":
+      await sendPushTo(hostId,
+        {title: "A stay was cancelled", body: `${petName}'s stay at ${homeName} was cancelled.`},
+        "/bookings");
+      break;
+    }
+  });
+
+export const onHomestayBookingCreated = onDocumentCreated(
+  {region: REGION, document: "homestayBookings/{id}"},
+  async (event) => {
+    const b = event.data?.data();
+    if (!b || b.status !== "requested") return;
+    await sendPushTo(String(b.hostId ?? ""),
+      {title: "New booking request",
+        body: `${b.petName ?? "A pet"} needs a place — ${b.nights ?? "?"} nights.`},
+      "/bookings");
+  });
+
+/** Service bookings: the pro is told when money has actually landed
+ *  ('confirmed'), and when a customer cancels and frees the slot. A freshly
+ *  created but unpaid booking is deliberately silent — the customer just made
+ *  it, and the pro has nothing to act on until it is paid. */
+export const onServiceBookingWritten = onDocumentUpdated(
+  {region: REGION, document: "bookings/{id}"},
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after || before.status === after.status) return;
+
+    const petName = String(after.petName ?? "A pet");
+    const dateLabel = String(after.dateLabel ?? "");
+    if (after.status === "confirmed") {
+      await sendPushTo(String(after.proId ?? ""),
+        {title: "New booking, paid", body: `${petName} · ${dateLabel}`}, "/bookings");
+    } else if (after.status === "cancelled") {
+      await sendPushTo(String(after.proId ?? ""),
+        {title: "A booking was cancelled", body: `${petName} · ${dateLabel}`}, "/bookings");
+    }
+  });
+
+/** A reciprocal Woof is the payoff moment of Discover, and neither side sees it
+ *  unless they happen to be in the deck — so both get told. */
+export const onSwipeCreated = onDocumentCreated(
+  {region: REGION, document: "swipes/{id}"},
+  async (event) => {
+    const swipe = event.data?.data();
+    if (!swipe || swipe.direction !== "woof") return;
+    const fromUid = String(swipe.fromUid ?? "");
+    const ownerId = String(swipe.ownerId ?? "");
+    if (!fromUid || !ownerId || fromUid === ownerId) return;
+
+    // Did the other owner already woof one of this user's pets?
+    const reciprocal = await admin.firestore().collection("swipes")
+      .where("fromUid", "==", ownerId)
+      .where("ownerId", "==", fromUid)
+      .where("direction", "==", "woof")
+      .limit(1)
+      .get();
+    if (reciprocal.empty) return;
+
+    const body = "You both woofed. Say hello!";
+    await Promise.all([
+      sendPushTo(fromUid, {title: "It's a match! 🐾", body}, "/discover"),
+      sendPushTo(ownerId, {title: "It's a match! 🐾", body}, "/discover"),
+    ]);
+  });
 
 /** Reads the booking, asserts ownership + payable state, and recomputes the
  *  authoritative price from the LISTING (never from client-written fields). */
@@ -99,7 +298,7 @@ export const createBookingOrder = onCall(
   });
 
 export const verifyBookingPayment = onCall(
-  {region: "asia-south1", secrets: [razorpayKeyId, razorpayKeySecret]},
+  {region: "asia-south1", secrets: [razorpayKeyId, razorpayKeySecret, resendApiKey]},
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "sign-in-required");
     const {kind, bookingId} = readArgs(request.data);
@@ -157,6 +356,40 @@ export const verifyBookingPayment = onCall(
         updatedAt: Date.now(),
       });
     });
+
+    // Receipt. Awaited so a hard failure is visible in the logs, but never
+    // allowed to throw — the money has moved and the booking is confirmed, so
+    // a mail outage must not surface to the user as a failed payment.
+    try {
+      const b = (await ref.get()).data() ?? {};
+      const to = await verifiedEmailFor(uid);
+      const p = amounts.parts;
+      const lines: InvoiceLine[] = kind === "service" ?
+        [{label: `${b.serviceType ?? "Service"} with ${b.proName ?? "your pro"}`,
+          amount: Number(p.rate ?? 0)},
+        {label: "Pawgo service fee", amount: Number(p.fee ?? 0)}] :
+        [{label: `${p.nights ?? 0} nights at ${b.homeName ?? "the home"}`,
+          amount: Number(p.subtotal ?? 0)},
+        {label: "Pawgo service fee", amount: Number(p.fee ?? 0)}];
+
+      await sendInvoiceEmail(resendApiKey.value(), MAIL_FROM, {
+        to,
+        customerName: "",
+        heading: kind === "service" ?
+          `${b.serviceType ?? "Service"} with ${b.proName ?? "your pro"}` :
+          `${b.petName ?? "Your pet"} at ${b.homeName ?? "the home"}`,
+        subheading: kind === "service" ?
+          `${b.dateLabel ?? ""} ${b.timeSlot ?? ""}`.trim() :
+          `${b.checkIn ?? ""} → ${b.checkOut ?? ""}`,
+        lines,
+        total: amounts.total,
+        paymentId,
+        bookingId,
+      });
+    } catch (e) {
+      logger.error("verifyBookingPayment: receipt email failed", {bookingId, error: e});
+    }
+
     return {confirmed: true, paymentId};
   });
 
@@ -204,6 +437,14 @@ export const onReviewCreated = onDocumentCreated(
       tx.update(targetRef, {rating: n > 0 ? sum / n : 0, reviewCount: n});
     });
     logger.info("onReviewCreated recomputed rating", {col, targetId});
+
+    // targetId is the pro's/host's own uid, so it doubles as the push target.
+    const stars = "★".repeat(Math.max(0, Math.min(5, Number(review.stars) || 0)));
+    await sendPushTo(targetId,
+      {title: `New ${stars} review`,
+        body: String(review.text ?? "").trim() ||
+          `${review.authorName ?? "Someone"} rated you.`},
+      "/bookings");
   });
 
 const DELETED_NAME = "Deleted user";
@@ -310,7 +551,7 @@ export const deleteMyAccount = onCall(
   });
 
 export const refundBookingPayment = onCall(
-  {region: "asia-south1", secrets: [razorpayKeyId, razorpayKeySecret]},
+  {region: "asia-south1", secrets: [razorpayKeyId, razorpayKeySecret, resendApiKey]},
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "sign-in-required");
     const bookingId = request.data?.bookingId;
@@ -377,6 +618,18 @@ export const refundBookingPayment = onCall(
         logger.error(
           "refundBookingPayment: refund SUCCEEDED but persisting refundId failed",
           {bookingId, refundId, error: e});
+      }
+      try {
+        const b = (await ref.get()).data() ?? {};
+        await sendRefundEmail(resendApiKey.value(), MAIL_FROM, {
+          to: await verifiedEmailFor(uid),
+          homeName: String(b.homeName ?? "the home"),
+          amount: claim.refundAmount,
+          bookingId,
+          refundId,
+        });
+      } catch (e) {
+        logger.error("refundBookingPayment: refund email failed", {bookingId, error: e});
       }
     }
     return {refundAmount: claim.refundAmount, refundId};

@@ -12,6 +12,7 @@ import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/providers.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/auth/signup_screen.dart';
+import '../../features/auth/verify_email_screen.dart';
 import '../../features/auth/location_screen.dart';
 import '../../features/chat/chat_conversation_screen.dart';
 import '../../features/chat/chat_list_screen.dart';
@@ -77,8 +78,19 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
     initialLocation: initialLocation,
     refreshListenable: GoRouterRefreshStream(auth.authStateChanges()),
     redirect: (context, state) {
-      final loggedIn = auth.currentUser != null;
+      final user = auth.currentUser;
+      final loggedIn = user != null;
       if (!loggedIn && _protected.contains(state.matchedLocation)) return Routes.welcome;
+      // Signed in but unproven: Firebase Auth only validates an address's shape,
+      // never that the mailbox exists or belongs to whoever typed it. Until the
+      // link is clicked the account is inert — no browsing, booking or posting.
+      if (loggedIn && !user.emailVerified && _protected.contains(state.matchedLocation)) {
+        return Routes.verifyEmail;
+      }
+      // Verified users have no reason to sit on the verify screen.
+      if (loggedIn && user.emailVerified && state.matchedLocation == Routes.verifyEmail) {
+        return Routes.home;
+      }
       return null;
     },
     routes: [
@@ -86,6 +98,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.onboarding, builder: (_, _) => const OnboardingScreen()),
       GoRoute(path: Routes.welcome, builder: (_, _) => const WelcomeScreen()),
       GoRoute(path: Routes.signup, builder: (_, _) => const SignupScreen()),
+      GoRoute(path: Routes.verifyEmail, builder: (_, _) => const VerifyEmailScreen()),
       GoRoute(path: Routes.location, builder: (_, _) => const LocationScreen()),
       GoRoute(path: Routes.createPet, builder: (_, state) =>
           CreatePetScreen(fromOnboarding: (state.extra as OnboardingArg?)?.fromOnboarding ?? false)),

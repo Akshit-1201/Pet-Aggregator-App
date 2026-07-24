@@ -16,8 +16,12 @@ void main() {
     expect(find.text('Continue'), findsOneWidget);
   });
 
-  testWidgets('filling the form creates account + profile and goes to Location', (tester) async {
-    final auth = FakeAuthRepository();
+  testWidgets('filling the form creates account + profile, then continues past the '
+      'email gate to Location', (tester) async {
+    // Signup no longer lands on Location directly — the email-verification gate
+    // sits in between, because Firebase Auth validates an address's shape but
+    // never that the mailbox exists or belongs to whoever typed it.
+    final auth = FakeAuthRepository(emailVerified: false);
     final users = InMemoryUserRepository();
     await pumpPgApp(tester, overrides: [
       authRepositoryProvider.overrideWithValue(auth),
@@ -34,6 +38,12 @@ void main() {
     expect(auth.currentUser, isNotNull);
     final profile = await users.watchUser(auth.currentUser!.uid).first;
     expect(profile!.name, 'Radhika Nair');
+    expect(find.text('Confirm your email'), findsOneWidget);
+
+    // Clicking the emailed link, then confirming, resumes the original funnel.
+    auth.emailVerified = true;
+    await tester.tap(find.text("I've confirmed it"));
+    await tester.pumpAndSettle();
     expect(find.text('Choose your area'), findsOneWidget); // Location screen
   });
 }

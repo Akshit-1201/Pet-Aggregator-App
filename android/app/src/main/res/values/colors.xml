@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Tints the status-bar notification icon and the expanded notification's
+         accent. Matches the splash/window colour (the brand gradient's mid stop)
+         so a Pawgo notification reads as Pawgo at a glance. -->
+    <color name="pawgo_brand">#F0871E</color>
+</resources>

@@ -25,7 +25,9 @@ import 'preferences_repository.dart';
 import 'review_repository.dart';
 import 'block_repository.dart';
 import 'report_repository.dart';
+import 'push_token_repository.dart';
 import 'storage_repository.dart';
+import '../services/push_service.dart';
 import '../services/image_picker_service.dart';
 import '../services/payment_service.dart';
 import '../services/razorpay_payment_service.dart';
@@ -42,6 +44,7 @@ import 'firebase/firestore_chat_repository.dart';
 import 'firebase/firestore_review_repository.dart';
 import 'firebase/firestore_block_repository.dart';
 import 'firebase/firestore_report_repository.dart';
+import 'firebase/firestore_push_token_repository.dart';
 import 'firebase/firebase_storage_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) => FirebaseAuthRepository());
@@ -69,6 +72,9 @@ final nearbyPetsProvider = StreamProvider<List<PetProfile>>((ref) {
 
 final blockRepositoryProvider = Provider<BlockRepository>((ref) => FirestoreBlockRepository());
 final reportRepositoryProvider = Provider<ReportRepository>((ref) => FirestoreReportRepository());
+final pushServiceProvider = Provider<PushService>((ref) => FirebasePushService());
+final pushTokenRepositoryProvider =
+    Provider<PushTokenRepository>((ref) => FirestorePushTokenRepository());
 
 /// Uids the signed-in user has blocked. Every surface that renders other users'
 /// content filters against this, so a block hides them app-wide rather than only
