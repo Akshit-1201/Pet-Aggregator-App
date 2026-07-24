@@ -512,6 +512,11 @@ class InMemoryReviewRepository implements ReviewRepository {
   ({double rating, int count}) aggregateFor(String targetId) =>
       _agg[targetId] ?? (rating: 0.0, count: 0);
 
+  /// The aggregate below stands in for the **`onReviewCreated` Cloud Function**,
+  /// not for client code — `FirestoreReviewRepository.submitReview` only writes
+  /// the review doc now, because clients are no longer allowed to write
+  /// `rating`/`reviewCount`. Keeping it here means tests still assert the
+  /// end-to-end outcome a user sees.
   @override
   Future<void> submitReview(Review review) async {
     if (_reviews.containsKey(review.bookingId)) return; // idempotent

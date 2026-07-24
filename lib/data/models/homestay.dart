@@ -54,6 +54,13 @@ class Homestay {
   /// The image used wherever a single thumbnail represents the home.
   String get coverPhoto => photoUrls.isEmpty ? '' : photoUrls.first;
 
+  /// The host's own editable listing fields — deliberately **excludes**
+  /// `verified`, `rating` and `reviewCount`. Those are server-owned: the rating
+  /// pair is recomputed by the `onReviewCreated` Function and `verified` is
+  /// granted out-of-band by staff, so a host cannot award themselves a trust
+  /// badge or inflate their own score. `firestore.rules` rejects any client
+  /// write that touches them, and the repository writes with `merge: true`, so
+  /// leaving them out here preserves whatever the server already stored.
   Map<String, dynamic> toMap() => {
         'ownerId': uid,
         'homeName': homeName,
@@ -64,9 +71,6 @@ class Homestay {
         'ratePerNight': ratePerNight,
         'amenities': amenities.map((a) => a.storageKey).toList(),
         'photoUrls': photoUrls,
-        'verified': verified,
-        'rating': rating,
-        'reviewCount': reviewCount,
       };
 
   factory Homestay.fromMap(String uid, Map<String, dynamic> m) => Homestay(

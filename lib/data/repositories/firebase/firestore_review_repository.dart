@@ -8,22 +8,18 @@ class FirestoreReviewRepository implements ReviewRepository {
 
   CollectionReference<Map<String, dynamic>> get _col => _db.collection('reviews');
 
+  /// Writes only the review itself. The target's `rating`/`reviewCount` used to
+  /// be recomputed here, which meant the rules had to let clients write those
+  /// fields — and a rule cannot check arithmetic, so any signed-in user could
+  /// set any pro's rating to 5.0. Aggregation now happens in the
+  /// `onReviewCreated` Function, so the fields are server-only.
   @override
   Future<void> submitReview(Review review) async {
     final reviewRef = _col.doc(review.bookingId); // one review per booking
-    final targetCol = review.targetType == ReviewTargetType.pro ? 'pros' : 'homestays';
-    final targetRef = _db.collection(targetCol).doc(review.targetId);
     await _db.runTransaction((tx) async {
       final existing = await tx.get(reviewRef);
       if (existing.exists) return; // idempotent — the booking was already rated
-      final targetSnap = await tx.get(targetRef);
-      final data = targetSnap.data() ?? const <String, dynamic>{};
-      final count = (data['reviewCount'] ?? 0) as int;
-      final rating = ((data['rating'] ?? 0) as num).toDouble();
-      final newCount = count + 1;
-      final newRating = (rating * count + review.stars) / newCount;
       tx.set(reviewRef, review.toMap());
-      tx.update(targetRef, {'rating': newRating, 'reviewCount': newCount});
     });
   }
 

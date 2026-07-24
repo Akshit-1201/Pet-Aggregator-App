@@ -72,8 +72,10 @@ class ProProfileScreen extends ConsumerWidget {
                             Row(children: [
                               Flexible(child: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis,
                                 style: PgText.poppins(19, FontWeight.w800, color: c.text))),
-                              const SizedBox(width: 5),
-                              Icon(Icons.verified, size: 16, color: c.brand),
+                              if (p.verified) ...[
+                                const SizedBox(width: 5),
+                                Icon(Icons.verified, size: 16, color: c.brand),
+                              ],
                             ]),
                             const SizedBox(height: 2),
                             Text('${p.serviceType.label} · ${p.area}',
@@ -100,6 +102,27 @@ class ProProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 7),
                     Text(p.bio.isEmpty ? 'No description yet.' : p.bio,
                       style: PgText.inter(13.5, FontWeight.w400, color: c.muted, height: 1.6)),
+                    const SizedBox(height: 18),
+                    // Mirrors the host-profile treatment: say plainly when a pro
+                    // has not been vetted rather than implying they have.
+                    if (p.verified)
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(color: c.brandSoft, borderRadius: BorderRadius.circular(14)),
+                        child: Row(children: [
+                          const Text('🛡️', style: TextStyle(fontSize: 18)),
+                          const SizedBox(width: 10),
+                          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                            Text('Pawgo Verified pro',
+                              style: PgText.inter(13, FontWeight.w700, color: c.text)),
+                            Text('ID & experience confirmed',
+                              style: PgText.inter(12, FontWeight.w400, color: c.muted)),
+                          ])),
+                        ]),
+                      )
+                    else
+                      Text('New pro · not yet Pawgo-verified',
+                        style: PgText.inter(12.5, FontWeight.w600, color: c.faint)),
                     const SizedBox(height: 20),
                     Text('Reviews', style: PgText.sectionHeader(context)),
                     const SizedBox(height: 10),

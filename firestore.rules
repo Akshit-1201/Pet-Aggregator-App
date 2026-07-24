@@ -1,6 +1,23 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // A review's doc id IS its bookingId (one review per booking), so these can
+    // look the booking up directly and confirm the author really is the paying
+    // customer of that exact provider. exists() first: get() on a missing doc
+    // errors out, and && short-circuits.
+    function isMyPaidService(bookingId, targetId) {
+      return exists(/databases/$(database)/documents/bookings/$(bookingId))
+             && get(/databases/$(database)/documents/bookings/$(bookingId)).data.parentId == request.auth.uid
+             && get(/databases/$(database)/documents/bookings/$(bookingId)).data.proId == targetId
+             && get(/databases/$(database)/documents/bookings/$(bookingId)).data.status == 'confirmed';
+    }
+    function isMyPaidStay(bookingId, targetId) {
+      return exists(/databases/$(database)/documents/homestayBookings/$(bookingId))
+             && get(/databases/$(database)/documents/homestayBookings/$(bookingId)).data.guestId == request.auth.uid
+             && get(/databases/$(database)/documents/homestayBookings/$(bookingId)).data.hostId == targetId
+             && get(/databases/$(database)/documents/homestayBookings/$(bookingId)).data.status == 'paid';
+    }
+
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
@@ -19,11 +36,21 @@ service cloud.firestore {
                   && request.resource.data.fromUid == request.auth.uid;
       allow update, delete: if false;
     }
+    // `verified`, `rating` and `reviewCount` are server-owned. The old rules let
+    // ANY signed-in user update them as long as the write touched nothing else,
+    // so a two-line script could set any pro's rating to 5.0; and the blanket
+    // owner-write let a pro grant themselves the "Pawgo Verified" badge by
+    // writing Firestore directly. Both are now rejected for every client:
+    // ratings are written only by the onReviewCreated Function and `verified`
+    // only by staff (both Admin SDK, which bypasses rules).
     match /pros/{uid} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == uid;
-      allow update: if request.auth != null
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'reviewCount']);
+      allow create: if request.auth != null && request.auth.uid == uid
+                    && !request.resource.data.keys().hasAny(['verified', 'rating', 'reviewCount']);
+      allow update: if request.auth != null && request.auth.uid == uid
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                         .hasAny(['verified', 'rating', 'reviewCount']);
+      allow delete: if false;
     }
     match /bookings/{id} {
       allow read: if request.auth != null
@@ -39,11 +66,15 @@ service cloud.firestore {
                     && request.resource.data.status == 'cancelled';
       allow delete: if false;
     }
+    // Same server-owned fields as /pros — see the note there.
     match /homestays/{uid} {
       allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == uid;
-      allow update: if request.auth != null
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'reviewCount']);
+      allow create: if request.auth != null && request.auth.uid == uid
+                    && !request.resource.data.keys().hasAny(['verified', 'rating', 'reviewCount']);
+      allow update: if request.auth != null && request.auth.uid == uid
+                    && !request.resource.data.diff(resource.data).affectedKeys()
+                         .hasAny(['verified', 'rating', 'reviewCount']);
+      allow delete: if false;
     }
     match /homestayBookings/{id} {
       allow read: if request.auth != null
@@ -93,9 +124,26 @@ service cloud.firestore {
         allow update, delete: if false;
       }
     }
-    match /reviews/{reviewId} {
+    // The doc id is the bookingId, which is what makes "one review per booking"
+    // enforceable here rather than only in client code. Previously any signed-in
+    // user could review anyone they had never booked (and review themselves);
+    // now the write must be backed by their own paid booking with that exact
+    // provider. Note this checks the booking was PAID, not that it has finished
+    // — "completed" is derived from calendar dates (see booking_lifecycle.dart)
+    // and is impractical to recompute in rules, so the client still owns that
+    // part. Reviewing your own paid booking a day early is a far smaller problem
+    // than reviewing a stranger.
+    match /reviews/{bookingId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.authorId == request.auth.uid
+                    && request.resource.data.bookingId == bookingId
+                    && (
+                      (request.resource.data.targetType == 'pro'
+                        && isMyPaidService(bookingId, request.resource.data.targetId))
+                      || (request.resource.data.targetType == 'homestay'
+                        && isMyPaidStay(bookingId, request.resource.data.targetId))
+                    );
       allow update, delete: if false;
     }
   }

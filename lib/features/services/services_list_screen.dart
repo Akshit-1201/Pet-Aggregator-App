@@ -141,8 +141,10 @@ class _ProCard extends StatelessWidget {
             Row(children: [
               Flexible(child: Text(pro.name, maxLines: 1, overflow: TextOverflow.ellipsis,
                 style: PgText.poppins(14.5, FontWeight.w700, color: c.text))),
-              const SizedBox(width: 4),
-              Icon(Icons.verified, size: 14, color: c.brand),
+              if (pro.verified) ...[
+                const SizedBox(width: 4),
+                Icon(Icons.verified, size: 14, color: c.brand),
+              ],
             ]),
             const SizedBox(height: 2),
             Text('${pro.serviceType.label} · ${pro.experienceYears} yrs',

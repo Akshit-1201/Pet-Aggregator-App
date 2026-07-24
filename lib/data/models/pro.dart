@@ -16,15 +16,23 @@ class Pro {
   final ServiceType serviceType;
   final int rate, experienceYears, reviewCount;
   final double rating;
+  final bool verified;
 
   const Pro({
     required this.uid, required this.name, required this.area, required this.bio,
     required this.serviceType, required this.rate, required this.experienceYears,
-    this.rating = 0, this.reviewCount = 0,
+    this.verified = false, this.rating = 0, this.reviewCount = 0,
   });
 
   String get unit => serviceType.unit;
 
+  /// The pro's own editable listing fields — deliberately **excludes**
+  /// `verified`, `rating` and `reviewCount`. Those are server-owned: the rating
+  /// pair is recomputed by the `onReviewCreated` Function and `verified` is
+  /// granted out-of-band by staff, so a pro cannot award themselves a trust
+  /// badge or inflate their own score. `firestore.rules` rejects any client
+  /// write that touches them, and the repository writes with `merge: true`, so
+  /// leaving them out here preserves whatever the server already stored.
   Map<String, dynamic> toMap() => {
         'ownerId': uid,
         'name': name,
@@ -33,8 +41,6 @@ class Pro {
         'serviceType': serviceType.storageKey,
         'rate': rate,
         'experienceYears': experienceYears,
-        'rating': rating,
-        'reviewCount': reviewCount,
       };
 
   factory Pro.fromMap(String uid, Map<String, dynamic> m) => Pro(
@@ -45,6 +51,7 @@ class Pro {
         serviceType: ServiceType.fromStorage((m['serviceType'] ?? 'walker') as String),
         rate: (m['rate'] ?? 0) as int,
         experienceYears: (m['experienceYears'] ?? 0) as int,
+        verified: (m['verified'] ?? false) as bool,
         rating: ((m['rating'] ?? 0) as num).toDouble(),
         reviewCount: (m['reviewCount'] ?? 0) as int,
       );

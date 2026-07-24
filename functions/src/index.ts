@@ -1,4 +1,5 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
+import {onDocumentCreated} from "firebase-functions/v2/firestore";
 import {defineSecret} from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 import * as crypto from "crypto";
@@ -157,6 +158,52 @@ export const verifyBookingPayment = onCall(
       });
     });
     return {confirmed: true, paymentId};
+  });
+
+/** Owns `rating`/`reviewCount` on pros and homestays.
+ *
+ *  These used to be written by the client inside submitReview's transaction,
+ *  which forced firestore.rules to allow client writes to them — and because a
+ *  rule cannot verify arithmetic, that let any signed-in user set any pro's
+ *  rating to 5.0. Rules now reject those fields entirely; the Admin SDK bypasses
+ *  rules, so this trigger is the only writer.
+ *
+ *  Recomputes from the full review set rather than incrementing, so it is
+ *  idempotent: Firestore delivers triggers at least once, and a redelivery of
+ *  an incrementing handler would double-count. Recomputing also self-heals any
+ *  drift left behind by the old client-side aggregation. */
+export const onReviewCreated = onDocumentCreated(
+  {region: "asia-south1", document: "reviews/{bookingId}"},
+  async (event) => {
+    const review = event.data?.data();
+    if (!review) return;
+    const targetId = String(review.targetId ?? "");
+    if (!targetId) return;
+    const col = review.targetType === "homestay" ? "homestays" : "pros";
+    const db = admin.firestore();
+    const targetRef = db.collection(col).doc(targetId);
+
+    await db.runTransaction(async (tx) => {
+      // Reads before writes, per transaction rules.
+      const targetSnap = await tx.get(targetRef);
+      if (!targetSnap.exists) return; // listing deleted between write and trigger
+      const reviews = await tx.get(
+        db.collection("reviews").where("targetId", "==", targetId));
+
+      let sum = 0;
+      let n = 0;
+      reviews.forEach((doc) => {
+        const stars = Number(doc.data().stars);
+        // Ignore anything out of range rather than letting it skew the mean.
+        if (Number.isFinite(stars) && stars >= 1 && stars <= 5) {
+          sum += stars;
+          n += 1;
+        }
+      });
+
+      tx.update(targetRef, {rating: n > 0 ? sum / n : 0, reviewCount: n});
+    });
+    logger.info("onReviewCreated recomputed rating", {col, targetId});
   });
 
 export const refundBookingPayment = onCall(
