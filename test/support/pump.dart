@@ -7,6 +7,7 @@ import 'package:pet_aggregator_app/core/router/routes.dart';
 import 'package:pet_aggregator_app/core/theme/app_theme.dart';
 import 'package:pet_aggregator_app/data/repositories/auth_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/providers.dart';
+import 'fakes.dart';
 
 /// Pumps [child] inside a themed Scaffold on a phone-sized surface.
 ///
@@ -40,7 +41,16 @@ Future<void> pumpPgApp(
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
-  final container = ProviderContainer(overrides: overrides);
+  // blockRepositoryProvider is consumed indirectly by nearly every list
+  // provider (posts, pros, homestays, chats, nearby pets all filter blocked
+  // users), so without a default fake every screen test would have to override
+  // it just to avoid reaching real Firestore. Caller overrides still win —
+  // Riverpod takes the last matching entry.
+  final container = ProviderContainer(overrides: [
+    blockRepositoryProvider.overrideWithValue(InMemoryBlockRepository()),
+    reportRepositoryProvider.overrideWithValue(InMemoryReportRepository()),
+    ...overrides,
+  ]);
   addTearDown(container.dispose);
   final AuthRepository auth = container.read(authRepositoryProvider);
   final router = buildRouter(auth: auth, initialLocation: initialLocation);

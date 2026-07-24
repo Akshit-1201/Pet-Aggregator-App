@@ -18,8 +18,30 @@ service cloud.firestore {
              && get(/databases/$(database)/documents/homestayBookings/$(bookingId)).data.status == 'paid';
     }
 
+    // True when `blockerUid` has blocked `otherUid`.
+    function hasBlocked(blockerUid, otherUid) {
+      return exists(/databases/$(database)/documents/users/$(blockerUid)/blocked/$(otherUid));
+    }
+
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+
+      // A block list lives under its owner's doc, so the owner-only rule above
+      // already keeps it private — nobody can discover who has blocked them.
+      match /blocked/{blockedUid} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    // Write-only from the app: a client files a report but can never read the
+    // queue back, so reports cannot be enumerated or edited to look handled.
+    // The admin panel (plan.md Phase 12) reads this with the Admin SDK.
+    match /reports/{reportId} {
+      allow read: if false;
+      allow create: if request.auth != null
+                    && request.resource.data.reporterId == request.auth.uid
+                    && request.resource.data.status == 'open';
+      allow update, delete: if false;
     }
     match /pets/{petId} {
       allow read: if request.auth != null;
@@ -118,9 +140,17 @@ service cloud.firestore {
       match /messages/{messageId} {
         allow read: if request.auth != null
                     && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+        // Blocking is filtered client-side everywhere else, which only hides
+        // content. Here it is genuinely enforced: "they can still message me"
+        // is the failure that actually matters, so a blocked sender is rejected
+        // by the server rather than by the app.
         allow create: if request.auth != null
                     && request.resource.data.senderId == request.auth.uid
-                    && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+                    && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
+                    && !hasBlocked(
+                         get(/databases/$(database)/documents/chats/$(chatId))
+                           .data.participants.removeAll([request.auth.uid])[0],
+                         request.auth.uid);
         allow update, delete: if false;
       }
     }

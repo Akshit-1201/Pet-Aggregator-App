@@ -6,7 +6,9 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_app_bar.dart';
 import '../../core/widgets/pg_image_slot.dart';
+import '../../core/widgets/pg_moderation_sheet.dart';
 import '../../data/models/post.dart';
+import '../../data/models/report.dart';
 import '../../data/repositories/providers.dart';
 
 class ThreadScreen extends ConsumerStatefulWidget {
@@ -69,6 +71,18 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                     Text(post.authorName, style: PgText.inter(12.5, FontWeight.w700, color: c.text)),
                     Text(Post.timeAgo(post.createdAt), style: PgText.inter(11, FontWeight.w400, color: c.faint)),
                   ])),
+                  if (post.authorId != ref.watch(authStateProvider).value?.uid)
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => showModerationSheet(context, ref,
+                          targetType: ReportTargetType.post,
+                          targetId: post.id,
+                          targetOwnerId: post.authorId,
+                          targetOwnerName: post.authorName),
+                      child: Padding(
+                        padding: const EdgeInsets.all(6),
+                        child: Icon(Icons.more_horiz, color: c.faint, size: 20)),
+                    ),
                 ]),
                 const SizedBox(height: 12),
                 Text(post.body, style: PgText.inter(14, FontWeight.w400, color: c.muted, height: 1.6)),
@@ -85,7 +99,10 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                           child: Text('No replies yet — be the first.',
                             style: PgText.inter(13.5, FontWeight.w400, color: c.muted)))
                       : Column(children: [
-                          for (final cm in comments) ...[_CommentRow(comment: cm), const SizedBox(height: 12)],
+                          for (final cm in comments) ...[
+                            _CommentRow(comment: cm, postId: post.id),
+                            const SizedBox(height: 12),
+                          ],
                         ]),
                 ),
               ],
@@ -125,13 +142,15 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
   }
 }
 
-class _CommentRow extends StatelessWidget {
+class _CommentRow extends ConsumerWidget {
   final Comment comment;
-  const _CommentRow({required this.comment});
+  final String postId;
+  const _CommentRow({required this.comment, required this.postId});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.pg;
+    final isMine = comment.authorId == ref.watch(authStateProvider).value?.uid;
     return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
       const PgImageSlot(size: 34, circle: true, emoji: '🙂'),
       const SizedBox(width: 11),
@@ -144,6 +163,20 @@ class _CommentRow extends StatelessWidget {
             Text(comment.authorName, style: PgText.inter(12.5, FontWeight.w700, color: c.text)),
             const SizedBox(width: 7),
             Text(Post.timeAgo(comment.createdAt), style: PgText.inter(11, FontWeight.w400, color: c.faint)),
+            if (!isMine) ...[
+              const Spacer(),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                // contextId carries the post id so a moderator can find a
+                // comment without a collection-group scan.
+                onTap: () => showModerationSheet(context, ref,
+                    targetType: ReportTargetType.comment,
+                    targetId: comment.id,
+                    contextId: postId,
+                    targetOwnerId: comment.authorId,
+                    targetOwnerName: comment.authorName),
+                child: Icon(Icons.more_horiz, color: c.faint, size: 18)),
+            ],
           ]),
           const SizedBox(height: 5),
           Text(comment.body, style: PgText.inter(13.5, FontWeight.w400, color: c.muted, height: 1.5)),

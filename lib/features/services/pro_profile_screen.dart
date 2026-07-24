@@ -5,7 +5,9 @@ import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
+import '../../core/widgets/pg_moderation_sheet.dart';
 import '../../data/models/pro.dart';
+import '../../data/models/report.dart';
 import '../chat/chat_actions.dart';
 import '../reviews/reviews_section.dart';
 
@@ -41,17 +43,29 @@ class ProProfileScreen extends ConsumerWidget {
                   gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
                     colors: [Color(0xFFF59E2E), Color(0xFFF0871E)])),
                 child: SafeArea(
-                  child: Align(alignment: Alignment.topLeft,
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: GestureDetector(
+                  child: Padding(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(children: [
+                      GestureDetector(
                         onTap: () => context.pop(),
                         child: Container(
                           width: 40, height: 40, alignment: Alignment.center,
                           decoration: BoxDecoration(color: const Color(0x33FFFFFF),
                             borderRadius: BorderRadius.circular(12)),
                           child: const Icon(Icons.chevron_left, color: Colors.white))),
-                    ),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => showModerationSheet(context, ref,
+                            targetType: ReportTargetType.pro,
+                            targetId: p.uid,
+                            targetOwnerId: p.uid,
+                            targetOwnerName: p.name),
+                        child: Container(
+                          width: 40, height: 40, alignment: Alignment.center,
+                          decoration: BoxDecoration(color: const Color(0x33FFFFFF),
+                            borderRadius: BorderRadius.circular(12)),
+                          child: const Icon(Icons.more_horiz, color: Colors.white))),
+                    ]),
                   ),
                 ),
               ),

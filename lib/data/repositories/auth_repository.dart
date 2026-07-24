@@ -36,4 +36,15 @@ abstract interface class AuthRepository {
   Future<AppUser> signUp({required String email, required String password});
   Future<AppUser> signIn({required String email, required String password});
   Future<void> signOut();
+
+  /// Proves the person at the keyboard owns the account, by re-checking the
+  /// password. Firebase requires a recent sign-in before deletion anyway, and
+  /// it stops a borrowed unlocked phone from wiping someone's account.
+  /// Throws [AuthFailure] with [AuthFailureType.invalidCredentials] on a wrong
+  /// password.
+  Future<void> reauthenticate(String password);
+
+  /// Irreversibly deletes the account and its data. Implemented server-side —
+  /// the client cannot reach most of what has to be cleaned up.
+  Future<void> deleteAccount();
 }

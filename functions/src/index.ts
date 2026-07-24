@@ -206,6 +206,109 @@ export const onReviewCreated = onDocumentCreated(
     logger.info("onReviewCreated recomputed rating", {col, targetId});
   });
 
+const DELETED_NAME = "Deleted user";
+const DELETED_UID = "deleted";
+
+/** Deletes docs in chunks — Firestore caps a batch at 500 writes. */
+async function deleteAll(
+  query: FirebaseFirestore.Query, db: FirebaseFirestore.Firestore) {
+  const snap = await query.get();
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = db.batch();
+    snap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+  return snap.size;
+}
+
+/** Rewrites the author fields on docs the user wrote, leaving the content. */
+async function anonymizeAll(
+  query: FirebaseFirestore.Query,
+  db: FirebaseFirestore.Firestore,
+  fields: Record<string, unknown>) {
+  const snap = await query.get();
+  for (let i = 0; i < snap.docs.length; i += 400) {
+    const batch = db.batch();
+    snap.docs.slice(i, i + 400).forEach((d) => batch.update(d.ref, fields));
+    await batch.commit();
+  }
+  return snap.size;
+}
+
+/** In-app account deletion — a hard Google Play requirement for any app with
+ *  account creation.
+ *
+ *  Three tiers, chosen because a marketplace cannot simply erase one side of a
+ *  transaction:
+ *
+ *  - DELETED outright: the auth account and everything purely personal —
+ *    profile, pets, swipes, and the pro/homestay listings.
+ *  - ANONYMIZED: reviews, posts and comments keep their text but lose the
+ *    author. Hard-deleting these would gut community threads other people are
+ *    reading and silently drop ratings that other users' decisions rest on.
+ *  - RETAINED: bookings. They are financial records shared with a counterparty —
+ *    the pro or host needs their own history, and refunds reference the
+ *    paymentId. The deleted user's name is replaced, so nothing personal
+ *    survives beyond the transaction itself.
+ *
+ *  Storage objects under users/{uid}/ go too. Pet and homestay photos live under
+ *  their own prefixes and are removed with their listings.
+ *
+ *  Runs last: auth deletion is the irreversible step, so a Firestore failure
+ *  earlier leaves the account intact and the user can retry. */
+export const deleteMyAccount = onCall(
+  {region: "asia-south1"},
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "sign-in-required");
+    const uid = request.auth.uid;
+    const db = admin.firestore();
+
+    // Personal content -> gone.
+    await deleteAll(db.collection("pets").where("ownerId", "==", uid), db);
+    await deleteAll(db.collection("swipes").where("fromUid", "==", uid), db);
+    await db.collection("pros").doc(uid).delete();
+    await db.collection("homestays").doc(uid).delete();
+
+    // Authored content -> kept, de-identified.
+    await anonymizeAll(db.collection("reviews").where("authorId", "==", uid), db,
+      {authorId: DELETED_UID, authorName: DELETED_NAME});
+    await anonymizeAll(db.collection("posts").where("authorId", "==", uid), db,
+      {authorId: DELETED_UID, authorName: DELETED_NAME});
+    await anonymizeAll(db.collectionGroup("comments").where("authorId", "==", uid), db,
+      {authorId: DELETED_UID, authorName: DELETED_NAME});
+
+    // Bookings are retained untouched as financial records. Nothing is scrubbed
+    // because there is nothing to scrub: they store the PROVIDER's name
+    // (proName / hostName) and never the customer's, so the only trace of this
+    // user is parentId/guestId — an opaque uid with no account behind it once
+    // the auth record below is gone. Rewriting those ids would break the pro's
+    // and host's own booking history for no privacy gain.
+
+    // Chats: the other participant keeps their thread, but the name shown for
+    // this user becomes the tombstone.
+    const chats = await db.collection("chats")
+      .where("participants", "array-contains", uid).get();
+    for (const doc of chats.docs) {
+      await doc.ref.update({[`names.${uid}`]: DELETED_NAME});
+    }
+
+    // Reviews the user RECEIVED stay put and keep counting — they describe the
+    // listing's history, and the listing itself is already gone.
+
+    await db.collection("users").doc(uid).delete();
+
+    try {
+      await admin.storage().bucket().deleteFiles({prefix: `users/${uid}/`});
+    } catch (e) {
+      // Never block deletion of the account on an orphaned file.
+      logger.error("deleteMyAccount: storage cleanup failed", {uid, error: e});
+    }
+
+    await admin.auth().deleteUser(uid);
+    logger.info("deleteMyAccount completed", {uid});
+    return {deleted: true};
+  });
+
 export const refundBookingPayment = onCall(
   {region: "asia-south1", secrets: [razorpayKeyId, razorpayKeySecret]},
   async (request) => {

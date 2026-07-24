@@ -1,18 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/pg_moderation_sheet.dart';
 import '../../data/models/homestay.dart';
+import '../../data/models/report.dart';
 import '../reviews/reviews_section.dart';
 import 'home_gallery.dart';
 
-class HostProfileScreen extends StatelessWidget {
+class HostProfileScreen extends ConsumerWidget {
   final Homestay? homestay;
   const HostProfileScreen({super.key, this.homestay});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.pg;
     final h = homestay;
     if (h == null) {
@@ -43,16 +46,30 @@ class HostProfileScreen extends StatelessWidget {
                 HomeGallery(photoUrls: h.photoUrls, emoji: h.homeType.emoji,
                     height: (MediaQuery.sizeOf(context).height * 0.42).clamp(280.0, 430.0),
                     dotsBottomInset: 46),
-                Positioned(top: 0, left: 0, child: SafeArea(
+                Positioned(top: 0, left: 0, right: 0, child: SafeArea(
                   child: Padding(
                     padding: const EdgeInsets.all(14),
-                    child: GestureDetector(
-                      onTap: () => context.canPop() ? context.pop() : null,
-                      child: Container(
-                        width: 40, height: 40, alignment: Alignment.center,
-                        decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(12),
-                          boxShadow: c.shadowSm),
-                        child: Icon(Icons.chevron_left, color: c.text))),
+                    child: Row(children: [
+                      GestureDetector(
+                        onTap: () => context.canPop() ? context.pop() : null,
+                        child: Container(
+                          width: 40, height: 40, alignment: Alignment.center,
+                          decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(12),
+                            boxShadow: c.shadowSm),
+                          child: Icon(Icons.chevron_left, color: c.text))),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () => showModerationSheet(context, ref,
+                            targetType: ReportTargetType.homestay,
+                            targetId: h.uid,
+                            targetOwnerId: h.uid,
+                            targetOwnerName: h.hostName),
+                        child: Container(
+                          width: 40, height: 40, alignment: Alignment.center,
+                          decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(12),
+                            boxShadow: c.shadowSm),
+                          child: Icon(Icons.more_horiz, color: c.text))),
+                    ]),
                   ),
                 )),
               ]),

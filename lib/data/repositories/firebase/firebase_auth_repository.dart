@@ -1,10 +1,15 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/app_user.dart';
 import '../auth_repository.dart';
 
 class FirebaseAuthRepository implements AuthRepository {
   final FirebaseAuth _auth;
-  FirebaseAuthRepository([FirebaseAuth? auth]) : _auth = auth ?? FirebaseAuth.instance;
+  final FirebaseFunctions _functions;
+  FirebaseAuthRepository([FirebaseAuth? auth, FirebaseFunctions? functions])
+      : _auth = auth ?? FirebaseAuth.instance,
+        _functions = functions ??
+            FirebaseFunctions.instanceFor(region: 'asia-south1');
 
   AppUser? _map(User? u) => u == null ? null : AppUser(uid: u.uid, email: u.email);
 
@@ -36,4 +41,28 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() => _auth.signOut();
+
+  @override
+  Future<void> reauthenticate(String password) async {
+    final user = _auth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null) {
+      throw const AuthFailure(AuthFailureType.invalidCredentials, 'Please sign in again.');
+    }
+    try {
+      await user.reauthenticateWithCredential(
+          EmailAuthProvider.credential(email: email, password: password));
+    } on FirebaseAuthException catch (e) {
+      throw AuthFailure.fromCode(e.code);
+    }
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    // The Function does the fan-out delete AND removes the auth user, so there
+    // is no client-side _auth.currentUser.delete() here — calling both would
+    // race, and the second would fail on an already-deleted account.
+    await _functions.httpsCallable('deleteMyAccount').call<Map<String, dynamic>>();
+    await _auth.signOut();
+  }
 }

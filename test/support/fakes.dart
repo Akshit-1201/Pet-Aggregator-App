@@ -24,6 +24,9 @@ import 'package:pet_aggregator_app/data/repositories/chat_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/preferences_repository.dart';
 import 'package:pet_aggregator_app/data/models/review.dart';
 import 'package:pet_aggregator_app/data/repositories/review_repository.dart';
+import 'package:pet_aggregator_app/data/models/report.dart';
+import 'package:pet_aggregator_app/data/repositories/block_repository.dart';
+import 'package:pet_aggregator_app/data/repositories/report_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/storage_repository.dart';
 import 'package:pet_aggregator_app/data/services/image_picker_service.dart';
 import 'package:pet_aggregator_app/data/services/payment_service.dart';
@@ -85,6 +88,62 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() async => _set(null);
+
+  /// Records that deleteAccount ran, so tests can assert the flow reached it
+  /// without needing a real backend.
+  bool deleted = false;
+
+  @override
+  Future<void> reauthenticate(String password) async {
+    final email = _current?.email;
+    if (email == null || _passwords[email] != password) {
+      throw const AuthFailure(AuthFailureType.invalidCredentials, 'Incorrect email or password.');
+    }
+  }
+
+  @override
+  Future<void> deleteAccount() async {
+    deleted = true;
+    _set(null); // mirrors the real repo, which signs out after the callable
+  }
+}
+
+class InMemoryBlockRepository implements BlockRepository {
+  final Map<String, Set<String>> _blocked = {};
+  final Map<String, StreamController<Set<String>>> _ctrls = {};
+
+  StreamController<Set<String>> _ctrl(String uid) =>
+      _ctrls.putIfAbsent(uid, () => StreamController<Set<String>>.broadcast());
+
+  /// A fresh copy each call. Returning the live set would emit the same
+  /// instance twice, and Riverpod's `==` check would swallow the change —
+  /// the real repository builds a new set per Firestore snapshot.
+  Set<String> blockedFor(String uid) => {...?_blocked[uid]};
+
+  @override
+  Stream<Set<String>> watchBlockedUids(String uid) async* {
+    yield blockedFor(uid);
+    yield* _ctrl(uid).stream;
+  }
+
+  @override
+  Future<void> block(String uid, String blockedUid) async {
+    _blocked.putIfAbsent(uid, () => <String>{}).add(blockedUid);
+    _ctrl(uid).add(blockedFor(uid));
+  }
+
+  @override
+  Future<void> unblock(String uid, String blockedUid) async {
+    _blocked[uid]?.remove(blockedUid);
+    _ctrl(uid).add(blockedFor(uid));
+  }
+}
+
+class InMemoryReportRepository implements ReportRepository {
+  final List<Report> reports = [];
+
+  @override
+  Future<void> submitReport(Report report) async => reports.add(report);
 }
 
 class InMemoryUserRepository implements UserRepository {

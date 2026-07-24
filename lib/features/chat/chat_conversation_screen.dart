@@ -5,8 +5,10 @@ import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
+import '../../core/widgets/pg_moderation_sheet.dart';
 import '../../core/widgets/pg_snackbar.dart';
 import '../../data/models/chat.dart';
+import '../../data/models/report.dart';
 import '../../data/repositories/providers.dart';
 
 class ChatConversationScreen extends ConsumerStatefulWidget {
@@ -77,6 +79,17 @@ class _ChatConversationScreenState extends ConsumerState<ChatConversationScreen>
               GestureDetector(
                 onTap: () => showComingSoon(context, 'Calls'),
                 child: Icon(Icons.call_outlined, color: c.muted, size: 21)),
+              const SizedBox(width: 6),
+              GestureDetector(
+                onTap: () => showModerationSheet(context, ref,
+                    targetType: ReportTargetType.user,
+                    targetId: chat.otherUid(myUid),
+                    targetOwnerId: chat.otherUid(myUid),
+                    targetOwnerName: otherName,
+                    contextId: chat.id),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Icon(Icons.more_vert, color: c.muted, size: 21))),
             ]),
           ),
           Expanded(

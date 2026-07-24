@@ -23,6 +23,8 @@ import 'post_repository.dart';
 import 'chat_repository.dart';
 import 'preferences_repository.dart';
 import 'review_repository.dart';
+import 'block_repository.dart';
+import 'report_repository.dart';
 import 'storage_repository.dart';
 import '../services/image_picker_service.dart';
 import '../services/payment_service.dart';
@@ -38,6 +40,8 @@ import 'firebase/firestore_booking_repository.dart';
 import 'firebase/firestore_post_repository.dart';
 import 'firebase/firestore_chat_repository.dart';
 import 'firebase/firestore_review_repository.dart';
+import 'firebase/firestore_block_repository.dart';
+import 'firebase/firestore_report_repository.dart';
 import 'firebase/firebase_storage_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) => FirebaseAuthRepository());
@@ -53,9 +57,27 @@ final currentUserProfileProvider = StreamProvider<UserProfile?>((ref) {
   return ref.watch(userRepositoryProvider).watchUser(user.uid);
 });
 
+// Filtered here rather than in discoverDeckProvider so the Nearby map drops
+// blocked owners' pets too — both surfaces derive from this one.
 final nearbyPetsProvider = StreamProvider<List<PetProfile>>((ref) {
   final user = ref.watch(authStateProvider).value;
-  return ref.watch(petRepositoryProvider).watchNearbyPets(excludeOwnerId: user?.uid ?? '__none__');
+  final blocked = ref.watch(blockedUidsProvider).value ?? const <String>{};
+  return ref.watch(petRepositoryProvider)
+      .watchNearbyPets(excludeOwnerId: user?.uid ?? '__none__')
+      .map((pets) => pets.where((p) => !blocked.contains(p.ownerId)).toList());
+});
+
+final blockRepositoryProvider = Provider<BlockRepository>((ref) => FirestoreBlockRepository());
+final reportRepositoryProvider = Provider<ReportRepository>((ref) => FirestoreReportRepository());
+
+/// Uids the signed-in user has blocked. Every surface that renders other users'
+/// content filters against this, so a block hides them app-wide rather than only
+/// in the place it was applied. Empty (never null) while loading or signed out,
+/// so a slow read fails open on visibility rather than blanking the feed.
+final blockedUidsProvider = StreamProvider<Set<String>>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(<String>{});
+  return ref.watch(blockRepositoryProvider).watchBlockedUids(user.uid);
 });
 
 final swipeRepositoryProvider = Provider<SwipeRepository>((ref) => FirestoreSwipeRepository());
@@ -68,13 +90,18 @@ final swipedPetIdsProvider = StreamProvider<Set<String>>((ref) {
 
 final discoverDeckProvider = Provider<AsyncValue<List<PetProfile>>>((ref) {
   final swiped = ref.watch(swipedPetIdsProvider).value ?? const <String>{};
+  // Blocked owners are already gone — nearbyPetsProvider filters them.
   return ref.watch(nearbyPetsProvider).whenData(
       (pets) => pets.where((p) => !swiped.contains(p.id)).toList());
 });
 
 final proRepositoryProvider = Provider<ProRepository>((ref) => FirestoreProRepository());
 
-final prosProvider = StreamProvider<List<Pro>>((ref) => ref.watch(proRepositoryProvider).watchPros());
+final prosProvider = StreamProvider<List<Pro>>((ref) {
+  final blocked = ref.watch(blockedUidsProvider).value ?? const <String>{};
+  return ref.watch(proRepositoryProvider).watchPros()
+      .map((pros) => pros.where((p) => !blocked.contains(p.uid)).toList());
+});
 
 final currentProProvider = StreamProvider<Pro?>((ref) {
   final user = ref.watch(authStateProvider).value;
@@ -94,8 +121,11 @@ final myPetsProvider = StreamProvider<List<PetProfile>>((ref) {
 final homestayRepositoryProvider =
     Provider<HomestayRepository>((ref) => FirestoreHomestayRepository());
 
-final homestaysProvider =
-    StreamProvider<List<Homestay>>((ref) => ref.watch(homestayRepositoryProvider).watchHomestays());
+final homestaysProvider = StreamProvider<List<Homestay>>((ref) {
+  final blocked = ref.watch(blockedUidsProvider).value ?? const <String>{};
+  return ref.watch(homestayRepositoryProvider).watchHomestays()
+      .map((homes) => homes.where((h) => !blocked.contains(h.uid)).toList());
+});
 
 final currentHomestayProvider = StreamProvider<Homestay?>((ref) {
   final user = ref.watch(authStateProvider).value;
@@ -108,10 +138,17 @@ final homestayBookingRepositoryProvider =
 
 final postRepositoryProvider = Provider<PostRepository>((ref) => FirestorePostRepository());
 
-final postsProvider = StreamProvider<List<Post>>((ref) => ref.watch(postRepositoryProvider).watchPosts());
+final postsProvider = StreamProvider<List<Post>>((ref) {
+  final blocked = ref.watch(blockedUidsProvider).value ?? const <String>{};
+  return ref.watch(postRepositoryProvider).watchPosts()
+      .map((posts) => posts.where((p) => !blocked.contains(p.authorId)).toList());
+});
 
-final commentsProvider = StreamProvider.autoDispose.family<List<Comment>, String>(
-    (ref, postId) => ref.watch(postRepositoryProvider).watchComments(postId));
+final commentsProvider = StreamProvider.autoDispose.family<List<Comment>, String>((ref, postId) {
+  final blocked = ref.watch(blockedUidsProvider).value ?? const <String>{};
+  return ref.watch(postRepositoryProvider).watchComments(postId)
+      .map((comments) => comments.where((c) => !blocked.contains(c.authorId)).toList());
+});
 
 final preferencesRepositoryProvider = Provider<PreferencesRepository>(
     (ref) => throw UnimplementedError('preferencesRepositoryProvider must be overridden in main()'));
@@ -150,7 +187,9 @@ final chatRepositoryProvider = Provider<ChatRepository>((ref) => FirestoreChatRe
 final myChatsProvider = StreamProvider<List<Chat>>((ref) {
   final user = ref.watch(authStateProvider).value;
   if (user == null) return Stream.value(const []);
-  return ref.watch(chatRepositoryProvider).watchMyChats(user.uid);
+  final blocked = ref.watch(blockedUidsProvider).value ?? const <String>{};
+  return ref.watch(chatRepositoryProvider).watchMyChats(user.uid)
+      .map((chats) => chats.where((c) => !blocked.contains(c.otherUid(user.uid))).toList());
 });
 
 final chatMessagesProvider = StreamProvider.autoDispose.family<List<Message>, String>(

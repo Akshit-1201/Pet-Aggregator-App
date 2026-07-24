@@ -40,6 +40,7 @@ import '../../features/pets/create_pet_screen.dart';
 import '../../features/pets/pet_profile_detail_screen.dart';
 import '../../features/profile/profile_screen.dart';
 import '../../features/profile/settings_screen.dart';
+import '../../features/profile/blocked_users_screen.dart';
 import '../../features/auth/onboarding_arg.dart';
 import '../../features/bookings/my_bookings_screen.dart';
 import '../../features/reviews/rate_review_screen.dart';
@@ -64,7 +65,7 @@ const _protected = {
   Routes.homestay, Routes.host, Routes.hostSetup,
   Routes.hostRequest, Routes.hostAccepted, Routes.homestayPayment,
   Routes.newPost, Routes.thread, Routes.postLive,
-  Routes.settings, Routes.petProfile,
+  Routes.settings, Routes.blockedUsers, Routes.petProfile,
   Routes.chatList, Routes.chat,
   Routes.bookings, Routes.rate,
   Routes.notifications,
@@ -108,6 +109,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.postLive, builder: (_, state) => PostLiveScreen(post: state.extra as Post?)),
       GoRoute(path: Routes.petProfile, builder: (_, state) => PetProfileDetailScreen(pet: state.extra as PetProfile?)),
       GoRoute(path: Routes.settings, builder: (_, _) => const SettingsScreen()),
+      GoRoute(path: Routes.blockedUsers, builder: (_, _) => const BlockedUsersScreen()),
       GoRoute(path: Routes.thread, builder: (_, state) => ThreadScreen(post: state.extra as Post?)),
       GoRoute(path: Routes.chat, builder: (_, state) => ChatConversationScreen(chat: state.extra as Chat?)),
       GoRoute(path: Routes.chatList, builder: (_, _) => const ChatListScreen()),
