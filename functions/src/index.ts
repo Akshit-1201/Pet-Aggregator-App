@@ -39,6 +39,31 @@ type Kind = "service" | "homestay";
 
 const REGION = "asia-south1";
 
+/**
+ * App Check enforcement on the callables.
+ *
+ * **Deliberately false.** Enforcement is server-side and takes effect the
+ * instant this deploys: every build in the wild without an App Check token
+ * starts failing at once — payments, refunds, account deletion, all of it. The
+ * app only began sending tokens in the same change that added this flag, so
+ * flipping it now would break every already-installed build, including the
+ * owner's test devices.
+ *
+ * The rollout, in order:
+ *   1. Ship a build that activates App Check (done — see lib/main.dart).
+ *   2. Register the app for Play Integrity: Firebase Console → App Check, using
+ *      `com.pawgo.app` and the release SHA-256 from android/app/pawgo-release.jks.
+ *   3. Register a debug token for each dev machine/emulator, or local runs break.
+ *   4. Turn on MONITORING (not enforcement) for Functions, Firestore, Storage.
+ *   5. Watch the verified-request percentage until effectively all traffic is
+ *      attested — i.e. old builds have aged out.
+ *   6. Only then set this to true and redeploy.
+ *
+ * Skipping to step 6 is the failure mode Firebase's monitoring phase exists to
+ * prevent.
+ */
+const ENFORCE_APP_CHECK = false;
+
 /** Sends one notification to every device a user is signed in on.
  *
  *  Tokens live in users/{uid}/fcmTokens/{token}. They expire when an app is
@@ -298,7 +323,8 @@ function readArgs(data: unknown) {
 }
 
 export const createBookingOrder = onCall(
-  {region: "asia-south1", secrets: [razorpayKeyId, razorpayKeySecret]},
+  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK,
+    secrets: [razorpayKeyId, razorpayKeySecret]},
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "sign-in-required");
     const {kind, bookingId} = readArgs(request.data);
@@ -323,7 +349,8 @@ export const createBookingOrder = onCall(
   });
 
 export const verifyBookingPayment = onCall(
-  {region: "asia-south1", secrets: [razorpayKeyId, razorpayKeySecret, resendApiKey]},
+  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK,
+    secrets: [razorpayKeyId, razorpayKeySecret, resendApiKey]},
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "sign-in-required");
     const {kind, bookingId} = readArgs(request.data);
@@ -441,7 +468,8 @@ export const verifyBookingPayment = onCall(
  * only the Razorpay account id and a masked last-4.
  */
 export const createPayoutAccount = onCall(
-  {region: REGION, secrets: [razorpayKeyId, razorpayKeySecret]},
+  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK,
+    secrets: [razorpayKeyId, razorpayKeySecret]},
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "sign-in-required");
     const uid = request.auth.uid;
@@ -656,7 +684,7 @@ async function anonymizeAll(
  *  Runs last: auth deletion is the irreversible step, so a Firestore failure
  *  earlier leaves the account intact and the user can retry. */
 export const deleteMyAccount = onCall(
-  {region: "asia-south1"},
+  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK},
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "sign-in-required");
     const uid = request.auth.uid;
@@ -709,7 +737,8 @@ export const deleteMyAccount = onCall(
   });
 
 export const refundBookingPayment = onCall(
-  {region: "asia-south1", secrets: [razorpayKeyId, razorpayKeySecret, resendApiKey]},
+  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK,
+    secrets: [razorpayKeyId, razorpayKeySecret, resendApiKey]},
   async (request) => {
     if (!request.auth) throw new HttpsError("unauthenticated", "sign-in-required");
     const bookingId = request.data?.bookingId;
