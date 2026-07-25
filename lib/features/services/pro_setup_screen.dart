@@ -8,7 +8,9 @@ import '../../core/widgets/pg_app_bar.dart';
 import '../../core/widgets/pg_buttons.dart';
 import '../../core/widgets/pg_text_field.dart';
 import '../../data/models/pro.dart';
+import '../../data/models/verification_request.dart';
 import '../../data/repositories/providers.dart';
+import '../verification/verification_card.dart';
 
 class ProSetupScreen extends ConsumerStatefulWidget {
   final bool fromOnboarding;
@@ -113,6 +115,11 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
                     keyboardType: TextInputType.number, hint: '4'),
                 const SizedBox(height: 14),
                 PgTextField(label: 'About you', controller: _bio, hint: 'Tell parents about yourself'),
+                const SizedBox(height: 18),
+                // Optional — an unverified pro can still list, they just don't
+                // get the badge. Kept below the listing fields so it never
+                // blocks someone from going live.
+                const VerificationCard(kind: VerificationKind.pro),
                 if (_error != null)
                   Padding(padding: const EdgeInsets.only(top: 12),
                     child: Text(_error!, style: PgText.inter(13, FontWeight.w600, color: c.heart))),

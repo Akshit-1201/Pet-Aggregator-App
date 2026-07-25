@@ -28,6 +28,8 @@ import 'package:pet_aggregator_app/data/models/report.dart';
 import 'package:pet_aggregator_app/data/repositories/block_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/report_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/push_token_repository.dart';
+import 'package:pet_aggregator_app/data/models/verification_request.dart';
+import 'package:pet_aggregator_app/data/repositories/verification_repository.dart';
 import 'package:pet_aggregator_app/data/services/push_service.dart';
 import 'package:pet_aggregator_app/data/repositories/storage_repository.dart';
 import 'package:pet_aggregator_app/data/services/image_picker_service.dart';
@@ -168,6 +170,49 @@ class InMemoryReportRepository implements ReportRepository {
 
   @override
   Future<void> submitReport(Report report) async => reports.add(report);
+}
+
+class InMemoryVerificationRepository implements VerificationRepository {
+  final Map<String, VerificationRequest> requests = {};
+  final Map<String, StreamController<VerificationRequest?>> _ctrls = {};
+  final List<String> uploaded = [];
+
+  StreamController<VerificationRequest?> _ctrl(String uid) =>
+      _ctrls.putIfAbsent(uid, () => StreamController<VerificationRequest?>.broadcast());
+
+  @override
+  Stream<VerificationRequest?> watchMyRequest(String uid) async* {
+    yield requests[uid];
+    yield* _ctrl(uid).stream;
+  }
+
+  @override
+  Future<String> uploadDocument({
+    required String uid, required Uint8List bytes, required int index,
+  }) async {
+    final path = 'verification/$uid/doc_$index.jpg';
+    uploaded.add(path);
+    return path;
+  }
+
+  @override
+  Future<void> submit(VerificationRequest request) async {
+    requests[request.uid] = request;
+    _ctrl(request.uid).add(request);
+  }
+
+  /// Stands in for an admin approving/rejecting from the panel — the app itself
+  /// can never write these fields.
+  void review(String uid, VerificationStatus status, {String reason = ''}) {
+    final r = requests[uid];
+    if (r == null) return;
+    requests[uid] = VerificationRequest(
+      uid: r.uid, kind: r.kind, applicantName: r.applicantName, area: r.area,
+      docPaths: r.docPaths, submittedAt: r.submittedAt, status: status,
+      reason: reason, reviewedBy: 'admin@pawgo.app',
+      reviewedAt: DateTime.now().millisecondsSinceEpoch);
+    _ctrl(uid).add(requests[uid]);
+  }
 }
 
 class InMemoryPushTokenRepository implements PushTokenRepository {
@@ -693,6 +738,18 @@ class InMemoryStorageRepository implements StorageRepository {
     return 'https://fake.storage/$path';
   }
 }
+
+/// A real, decodable 1x1 transparent PNG. Widgets that actually render picked
+/// bytes (the verification card) throw "Invalid image data" on arbitrary
+/// filler like `Uint8List(8)`.
+final Uint8List kTinyPng = Uint8List.fromList(const [
+  0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+  0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+  0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+  0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+  0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+  0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+]);
 
 class FakeImagePickerService implements ImagePickerService {
   final Uint8List? next;

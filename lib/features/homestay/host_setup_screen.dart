@@ -9,7 +9,9 @@ import '../../core/widgets/pg_buttons.dart';
 import '../../core/widgets/pg_image_slot.dart';
 import '../../core/widgets/pg_text_field.dart';
 import '../../data/models/homestay.dart';
+import '../../data/models/verification_request.dart';
 import '../../data/repositories/providers.dart';
+import '../verification/verification_card.dart';
 
 class HostSetupScreen extends ConsumerStatefulWidget {
   final bool fromOnboarding;
@@ -178,6 +180,10 @@ class _HostSetupScreenState extends ConsumerState<HostSetupScreen> {
                           _amenities.contains(a) ? _amenities.remove(a) : _amenities.add(a)),
                     ),
                 ]),
+                const SizedBox(height: 18),
+                // Optional — an unverified host can still list, they just don't
+                // get the "Pawgo Verified host" badge.
+                const VerificationCard(kind: VerificationKind.homestay),
               ],
             ),
           ),

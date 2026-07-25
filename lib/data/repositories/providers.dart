@@ -26,6 +26,8 @@ import 'review_repository.dart';
 import 'block_repository.dart';
 import 'report_repository.dart';
 import 'push_token_repository.dart';
+import 'verification_repository.dart';
+import '../models/verification_request.dart';
 import 'storage_repository.dart';
 import '../services/push_service.dart';
 import '../services/image_picker_service.dart';
@@ -45,6 +47,7 @@ import 'firebase/firestore_review_repository.dart';
 import 'firebase/firestore_block_repository.dart';
 import 'firebase/firestore_report_repository.dart';
 import 'firebase/firestore_push_token_repository.dart';
+import 'firebase/firestore_verification_repository.dart';
 import 'firebase/firebase_storage_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) => FirebaseAuthRepository());
@@ -72,6 +75,17 @@ final nearbyPetsProvider = StreamProvider<List<PetProfile>>((ref) {
 
 final blockRepositoryProvider = Provider<BlockRepository>((ref) => FirestoreBlockRepository());
 final reportRepositoryProvider = Provider<ReportRepository>((ref) => FirestoreReportRepository());
+final verificationRepositoryProvider =
+    Provider<VerificationRepository>((ref) => FirestoreVerificationRepository());
+
+/// The signed-in partner's own KYC application, or null if they've never
+/// applied. Only ever their own — the rules deny reading anyone else's.
+final myVerificationRequestProvider = StreamProvider<VerificationRequest?>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(null);
+  return ref.watch(verificationRepositoryProvider).watchMyRequest(user.uid);
+});
+
 final pushServiceProvider = Provider<PushService>((ref) => FirebasePushService());
 final pushTokenRepositoryProvider =
     Provider<PushTokenRepository>((ref) => FirestorePushTokenRepository());

@@ -14,6 +14,18 @@ service firebase.storage {
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
+    // KYC documents. `read: if false` is deliberate and the one place in this
+    // file that differs from every other path — the others allow any signed-in
+    // user to read, which is fine for a pet photo and unacceptable for someone's
+    // ID. Nobody reads these from a client, including the applicant; the admin
+    // panel uses the Admin SDK (which bypasses rules) to mint short-lived signed
+    // URLs for a reviewer.
+    match /verification/{uid}/{file} {
+      allow read: if false;
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
     match /pets/{file} {
       allow read: if request.auth != null;
       // pet files are named "{uid}_{millis}.jpg" — enforce the uploader's own prefix
