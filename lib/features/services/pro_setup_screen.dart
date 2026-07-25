@@ -11,6 +11,7 @@ import '../../data/models/pro.dart';
 import '../../data/models/verification_request.dart';
 import '../../data/repositories/providers.dart';
 import '../verification/verification_card.dart';
+import '../payouts/earnings_card.dart';
 
 class ProSetupScreen extends ConsumerStatefulWidget {
   final bool fromOnboarding;
@@ -120,6 +121,8 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
                 // get the badge. Kept below the listing fields so it never
                 // blocks someone from going live.
                 const VerificationCard(kind: VerificationKind.pro),
+                const SizedBox(height: 14),
+                const EarningsCard(),
                 if (_error != null)
                   Padding(padding: const EdgeInsets.only(top: 12),
                     child: Text(_error!, style: PgText.inter(13, FontWeight.w600, color: c.heart))),

@@ -1,11 +1,14 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
 import {onDocumentCreated, onDocumentUpdated} from "firebase-functions/v2/firestore";
+import {onSchedule} from "firebase-functions/v2/scheduler";
 import {defineSecret} from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 import * as crypto from "crypto";
 import Razorpay from "razorpay";
 import * as admin from "firebase-admin";
 import {sendInvoiceEmail, sendRefundEmail, InvoiceLine} from "./invoice";
+import {recordPayoutOwed, reversePayout, type PayoutStatus} from "./payouts";
+import {createLinkedAccount, readBankDetails, savePayoutAccount} from "./payout-account";
 
 admin.initializeApp();
 
@@ -379,6 +382,23 @@ export const verifyBookingPayment = onCall(
       });
     });
 
+    // What the partner is owed. Recorded here but NOT transferred here: every
+    // Razorpay Route call happens later in processPayouts, so a disabled or
+    // misconfigured Route can never make a customer's payment fail.
+    try {
+      const b = (await ref.get()).data() ?? {};
+      await recordPayoutOwed({
+        kind,
+        bookingId,
+        partnerId: String(kind === "service" ? b.proId ?? "" : b.hostId ?? ""),
+        parts: amounts.parts,
+        booking: b,
+        paymentId,
+      });
+    } catch (e) {
+      logger.error("verifyBookingPayment: payout record failed", {bookingId, error: e});
+    }
+
     // Receipt. Awaited so a hard failure is visible in the logs, but never
     // allowed to throw — the money has moved and the booking is confirmed, so
     // a mail outage must not surface to the user as a failed payment.
@@ -413,6 +433,122 @@ export const verifyBookingPayment = onCall(
     }
 
     return {confirmed: true, paymentId};
+  });
+
+/**
+ * Registers a pro's or host's bank account with Razorpay Route so they can be
+ * paid. Raw bank details and PAN pass through and are never persisted here —
+ * only the Razorpay account id and a masked last-4.
+ */
+export const createPayoutAccount = onCall(
+  {region: REGION, secrets: [razorpayKeyId, razorpayKeySecret]},
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "sign-in-required");
+    const uid = request.auth.uid;
+    const details = readBankDetails(request.data);
+
+    const existing = await admin.firestore().collection("payoutAccounts").doc(uid).get();
+    if (existing.exists && existing.data()?.razorpayAccountId) {
+      // Changing bank details means re-onboarding with Razorpay; not supported
+      // yet, and silently doing nothing would be worse than saying so.
+      throw new HttpsError("failed-precondition", "payout-account-exists");
+    }
+
+    const rzp = new Razorpay({
+      key_id: razorpayKeyId.value(),
+      key_secret: razorpayKeySecret.value(),
+    });
+
+    let accountId: string;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ({accountId} = await createLinkedAccount(rzp as any, uid, details));
+    } catch (e) {
+      // Deliberately does not echo the error back: Razorpay messages can quote
+      // the submitted account number.
+      logger.error("createPayoutAccount failed", {uid, error: e});
+      throw new HttpsError("internal", "payout-account-failed");
+    }
+
+    await savePayoutAccount(uid, accountId, details);
+    return {status: "pending"};
+  });
+
+/**
+ * Moves payouts along, once a day.
+ *
+ * Two jobs, both idempotent so a re-run or a partial failure is harmless:
+ *  - `owed` + the partner now has a Route account -> create an ON HOLD transfer.
+ *  - `held` + the booking is past its due date -> release it.
+ *
+ * Held-then-released rather than paid-at-capture because a homestay can still
+ * be cancelled for a full refund up to 24h before check-in. Releasing early
+ * would mean chasing money a host had already withdrawn.
+ */
+export const processPayouts = onSchedule(
+  {region: REGION, schedule: "every day 02:00", timeZone: "Asia/Kolkata",
+    secrets: [razorpayKeyId, razorpayKeySecret]},
+  async () => {
+    const db = admin.firestore();
+    const rzp = new Razorpay({
+      key_id: razorpayKeyId.value(),
+      key_secret: razorpayKeySecret.value(),
+    });
+    const now = Date.now();
+
+    const setStatus = (
+      ref: FirebaseFirestore.DocumentReference,
+      status: PayoutStatus,
+      extra: Record<string, unknown> = {},
+    ) => ref.update({status, updatedAt: Date.now(), ...extra});
+
+    // 1. Create held transfers for anything owed to a partner who can be paid.
+    const owed = await db.collection("payouts").where("status", "==", "owed").limit(200).get();
+    for (const doc of owed.docs) {
+      const p = doc.data();
+      const account = await db.collection("payoutAccounts").doc(String(p.partnerId)).get();
+      const accountId = account.data()?.razorpayAccountId;
+      // No account yet is the normal case, not an error — payout details are
+      // optional and earnings simply accrue until they are provided.
+      if (!accountId) continue;
+
+      try {
+        const transfer = await rzp.payments.transfer(String(p.paymentId), {
+          transfers: [{
+            account: String(accountId),
+            amount: Number(p.amount) * 100, // paise
+            currency: "INR",
+            on_hold: true,
+          }],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const id = (transfer as any)?.items?.[0]?.id ?? "";
+        await setStatus(doc.ref, "held", {transferId: id, error: ""});
+      } catch (e) {
+        logger.error("payout transfer failed", {payoutId: doc.id, error: e});
+        // Left as `owed`, not `failed`: Route being off is the likeliest cause
+        // and it should retry tomorrow rather than need manual resurrection.
+        await doc.ref.update({error: "transfer failed", updatedAt: Date.now()});
+      }
+    }
+
+    // 2. Release held transfers whose booking has completed.
+    const held = await db.collection("payouts").where("status", "==", "held").limit(200).get();
+    for (const doc of held.docs) {
+      const p = doc.data();
+      const dueAt = Number(p.dueAt ?? 0);
+      if (!dueAt || dueAt > now) continue;
+      try {
+        await rzp.transfers.edit(String(p.transferId), {on_hold: false});
+        await setStatus(doc.ref, "released", {releasedAt: Date.now(), error: ""});
+      } catch (e) {
+        logger.error("payout release failed", {payoutId: doc.id, error: e});
+        await doc.ref.update({error: "release failed", updatedAt: Date.now()});
+      }
+    }
+
+    logger.info("processPayouts done", {owed: owed.size, held: held.size});
   });
 
 /** Owns `rating`/`reviewCount` on pros and homestays.
@@ -612,6 +748,20 @@ export const refundBookingPayment = onCall(
       tx.update(ref, {status: "cancelled", updatedAt: Date.now(), refundAmount});
       return {refundAmount, paymentId};
     });
+
+    // Reverse the host's payout regardless of the refund amount: the stay is
+    // cancelled either way, and a held transfer left alone would pay a host for
+    // a stay that never happened.
+    try {
+      const rzp = new Razorpay({
+        key_id: razorpayKeyId.value(),
+        key_secret: razorpayKeySecret.value(),
+      });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await reversePayout(rzp as any, "homestay", bookingId);
+    } catch (e) {
+      logger.error("refundBookingPayment: payout reversal failed", {bookingId, error: e});
+    }
 
     let refundId = "";
     if (claim.refundAmount > 0) {

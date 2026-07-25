@@ -52,6 +52,7 @@ Future<void> pumpPgApp(
     // Both setup screens embed the verification card, so this would otherwise
     // reach real Firestore from every pro/host test.
     verificationRepositoryProvider.overrideWithValue(InMemoryVerificationRepository()),
+    payoutRepositoryProvider.overrideWithValue(InMemoryPayoutRepository()),
     ...overrides,
   ]);
   addTearDown(container.dispose);

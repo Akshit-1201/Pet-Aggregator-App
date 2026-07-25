@@ -28,6 +28,8 @@ import 'report_repository.dart';
 import 'push_token_repository.dart';
 import 'verification_repository.dart';
 import '../models/verification_request.dart';
+import 'payout_repository.dart';
+import '../models/payout_account.dart';
 import 'storage_repository.dart';
 import '../services/push_service.dart';
 import '../services/image_picker_service.dart';
@@ -48,6 +50,7 @@ import 'firebase/firestore_block_repository.dart';
 import 'firebase/firestore_report_repository.dart';
 import 'firebase/firestore_push_token_repository.dart';
 import 'firebase/firestore_verification_repository.dart';
+import 'firebase/firestore_payout_repository.dart';
 import 'firebase/firebase_storage_repository.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) => FirebaseAuthRepository());
@@ -75,6 +78,26 @@ final nearbyPetsProvider = StreamProvider<List<PetProfile>>((ref) {
 
 final blockRepositoryProvider = Provider<BlockRepository>((ref) => FirestoreBlockRepository());
 final reportRepositoryProvider = Provider<ReportRepository>((ref) => FirestoreReportRepository());
+final payoutRepositoryProvider =
+    Provider<PayoutRepository>((ref) => FirestorePayoutRepository());
+
+final myPayoutAccountProvider = StreamProvider<PayoutAccount?>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(null);
+  return ref.watch(payoutRepositoryProvider).watchMyAccount(user.uid);
+});
+
+final myPayoutsProvider = StreamProvider<List<Payout>>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(const []);
+  return ref.watch(payoutRepositoryProvider).watchMyPayouts(user.uid);
+});
+
+/// Totals for the earnings card. Empty (not an error) while loading, so a slow
+/// read shows ₹0 rather than a broken card.
+final myEarningsProvider = Provider<EarningsSummary>((ref) =>
+    EarningsSummary.from(ref.watch(myPayoutsProvider).value ?? const []));
+
 final verificationRepositoryProvider =
     Provider<VerificationRepository>((ref) => FirestoreVerificationRepository());
 

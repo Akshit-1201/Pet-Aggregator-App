@@ -173,6 +173,59 @@ export async function findUser(query: string): Promise<UserRow | null> {
   };
 }
 
+export type PayoutLedgerRow = {
+  id: string;
+  kind: string;
+  bookingId: string;
+  partnerId: string;
+  amount: number;
+  status: string;
+  transferId: string;
+  dueAt: number;
+  createdAt: number;
+  error: string;
+  hasAccount: boolean;
+};
+
+/**
+ * The payout ledger. `owed` first because that is the row a human has to care
+ * about — either the partner has not given bank details, or a transfer is
+ * failing. Released rows are just history.
+ */
+export async function listPayouts(): Promise<PayoutLedgerRow[]> {
+  const db = adminDb();
+  const snap = await db.collection("payouts").orderBy("createdAt", "desc").limit(200).get();
+
+  // One read per distinct partner, not per row.
+  const partnerIds = [...new Set(snap.docs.map((d) => str(d.data().partnerId)).filter(Boolean))];
+  const accounts = await Promise.all(
+    partnerIds.map((id) => db.collection("payoutAccounts").doc(id).get()),
+  );
+  const withAccount = new Set(
+    accounts.filter((a) => a.exists && a.data()?.razorpayAccountId).map((a) => a.id),
+  );
+
+  const ORDER: Record<string, number> = {owed: 0, held: 1, failed: 2, released: 3, reversed: 4};
+  return snap.docs
+    .map((d) => {
+      const x = d.data();
+      return {
+        id: d.id,
+        kind: str(x.kind),
+        bookingId: str(x.bookingId),
+        partnerId: str(x.partnerId),
+        amount: num(x.amount),
+        status: str(x.status),
+        transferId: str(x.transferId),
+        dueAt: num(x.dueAt),
+        createdAt: num(x.createdAt),
+        error: str(x.error),
+        hasAccount: withAccount.has(str(x.partnerId)),
+      } satisfies PayoutLedgerRow;
+    })
+    .sort((a, b) => (ORDER[a.status] ?? 9) - (ORDER[b.status] ?? 9) || b.createdAt - a.createdAt);
+}
+
 export async function queueCounts() {
   const [verifications, reports] = await Promise.all([
     adminDb().collection("verificationRequests").where("status", "==", "pending").count().get(),

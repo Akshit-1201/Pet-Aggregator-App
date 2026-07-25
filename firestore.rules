@@ -55,6 +55,19 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Payout account + earnings. Both are read-only to their owner and written
+    // only by the server: the amounts come from server-computed booking prices,
+    // and `razorpayAccountId` is what money is sent to. A client that could
+    // write either could pay itself, or redirect someone else's earnings.
+    match /payoutAccounts/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+    match /payouts/{payoutId} {
+      allow read: if request.auth != null && resource.data.partnerId == request.auth.uid;
+      allow write: if false;
+    }
+
     // Admin-only collections. Denied to every client outright — a client that
     // could write adminRoles could grant itself admin, and an audit log a client
     // can edit is not an audit log. Both are Admin SDK only.

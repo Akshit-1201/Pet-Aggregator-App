@@ -30,6 +30,8 @@ import 'package:pet_aggregator_app/data/repositories/report_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/push_token_repository.dart';
 import 'package:pet_aggregator_app/data/models/verification_request.dart';
 import 'package:pet_aggregator_app/data/repositories/verification_repository.dart';
+import 'package:pet_aggregator_app/data/models/payout_account.dart';
+import 'package:pet_aggregator_app/data/repositories/payout_repository.dart';
 import 'package:pet_aggregator_app/data/services/push_service.dart';
 import 'package:pet_aggregator_app/data/repositories/storage_repository.dart';
 import 'package:pet_aggregator_app/data/services/image_picker_service.dart';
@@ -170,6 +172,54 @@ class InMemoryReportRepository implements ReportRepository {
 
   @override
   Future<void> submitReport(Report report) async => reports.add(report);
+}
+
+class InMemoryPayoutRepository implements PayoutRepository {
+  final Map<String, PayoutAccount> accounts = {};
+  final Map<String, List<Payout>> payouts = {};
+  final _accountCtrls = <String, StreamController<PayoutAccount?>>{};
+
+  /// Set to make the next createAccount throw, for the error paths.
+  PayoutFailure? nextError;
+
+  StreamController<PayoutAccount?> _ctrl(String uid) =>
+      _accountCtrls.putIfAbsent(uid, () => StreamController<PayoutAccount?>.broadcast());
+
+  @override
+  Stream<PayoutAccount?> watchMyAccount(String uid) async* {
+    yield accounts[uid];
+    yield* _ctrl(uid).stream;
+  }
+
+  @override
+  Stream<List<Payout>> watchMyPayouts(String uid) =>
+      Stream.value(payouts[uid] ?? const <Payout>[]);
+
+  @override
+  Future<void> createAccount({
+    required String name,
+    required String email,
+    required String pan,
+    required String accountNumber,
+    required String ifsc,
+    required String beneficiaryName,
+  }) async {
+    if (nextError != null) {
+      final e = nextError!;
+      nextError = null;
+      throw e;
+    }
+    // Mirrors the server: only a masked last-4 comes back, never the number.
+    const uid = 'uid_me@x.com';
+    accounts[uid] = PayoutAccount(
+      uid: uid,
+      razorpayAccountId: 'acc_fake',
+      bankLast4: accountNumber.substring(accountNumber.length - 4),
+      ifsc: ifsc,
+      beneficiaryName: beneficiaryName,
+    );
+    _ctrl(uid).add(accounts[uid]);
+  }
 }
 
 class InMemoryVerificationRepository implements VerificationRepository {

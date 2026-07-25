@@ -12,6 +12,7 @@ import '../../data/models/homestay.dart';
 import '../../data/models/verification_request.dart';
 import '../../data/repositories/providers.dart';
 import '../verification/verification_card.dart';
+import '../payouts/earnings_card.dart';
 
 class HostSetupScreen extends ConsumerStatefulWidget {
   final bool fromOnboarding;
@@ -184,6 +185,8 @@ class _HostSetupScreenState extends ConsumerState<HostSetupScreen> {
                 // Optional — an unverified host can still list, they just don't
                 // get the "Pawgo Verified host" badge.
                 const VerificationCard(kind: VerificationKind.homestay),
+                const SizedBox(height: 14),
+                const EarningsCard(),
               ],
             ),
           ),
