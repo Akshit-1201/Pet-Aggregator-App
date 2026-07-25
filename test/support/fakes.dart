@@ -848,9 +848,17 @@ class FakePaymentService implements PaymentService {
         (throw const PaymentException(PaymentErrorType.failed, 'not-configured'));
   }
 
+  /// Kinds passed alongside [refundedBookingIds], so a test can assert a
+  /// service cancellation didn't quietly refund against the homestay collection.
+  final List<PaymentKind> refundedKinds = [];
+
   @override
-  Future<RefundResult> refundStay({required String bookingId}) async {
+  Future<RefundResult> refundBooking({
+    required String bookingId,
+    required PaymentKind kind,
+  }) async {
     refundedBookingIds.add(bookingId);
+    refundedKinds.add(kind);
     if (refundError != null) throw refundError!;
     return refundResult ?? const RefundResult(refundAmount: 0, refundId: '');
   }

@@ -30,5 +30,11 @@ abstract interface class PaymentService {
     void Function()? onVerifying,
   });
 
-  Future<RefundResult> refundStay({required String bookingId});
+  /// Cancels a PAID booking and refunds it. The server owns both the amount and
+  /// the cancellation write — a client cannot cancel a paid booking directly,
+  /// which is what stops a cancellation silently keeping the customer's money.
+  Future<RefundResult> refundBooking({
+    required String bookingId,
+    required PaymentKind kind,
+  });
 }

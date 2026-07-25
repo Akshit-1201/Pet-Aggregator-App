@@ -716,8 +716,13 @@ export const refundBookingPayment = onCall(
     if (typeof bookingId !== "string" || bookingId === "") {
       throw new HttpsError("invalid-argument", "bad-args");
     }
+    // Defaults to homestay: this callable was homestay-only until service
+    // refunds were added, and an already-installed build sends no `kind`.
+    const rawKind = request.data?.kind;
+    const kind: Kind = rawKind === "service" ? "service" : "homestay";
     const uid = request.auth.uid;
-    const ref = admin.firestore().collection("homestayBookings").doc(bookingId);
+    const col = kind === "service" ? "bookings" : "homestayBookings";
+    const ref = admin.firestore().collection(col).doc(bookingId);
 
     // Transactionally claim paid -> cancelled: computes the authoritative refund
     // and locks the booking so a double-submit cannot double-refund. Pure (no
@@ -726,19 +731,38 @@ export const refundBookingPayment = onCall(
       const snap = await tx.get(ref);
       if (!snap.exists) throw new HttpsError("not-found", "no-booking");
       const b = snap.data() as FirebaseFirestore.DocumentData;
-      if (b.guestId !== uid) throw new HttpsError("permission-denied", "not-your-booking");
-      if (b.status !== "paid") throw new HttpsError("failed-precondition", "not-paid");
-      // checkIn is a date (YYYY-MM-DD); interpret at IST midnight (Mumbai market).
-      const checkIn = new Date(`${String(b.checkIn).slice(0, 10)}T00:00:00+05:30`);
-      if (!Number.isFinite(checkIn.getTime())) {
+
+      const ownerField = kind === "service" ? "parentId" : "guestId";
+      const paidStatus = kind === "service" ? "confirmed" : "paid";
+      if (b[ownerField] !== uid) throw new HttpsError("permission-denied", "not-your-booking");
+      if (b.status !== paidStatus) throw new HttpsError("failed-precondition", "not-paid");
+
+      // Both kinds store a date-only YYYY-MM-DD; interpret at IST midnight
+      // (Mumbai market). This is a cross-boundary contract shared with the
+      // Flutter models — do not "improve" it to full ISO8601.
+      const dayField = kind === "service" ? b.date : b.checkIn;
+      const startOfDay = new Date(`${String(dayField).slice(0, 10)}T00:00:00+05:30`);
+      if (!Number.isFinite(startOfDay.getTime())) {
         throw new HttpsError("failed-precondition", "bad-checkin");
       }
       const now = new Date();
-      if (now.getTime() >= checkIn.getTime()) {
+      if (now.getTime() >= startOfDay.getTime()) {
         throw new HttpsError("failed-precondition", "after-checkin");
       }
-      const hours = (checkIn.getTime() - now.getTime()) / 3600000;
-      const refundAmount = hours >= 24 ? (b.subtotal as number) : 0;
+
+      // The two policies differ because the products do. A stay is committed
+      // capacity, so it uses a 24h window on the subtotal. A service is a
+      // single-day appointment and the date has no time-of-day, so an
+      // hour-precise rule would be fake precision: cancelling any day before
+      // refunds the rate in full. Neither ever refunds the Pawgo fee.
+      let refundAmount: number;
+      if (kind === "service") {
+        refundAmount = (b.rate as number) ?? 0;
+      } else {
+        const hours = (startOfDay.getTime() - now.getTime()) / 3600000;
+        refundAmount = hours >= 24 ? (b.subtotal as number) : 0;
+      }
+
       const paymentId = (b.paymentId as string) || "";
       // A refund needs a payment to refund against — assert BEFORE claiming so
       // this failure is genuinely pre-claim (booking left untouched).
@@ -749,18 +773,18 @@ export const refundBookingPayment = onCall(
       return {refundAmount, paymentId};
     });
 
-    // Reverse the host's payout regardless of the refund amount: the stay is
-    // cancelled either way, and a held transfer left alone would pay a host for
-    // a stay that never happened.
+    // Reverse the partner's payout regardless of the refund amount: the booking
+    // is cancelled either way, and a held transfer left alone would pay someone
+    // for work that never happened.
     try {
       const rzp = new Razorpay({
         key_id: razorpayKeyId.value(),
         key_secret: razorpayKeySecret.value(),
       });
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await reversePayout(rzp as any, "homestay", bookingId);
+      await reversePayout(rzp as any, kind, bookingId);
     } catch (e) {
-      logger.error("refundBookingPayment: payout reversal failed", {bookingId, error: e});
+      logger.error("refundBookingPayment: payout reversal failed", {bookingId, kind, error: e});
     }
 
     let refundId = "";
@@ -795,7 +819,9 @@ export const refundBookingPayment = onCall(
         const b = (await ref.get()).data() ?? {};
         await sendRefundEmail(resendApiKey.value(), MAIL_FROM, {
           to: await verifiedEmailFor(uid),
-          homeName: String(b.homeName ?? "the home"),
+          homeName: kind === "service"
+            ? `your ${String(b.serviceType ?? "booking")} with ${b.proName ?? "your pro"}`
+            : String(b.homeName ?? "the home"),
           amount: claim.refundAmount,
           bookingId,
           refundId,

@@ -47,11 +47,18 @@ BookingPhase stayPhase(HomestayBooking b, DateTime now) {
 
 bool canRate(BookingPhase p) => p == BookingPhase.completed;
 
+/// Cancelling an UNPAID booking — a plain client-side status write, no money
+/// involved. A paid ('confirmed') booking is [canCancelPaidService] instead,
+/// because it has to go through the server to be refunded.
 bool canCancelService(Booking b, DateTime now) {
   final d = DateTime.tryParse(b.date);
-  return (b.status == 'confirmed' || b.status == 'pending') &&
-      d != null &&
-      _day(now).isBefore(_day(d));
+  return b.status == 'pending' && d != null && _day(now).isBefore(_day(d));
+}
+
+/// Cancelling a PAID booking, which refunds the rate. Server-owned.
+bool canCancelPaidService(Booking b, DateTime now) {
+  final d = DateTime.tryParse(b.date);
+  return b.status == 'confirmed' && d != null && _day(now).isBefore(_day(d));
 }
 
 bool canPayService(Booking b, DateTime now) {

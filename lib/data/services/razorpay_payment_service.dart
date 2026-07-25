@@ -125,11 +125,17 @@ class RazorpayPaymentService implements PaymentService {
   }
 
   @override
-  Future<RefundResult> refundStay({required String bookingId}) async {
+  Future<RefundResult> refundBooking({
+    required String bookingId,
+    required PaymentKind kind,
+  }) async {
     try {
       final res = await _functions
           .httpsCallable('refundBookingPayment')
-          .call<Map<Object?, Object?>>({'bookingId': bookingId});
+          .call<Map<Object?, Object?>>({
+        'bookingId': bookingId,
+        'kind': kind == PaymentKind.service ? 'service' : 'homestay',
+      });
       final data = Map<String, dynamic>.from(res.data);
       return RefundResult(
           refundAmount: (data['refundAmount'] ?? 0) as int,

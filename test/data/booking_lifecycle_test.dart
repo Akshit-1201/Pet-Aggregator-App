@@ -65,11 +65,21 @@ void main() {
         expect(canRate(p), isFalse);
       }
     });
-    test('canCancelService: strictly before the date; never legacy or cancelled', () {
-      expect(canCancelService(_svc(date: '2026-07-20'), _now), isTrue);
-      expect(canCancelService(_svc(date: '2026-07-19'), _now), isFalse); // day-of
-      expect(canCancelService(_svc(), _now), isFalse);                    // legacy
+    test('canCancelService is UNPAID only; strictly before the date; never legacy', () {
+      // 'confirmed' means paid. It used to be included here, which let the
+      // client cancel a paid booking with no refund and no payout reversal —
+      // canCancelPaidService + the server own that case now.
+      expect(canCancelService(_svc(status: 'pending', date: '2026-07-20'), _now), isTrue);
+      expect(canCancelService(_svc(date: '2026-07-20'), _now), isFalse);  // confirmed = paid
+      expect(canCancelService(_svc(status: 'pending', date: '2026-07-19'), _now), isFalse); // day-of
+      expect(canCancelService(_svc(status: 'pending'), _now), isFalse);   // legacy
       expect(canCancelService(_svc(status: 'cancelled', date: '2026-07-25'), _now), isFalse);
+    });
+    test('canCancelPaidService is PAID only, strictly before the date', () {
+      expect(canCancelPaidService(_svc(date: '2026-07-20'), _now), isTrue);
+      expect(canCancelPaidService(_svc(status: 'pending', date: '2026-07-20'), _now), isFalse);
+      expect(canCancelPaidService(_svc(date: '2026-07-19'), _now), isFalse); // day-of
+      expect(canCancelPaidService(_svc(), _now), isFalse);                   // legacy
     });
     test('canCancelStay: requested until expiry; accepted strictly before check-in', () {
       expect(canCancelStay(_stay(checkIn: DateTime(2026, 7, 19)), _now), isTrue);   // pending, check-in today
@@ -142,9 +152,13 @@ void main() {
       expect(canPayService(_svc(date: '2026-07-21'), _now), isFalse);          // confirmed
       expect(canPayService(_svc(status: 'pending'), _now), isFalse);           // legacy, no date
     });
-    test('canCancelService covers pending and confirmed before the date', () {
+    test('the two cancel paths split cleanly on paid-ness', () {
+      // Every cancellable booking is covered by exactly one of them, so a paid
+      // booking can never fall through to the client-side write.
       expect(canCancelService(_svc(status: 'pending', date: '2026-07-21'), _now), isTrue);
-      expect(canCancelService(_svc(date: '2026-07-21'), _now), isTrue);
+      expect(canCancelPaidService(_svc(status: 'pending', date: '2026-07-21'), _now), isFalse);
+      expect(canCancelService(_svc(date: '2026-07-21'), _now), isFalse);
+      expect(canCancelPaidService(_svc(date: '2026-07-21'), _now), isTrue);
       expect(canCancelService(_svc(status: 'pending', date: '2026-07-18'), _now), isFalse);
     });
   });

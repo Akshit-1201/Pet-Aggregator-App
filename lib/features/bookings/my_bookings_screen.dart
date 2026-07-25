@@ -116,9 +116,12 @@ class _MyBookingsTab extends ConsumerWidget {
               canCancel: canCancelService(b, now),
               canPay: canPayService(b, now),
               onPay: () => context.push(Routes.payment, extra: b),
-              canCancelPaid: false,
-              onCancelPaid: null,
-              showContactHost: false,
+              canCancelPaid: canCancelPaidService(b, now),
+              onCancelPaid: () => _confirmCancelPaidService(context, ref, b, now),
+              // Once the service day arrives a paid booking can no longer be
+              // cancelled in-app, same as a stay that has started.
+              showContactHost: servicePhase(b, now) == BookingPhase.upcoming &&
+                  !canCancelPaidService(b, now),
               onCancel: () => confirmAndRun(context,
                   title: 'Cancel this booking?',
                   message: "This can't be undone.",
@@ -191,7 +194,9 @@ Future<void> _confirmCancelPaid(
   if (ok != true || !context.mounted) return;
   final messenger = ScaffoldMessenger.of(context);
   try {
-    final result = await ref.read(paymentServiceProvider).refundStay(bookingId: s.id);
+    final result = await ref
+        .read(paymentServiceProvider)
+        .refundBooking(bookingId: s.id, kind: PaymentKind.homestay);
     messenger.showSnackBar(SnackBar(
         content: Text(result.refundAmount > 0
             ? 'Stay cancelled. ₹${result.refundAmount} will be refunded in 5–7 days.'
@@ -206,6 +211,60 @@ Future<void> _confirmCancelPaid(
         content: Text(switch (e.message) {
       'refund-failed' => "Stay cancelled, but the refund didn't go through — contact support.",
       'cancel-failed' => "Couldn't cancel the stay — try again.",
+      _ => "We couldn't confirm this cancellation — check My bookings before trying again.",
+    })));
+  }
+}
+
+/// Cancelling a PAID service booking.
+///
+/// Separate from the unpaid path because this one has to go through the server:
+/// until now a paid booking could be cancelled straight from the client, which
+/// quietly kept the customer's money and left the pro's payout standing for a
+/// service that never happened.
+Future<void> _confirmCancelPaidService(
+    BuildContext context, WidgetRef ref, Booking b, DateTime now) async {
+  final c = context.pg;
+  final refund = serviceRefundRupees(b, now);
+  final ok = await showDialog<bool>(
+    context: context,
+    builder: (dctx) => AlertDialog(
+      backgroundColor: c.surface,
+      title:
+          Text('Cancel this booking?', style: PgText.poppins(16, FontWeight.w700, color: c.text)),
+      content: Text(
+          refund > 0
+              ? "You'll be refunded ₹$refund of ₹${b.total}. Refunds take 5–7 business days. "
+                  "The ₹${b.fee} Pawgo fee isn't refundable."
+              : "Bookings can't be cancelled on the day itself — you'll be refunded ₹0.",
+          style: PgText.inter(13.5, FontWeight.w400, color: c.muted)),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(dctx, false),
+            child: Text('Keep', style: PgText.inter(13.5, FontWeight.w600, color: c.muted))),
+        TextButton(
+            onPressed: () => Navigator.pop(dctx, true),
+            child: Text(refund > 0 ? 'Cancel & refund' : 'Cancel anyway',
+                style: PgText.inter(13.5, FontWeight.w700, color: c.brand))),
+      ],
+    ),
+  );
+  if (ok != true || !context.mounted) return;
+  final messenger = ScaffoldMessenger.of(context);
+  try {
+    final result = await ref
+        .read(paymentServiceProvider)
+        .refundBooking(bookingId: b.id, kind: PaymentKind.service);
+    messenger.showSnackBar(SnackBar(
+        content: Text(result.refundAmount > 0
+            ? 'Booking cancelled. ₹${result.refundAmount} will be refunded in 5–7 days.'
+            : 'Booking cancelled.')));
+  } on PaymentException catch (e) {
+    messenger.showSnackBar(SnackBar(
+        content: Text(switch (e.message) {
+      'refund-failed' =>
+        "Booking cancelled, but the refund didn't go through — contact support.",
+      'cancel-failed' => "Couldn't cancel the booking — try again.",
       _ => "We couldn't confirm this cancellation — check My bookings before trying again.",
     })));
   }

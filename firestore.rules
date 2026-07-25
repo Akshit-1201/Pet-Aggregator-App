@@ -126,10 +126,16 @@ service cloud.firestore {
       allow create: if request.auth != null
                   && request.resource.data.parentId == request.auth.uid
                   && request.resource.data.status == 'pending';
+      // Only an UNPAID booking may be cancelled from the client. 'confirmed'
+      // means the customer has paid, and this rule used to allow cancelling it
+      // — which silently kept their money and left the pro's payout in place
+      // for a service that never happened. A paid cancellation now has to go
+      // through refundBookingPayment, which refunds and reverses the payout in
+      // one place (Admin SDK, so it bypasses this rule).
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt'])
                     && resource.data.parentId == request.auth.uid
-                    && resource.data.status in ['pending', 'confirmed']
+                    && resource.data.status == 'pending'
                     && request.resource.data.status == 'cancelled';
       allow delete: if false;
     }
