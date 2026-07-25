@@ -20,7 +20,7 @@ void main() {
       authRepositoryProvider.overrideWithValue(auth),
       userRepositoryProvider.overrideWithValue(users),
       postRepositoryProvider.overrideWithValue(repo),
-    ], initialLocation: Routes.newPost);
+    ], providesPostRepository: true, initialLocation: Routes.newPost);
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).at(0), 'Best paw balm?');
@@ -42,7 +42,7 @@ void main() {
       authRepositoryProvider.overrideWithValue(auth),
       userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
       postRepositoryProvider.overrideWithValue(repo),
-    ], initialLocation: Routes.newPost);
+    ], providesPostRepository: true, initialLocation: Routes.newPost);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Post to community'));
     await tester.pumpAndSettle();

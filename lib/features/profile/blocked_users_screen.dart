@@ -15,7 +15,7 @@ class BlockedUsersScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.pg;
-    final blockedAsync = ref.watch(blockedUidsProvider);
+    final blockedAsync = ref.watch(blockedListProvider);
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -34,8 +34,8 @@ class BlockedUsersScreen extends ConsumerWidget {
               : ListView(
                   padding: const EdgeInsets.fromLTRB(22, 8, 22, 30),
                   children: [
-                    for (final uid in blocked)
-                      _BlockedRow(uid: uid),
+                    for (final entry in blocked)
+                      _BlockedRow(uid: entry.uid, name: entry.name),
                   ],
                 ),
         )),
@@ -46,14 +46,16 @@ class BlockedUsersScreen extends ConsumerWidget {
 
 class _BlockedRow extends ConsumerWidget {
   final String uid;
-  const _BlockedRow({required this.uid});
+  final String name;
+  const _BlockedRow({required this.uid, required this.name});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.pg;
-    // The blocked user's profile doc is still readable, so we can show a name
-    // rather than a raw uid. Falls back gracefully if they deleted their account.
-    final name = ref.watch(userByIdProvider(uid)).value?.name ?? 'Pawgo user';
+    // Name comes from the block record itself. Looking it up in users/{uid}
+    // could never work — that doc is readable only by its owner — so this list
+    // used to show "Pawgo user" for everybody.
+    final display = name.trim().isEmpty ? 'Pawgo user' : name;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -62,7 +64,7 @@ class _BlockedRow extends ConsumerWidget {
           color: c.surface, border: Border.all(color: c.border),
           borderRadius: BorderRadius.circular(16)),
       child: Row(children: [
-        Expanded(child: Text(name, style: PgText.inter(14, FontWeight.w600, color: c.text))),
+        Expanded(child: Text(display, style: PgText.inter(14, FontWeight.w600, color: c.text))),
         GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: () async {
@@ -70,7 +72,7 @@ class _BlockedRow extends ConsumerWidget {
             if (myUid == null) return;
             try {
               await ref.read(blockRepositoryProvider).unblock(myUid, uid);
-              if (context.mounted) showPgSnack(context, 'Unblocked $name.');
+              if (context.mounted) showPgSnack(context, 'Unblocked $display.');
             } catch (_) {
               if (context.mounted) showPgSnack(context, "Couldn't unblock. Please try again.");
             }

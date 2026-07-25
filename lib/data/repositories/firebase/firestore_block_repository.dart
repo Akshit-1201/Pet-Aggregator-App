@@ -13,8 +13,17 @@ class FirestoreBlockRepository implements BlockRepository {
       _col(uid).snapshots().map((snap) => snap.docs.map((d) => d.id).toSet());
 
   @override
-  Future<void> block(String uid, String blockedUid) =>
-      _col(uid).doc(blockedUid).set({'createdAt': DateTime.now().millisecondsSinceEpoch});
+  Stream<List<({String uid, String name})>> watchBlocked(String uid) =>
+      _col(uid).snapshots().map((snap) => snap.docs
+          .map((d) => (uid: d.id, name: (d.data()['name'] ?? '') as String))
+          .toList());
+
+  @override
+  Future<void> block(String uid, String blockedUid, {String name = ''}) =>
+      _col(uid).doc(blockedUid).set({
+        'createdAt': DateTime.now().millisecondsSinceEpoch,
+        'name': name,
+      });
 
   @override
   Future<void> unblock(String uid, String blockedUid) => _col(uid).doc(blockedUid).delete();

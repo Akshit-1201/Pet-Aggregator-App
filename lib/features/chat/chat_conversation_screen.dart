@@ -88,7 +88,10 @@ class _ChatConversationScreenState extends ConsumerState<ChatConversationScreen>
                     contextId: chat.id),
                 child: Padding(
                   padding: const EdgeInsets.all(4),
-                  child: Icon(Icons.more_vert, color: c.muted, size: 21))),
+                  child: Semantics(
+                      button: true,
+                      label: 'Report or block',
+                      child: Icon(Icons.more_vert, color: c.muted, size: 21)))),
             ]),
           ),
           Expanded(

@@ -81,7 +81,10 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                           targetOwnerName: post.authorName),
                       child: Padding(
                         padding: const EdgeInsets.all(6),
-                        child: Icon(Icons.more_horiz, color: c.faint, size: 20)),
+                        child: Semantics(
+                            button: true,
+                            label: 'Report or block this post',
+                            child: Icon(Icons.more_horiz, color: c.faint, size: 20))),
                     ),
                 ]),
                 const SizedBox(height: 12),
@@ -183,7 +186,10 @@ class _CommentRow extends ConsumerWidget {
                     contextId: postId,
                     targetOwnerId: comment.authorId,
                     targetOwnerName: comment.authorName),
-                child: Icon(Icons.more_horiz, color: c.faint, size: 18)),
+                child: Semantics(
+                    button: true,
+                    label: 'Report or block this reply',
+                    child: Icon(Icons.more_horiz, color: c.faint, size: 18))),
             ],
           ]),
           const SizedBox(height: 5),

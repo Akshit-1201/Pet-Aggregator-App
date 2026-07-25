@@ -152,7 +152,9 @@ Future<void> _confirmBlock(
   final myUid = ref.read(authRepositoryProvider).currentUser?.uid;
   if (myUid == null) return;
   try {
-    await ref.read(blockRepositoryProvider).block(myUid, blockedUid);
+    // Name captured now: users/{uid} is owner-read-only, so the blocked list
+    // cannot look it up afterwards.
+    await ref.read(blockRepositoryProvider).block(myUid, blockedUid, name: name);
     if (context.mounted) showPgSnack(context, 'Blocked. You can undo this in Settings.');
   } catch (_) {
     if (context.mounted) showPgSnack(context, "Couldn't block them. Please try again.");

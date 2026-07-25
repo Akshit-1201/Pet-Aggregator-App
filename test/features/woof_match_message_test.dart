@@ -17,9 +17,11 @@ void main() {
         email: 'me@x.com', area: 'Bandra West', role: Role.petParent));
     await users.createUser(const UserProfile(uid: 'owner1', name: 'Karan Mehta',
         email: 'k@x.com', area: 'Khar', role: Role.petParent));
+    // ownerName lives on the pet: users/{uid} is owner-read-only, so resolving
+    // it through userByIdProvider silently produced "Pet parent" on device.
     const pet = PetProfile(id: 'p1', ownerId: 'owner1', name: 'Simba', breed: 'Beagle',
         ageLabel: '3 yrs', sex: 'male', area: 'Khar', species: Species.dog,
-        vaccinated: true, accentColor: Color(0xFF6B8DE0));
+        vaccinated: true, accentColor: Color(0xFF6B8DE0), ownerName: 'Karan Mehta');
 
     await pumpPgApp(tester, overrides: [
       authRepositoryProvider.overrideWithValue(auth),

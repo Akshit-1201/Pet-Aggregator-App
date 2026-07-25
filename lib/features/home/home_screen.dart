@@ -6,6 +6,7 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_chip.dart';
 import '../../core/widgets/pg_image_slot.dart';
+import '../../data/models/post.dart';
 import '../../data/repositories/providers.dart';
 import 'widgets/pet_row.dart';
 
@@ -118,20 +119,45 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: 11),
                 Text('Community picks', style: PgText.sectionHeader(context)),
                 const SizedBox(height: 13),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
-                    borderRadius: BorderRadius.circular(18), boxShadow: c.shadowSm),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    const PgChip(label: 'Health'),
-                    const SizedBox(height: 10),
-                    Text('"Best vet in Bandra for vaccinations?"',
-                      style: PgText.poppins(15, FontWeight.w600, color: c.text)),
-                    const SizedBox(height: 8),
-                    Text('24 replies · posted by @dachshund_dad',
-                      style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
-                  ]),
-                ),
+                // Was a hardcoded fake post — "Best vet in Bandra", 24 replies,
+                // @dachshund_dad — left over from the Slice 1 mock and still
+                // rendering on a completely empty database. Now the newest real
+                // post, or an honest empty state.
+                Builder(builder: (_) {
+                  final posts = ref.watch(postsProvider).value ?? const <Post>[];
+                  if (posts.isEmpty) {
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(color: c.surface,
+                        border: Border.all(color: c.border),
+                        borderRadius: BorderRadius.circular(18), boxShadow: c.shadowSm),
+                      child: Text('No posts yet — be the first to ask something.',
+                        style: PgText.inter(13.5, FontWeight.w400, color: c.muted)),
+                    );
+                  }
+                  final post = posts.first;
+                  return GestureDetector(
+                    onTap: () => context.push(Routes.thread, extra: post),
+                    behavior: HitTestBehavior.opaque,
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(color: c.surface,
+                        border: Border.all(color: c.border),
+                        borderRadius: BorderRadius.circular(18), boxShadow: c.shadowSm),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        PgChip(label: post.category.label),
+                        const SizedBox(height: 10),
+                        Text(post.title, maxLines: 2, overflow: TextOverflow.ellipsis,
+                          style: PgText.poppins(15, FontWeight.w600, color: c.text)),
+                        const SizedBox(height: 8),
+                        Text('${post.replyCount} '
+                            '${post.replyCount == 1 ? 'reply' : 'replies'}'
+                            ' · posted by ${post.authorName}',
+                          style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
+                      ]),
+                    ),
+                  );
+                }),
               ],
             ),
           ),

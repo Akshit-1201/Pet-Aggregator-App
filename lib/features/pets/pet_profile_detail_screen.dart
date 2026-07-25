@@ -26,7 +26,9 @@ class PetProfileDetailScreen extends ConsumerWidget {
         body: Center(child: Text('Pet not found', style: PgText.body(context))));
     }
     final isMine = ref.watch(authRepositoryProvider).currentUser?.uid == p.ownerId;
-    final owner = ref.watch(userByIdProvider(p.ownerId)).value;
+    // Denormalised on the pet: users/{uid} is owner-read-only, so looking the
+    // owner up here always came back null and rendered a bare em dash.
+    final ownerName = p.ownerName.trim().isEmpty ? '—' : p.ownerName;
     final sexSymbol = p.sex.toLowerCase() == 'female' ? '♀' : '♂';
 
     return Scaffold(
@@ -93,7 +95,7 @@ class PetProfileDetailScreen extends ConsumerWidget {
                   const SizedBox(width: 12),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text('Pet parent', style: PgText.inter(11.5, FontWeight.w400, color: c.faint)),
-                    Text(owner?.name ?? '—', style: PgText.poppins(14, FontWeight.w700, color: c.text)),
+                    Text(ownerName, style: PgText.poppins(14, FontWeight.w700, color: c.text)),
                   ])),
                 ]),
               ),

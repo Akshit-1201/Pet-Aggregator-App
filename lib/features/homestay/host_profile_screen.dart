@@ -68,7 +68,10 @@ class HostProfileScreen extends ConsumerWidget {
                           width: 40, height: 40, alignment: Alignment.center,
                           decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(12),
                             boxShadow: c.shadowSm),
-                          child: Icon(Icons.more_horiz, color: c.text))),
+                          child: Semantics(
+                              button: true,
+                              label: 'Report or block this listing',
+                              child: Icon(Icons.more_horiz, color: c.text)))),
                     ]),
                   ),
                 )),

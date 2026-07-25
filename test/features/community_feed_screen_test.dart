@@ -19,7 +19,7 @@ void main() {
     await pumpPgApp(tester, overrides: [
       authRepositoryProvider.overrideWithValue(auth),
       postRepositoryProvider.overrideWithValue(InMemoryPostRepository([_p1, _p2])),
-    ], initialLocation: Routes.community);
+    ], providesPostRepository: true, initialLocation: Routes.community);
     await tester.pumpAndSettle();
 
     // Scoped to the screen itself: the persistent bottom nav also has a
@@ -43,7 +43,7 @@ void main() {
       authRepositoryProvider.overrideWithValue(auth),
       userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
       postRepositoryProvider.overrideWithValue(InMemoryPostRepository()),
-    ], initialLocation: Routes.community);
+    ], providesPostRepository: true, initialLocation: Routes.community);
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add));
     await tester.pumpAndSettle();

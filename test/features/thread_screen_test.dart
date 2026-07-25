@@ -25,7 +25,7 @@ void main() {
       authRepositoryProvider.overrideWithValue(auth),
       userRepositoryProvider.overrideWithValue(users),
       postRepositoryProvider.overrideWithValue(repo),
-    ], initialLocation: Routes.thread, extra: post);
+    ], providesPostRepository: true, initialLocation: Routes.thread, extra: post);
     await tester.pumpAndSettle();
 
     expect(find.text('Best vet in Bandra?'), findsOneWidget);
@@ -51,7 +51,7 @@ void main() {
       authRepositoryProvider.overrideWithValue(auth),
       userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
       postRepositoryProvider.overrideWithValue(InMemoryPostRepository([post])),
-    ], initialLocation: Routes.thread, extra: post);
+    ], providesPostRepository: true, initialLocation: Routes.thread, extra: post);
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.chevron_left));
     await tester.pumpAndSettle();

@@ -71,7 +71,11 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
     // arriving here straight from onboarding, that provider is still
     // AsyncLoading, so `.value?.area` silently yielded '' and the pet was
     // saved with no area (which then reads as a blank "· " subtitle).
-    final area = (await ref.read(userRepositoryProvider).watchUser(uid).first)?.area ?? '';
+    final profile = await ref.read(userRepositoryProvider).watchUser(uid).first;
+    final area = profile?.area ?? '';
+    // Captured here because `users/{uid}` is owner-read-only: the screens that
+    // show whose pet this is cannot look the name up later.
+    final ownerName = profile?.name ?? '';
 
     var photoUrl = '';
     final bytes = _photoBytes;
@@ -97,7 +101,7 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
             id: '', ownerId: uid, name: name, breed: _breed.text.trim(),
             ageLabel: _age.text.trim(), sex: '', area: area, species: _species,
             vaccinated: _vaccinated, accentColor: PetProfile.accentFor(name),
-            photoUrl: photoUrl));
+            photoUrl: photoUrl, ownerName: ownerName));
     } catch (_) {
       if (mounted) {
         setState(() => _saving = false);

@@ -59,9 +59,19 @@ class FirebaseAuthRepository implements AuthRepository {
   Future<bool> refreshEmailVerified() async {
     final user = _auth.currentUser;
     if (user == null) return false;
-    // reload() refetches the account record; currentUser must be re-read after,
-    // because the cached User instance keeps the stale emailVerified value.
     await user.reload();
+    // reload() alone is NOT enough. `emailVerified` is read from the cached ID
+    // token, which reload() does not refresh — so after clicking the emailed
+    // link the flag stayed false until the app was restarted, leaving the user
+    // stuck on the "Confirm your email" screen tapping a button that did
+    // nothing. Forcing a token refresh is what actually picks the change up.
+    // Found on-device; a widget test with a fake repo cannot catch this.
+    try {
+      await user.getIdToken(true);
+    } on FirebaseAuthException {
+      // A network blip here just means "not verified yet" — the poll retries.
+      return false;
+    }
     return _auth.currentUser?.emailVerified ?? false;
   }
 

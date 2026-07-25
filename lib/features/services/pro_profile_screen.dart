@@ -64,7 +64,10 @@ class ProProfileScreen extends ConsumerWidget {
                           width: 40, height: 40, alignment: Alignment.center,
                           decoration: BoxDecoration(color: const Color(0x33FFFFFF),
                             borderRadius: BorderRadius.circular(12)),
-                          child: const Icon(Icons.more_horiz, color: Colors.white))),
+                          child: Semantics(
+                              button: true,
+                              label: 'Report or block this listing',
+                              child: const Icon(Icons.more_horiz, color: Colors.white)))),
                     ]),
                   ),
                 ),

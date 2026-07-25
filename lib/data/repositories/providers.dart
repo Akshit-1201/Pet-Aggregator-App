@@ -123,6 +123,13 @@ final blockedUidsProvider = StreamProvider<Set<String>>((ref) {
   return ref.watch(blockRepositoryProvider).watchBlockedUids(user.uid);
 });
 
+/// Blocked users with their names, for the Settings list.
+final blockedListProvider = StreamProvider<List<({String uid, String name})>>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(const []);
+  return ref.watch(blockRepositoryProvider).watchBlocked(user.uid);
+});
+
 final swipeRepositoryProvider = Provider<SwipeRepository>((ref) => FirestoreSwipeRepository());
 
 final swipedPetIdsProvider = StreamProvider<Set<String>>((ref) {

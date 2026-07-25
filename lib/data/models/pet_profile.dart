@@ -18,11 +18,21 @@ class PetProfile {
   final bool vaccinated;
   final Color accentColor;
 
+  /// The owner's display name, captured when the pet is created.
+  ///
+  /// Denormalised because `users/{uid}` is readable **only by its owner** — the
+  /// screens that show "whose pet is this" cannot read the profile doc, and were
+  /// silently falling back to "Pet parent" everywhere. Same trade-off the app
+  /// already makes for `chat.names`, `post.authorName` and `booking.proName`: a
+  /// later rename does not propagate, which is preferable to making every
+  /// user's email readable by every signed-in user.
+  final String ownerName;
+
   const PetProfile({
     required this.id, required this.ownerId, required this.name, required this.breed,
     required this.ageLabel, required this.sex, required this.area,
     required this.species, required this.vaccinated, required this.accentColor,
-    this.photoUrl = '',
+    this.photoUrl = '', this.ownerName = '',
   });
 
   /// Joins [parts] with ' · ', skipping blanks. Pet docs legitimately carry
@@ -44,6 +54,7 @@ class PetProfile {
         'area': area,
         'vaccinated': vaccinated,
         'photoUrl': photoUrl,
+        'ownerName': ownerName,
       };
 
   factory PetProfile.fromMap(String id, Map<String, dynamic> m) => PetProfile(
@@ -58,6 +69,7 @@ class PetProfile {
         vaccinated: (m['vaccinated'] ?? false) as bool,
         accentColor: accentFor((m['name'] ?? '') as String),
         photoUrl: (m['photoUrl'] ?? '') as String,
+        ownerName: (m['ownerName'] ?? '') as String,
       );
 
   static const _accents = [

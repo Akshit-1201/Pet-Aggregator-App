@@ -154,9 +154,22 @@ class InMemoryBlockRepository implements BlockRepository {
     yield* _ctrl(uid).stream;
   }
 
+  /// uid -> blockedUid -> name, mirroring what the real repo stores.
+  final Map<String, Map<String, String>> names = {};
+
   @override
-  Future<void> block(String uid, String blockedUid) async {
+  Stream<List<({String uid, String name})>> watchBlocked(String uid) async* {
+    List<({String uid, String name})> rows() => blockedFor(uid)
+        .map((b) => (uid: b, name: names[uid]?[b] ?? ''))
+        .toList();
+    yield rows();
+    yield* _ctrl(uid).stream.map((_) => rows());
+  }
+
+  @override
+  Future<void> block(String uid, String blockedUid, {String name = ''}) async {
     _blocked.putIfAbsent(uid, () => <String>{}).add(blockedUid);
+    names.putIfAbsent(uid, () => {})[blockedUid] = name;
     _ctrl(uid).add(blockedFor(uid));
   }
 

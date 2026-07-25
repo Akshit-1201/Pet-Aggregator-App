@@ -10,6 +10,14 @@
 abstract interface class BlockRepository {
   /// Uids [uid] has blocked.
   Stream<Set<String>> watchBlockedUids(String uid);
-  Future<void> block(String uid, String blockedUid);
+
+  /// The blocked list with names, for the Settings screen.
+  ///
+  /// [name] is stored at block time rather than looked up later: `users/{uid}`
+  /// is owner-read-only, so the list could never resolve a name and showed
+  /// "Pawgo user" for everyone.
+  Stream<List<({String uid, String name})>> watchBlocked(String uid);
+
+  Future<void> block(String uid, String blockedUid, {String name = ''});
   Future<void> unblock(String uid, String blockedUid);
 }

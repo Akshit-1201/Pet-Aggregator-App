@@ -16,9 +16,11 @@ void main() {
     await users.createUser(const UserProfile(uid: 'owner1', name: 'Karan Mehta',
         email: 'k@x.com', area: 'Bandra West', role: Role.petParent));
     final swipes = InMemorySwipeRepository();
+    // ownerName lives on the pet: users/{uid} is owner-read-only, so resolving
+    // it through userByIdProvider silently rendered a bare em dash on device.
     const pet = PetProfile(id: 'pet1', ownerId: 'owner1', name: 'Bruno', breed: 'Labrador',
         ageLabel: '2 yrs', sex: 'male', area: 'Bandra West', species: Species.dog,
-        vaccinated: true, accentColor: Color(0xFFF0871E));
+        vaccinated: true, accentColor: Color(0xFFF0871E), ownerName: 'Karan Mehta');
 
     await pumpPgApp(tester, overrides: [
       authRepositoryProvider.overrideWithValue(auth),

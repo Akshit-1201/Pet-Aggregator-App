@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
 import '../../data/models/pet_profile.dart';
-import '../../data/repositories/providers.dart';
 import '../chat/chat_actions.dart';
 
 class WoofMatchScreen extends ConsumerWidget {
@@ -15,7 +14,9 @@ class WoofMatchScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final name = pet?.name ?? 'your match';
     final ownerUid = pet?.ownerId ?? '';
-    final ownerName = ref.watch(userByIdProvider(ownerUid)).value?.name ?? 'Pet parent';
+    // From the pet doc, not users/{uid} — that is owner-read-only, so the
+    // lookup this used to do always failed and every match read "Pet parent".
+    final ownerName = (pet?.ownerName ?? '').isNotEmpty ? pet!.ownerName : 'Pet parent';
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(

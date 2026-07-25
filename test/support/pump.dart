@@ -35,24 +35,32 @@ Future<void> pumpPgApp(
   String initialLocation = Routes.splash,
   Object? extra,
   Brightness brightness = Brightness.light,
+  /// Set when [overrides] already contains a `postRepositoryProvider`.
+  ///
+  /// Riverpod 3 THROWS on a duplicate override rather than taking the last one,
+  /// and the override list gives no public way to inspect what is in it — so a
+  /// test that supplies its own post repository has to say so.
+  bool providesPostRepository = false,
 }) async {
   tester.view.physicalSize = const Size(420, 920);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
-  // blockRepositoryProvider is consumed indirectly by nearly every list
-  // provider (posts, pros, homestays, chats, nearby pets all filter blocked
-  // users), so without a default fake every screen test would have to override
-  // it just to avoid reaching real Firestore. Caller overrides still win —
-  // Riverpod takes the last matching entry.
+  // Cross-cutting repositories that almost every screen reaches indirectly:
+  // block/report (every list filters blocked users), verification + payout
+  // (both setup screens embed those cards), and posts (Home shows the newest
+  // one under "Community picks"). Without defaults, each of ~20 unrelated tests
+  // would have to override them purely to avoid hitting real Firestore.
+  //
+  // No test overrides the first four, so they are always safe to default.
   final container = ProviderContainer(overrides: [
     blockRepositoryProvider.overrideWithValue(InMemoryBlockRepository()),
     reportRepositoryProvider.overrideWithValue(InMemoryReportRepository()),
-    // Both setup screens embed the verification card, so this would otherwise
-    // reach real Firestore from every pro/host test.
     verificationRepositoryProvider.overrideWithValue(InMemoryVerificationRepository()),
     payoutRepositoryProvider.overrideWithValue(InMemoryPayoutRepository()),
+    if (!providesPostRepository)
+      postRepositoryProvider.overrideWithValue(InMemoryPostRepository()),
     ...overrides,
   ]);
   addTearDown(container.dispose);
