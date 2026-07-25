@@ -46,13 +46,12 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@color/pawgo_brand" />
-        <!-- ACTION REQUIRED: this key is still restricted to the OLD package
-             (com.example.pet_aggregator_app) + the debug SHA-1, so the Nearby map
-             will fail to load until the restriction is updated in Google Cloud
-             Console → Credentials → this key → Android restrictions. Add both:
-               com.pawgo.app : 6E:D8:EF:EB:70:31:9A:95:98:9C:CC:0D:E8:0B:61:E3:E4:7A:60:D5
-               com.pawgo.app : 48:31:E5:13:AA:ED:B2:4F:2E:BB:F2:30:05:BD:38:05:53:20:96:9B
-             The second is the release keystore's SHA-1 (android/app/pawgo-release.jks). -->
+        <!-- Restricted (Cloud Console key "Pawgo Android Maps") to com.pawgo.app
+             with BOTH the debug SHA-1 (6E:D8:EF:EB:…:60:D5) and the release
+             SHA-1 (48:31:E5:13:…:96:9B, from android/app/pawgo-release.jks), and
+             locked to the Maps Android API only. Committing the key is safe
+             precisely because of those restrictions — if the signing key is ever
+             rotated, this restriction has to be updated or Nearby stops loading. -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyBbEEoDT0x6i44ENxXRAGIV0i9zziaYItQ" />

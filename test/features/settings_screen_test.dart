@@ -35,13 +35,13 @@ void main() {
       preferencesRepositoryProvider.overrideWithValue(InMemoryPreferencesRepository()),
     ], initialLocation: Routes.settings);
     await tester.pumpAndSettle();
-    // Every row must do something. "Booking updates" is now real — it gates a
-    // server-side push category — so it is expected here. The two still absent
-    // have no feature behind them: there is no location-sharing setting, and
-    // chat safety is a client-side phone mask with nothing to configure.
+    // Every row must be backed by something. "Booking updates" gates a
+    // server-side push category; "Chat safety" reports the server-side contact
+    // masking (stated as fact, not offered as a toggle — a user may not switch
+    // it off). "Location sharing" stays absent because no such setting exists.
     expect(find.text('Booking updates'), findsOneWidget);
+    expect(find.text('Chat safety'), findsOneWidget);
     expect(find.text('Location sharing'), findsNothing);
-    expect(find.text('Chat safety'), findsNothing);
     expect(find.text('About Pawgo'), findsOneWidget);
   });
 }

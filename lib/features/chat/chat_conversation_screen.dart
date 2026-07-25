@@ -6,7 +6,6 @@ import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
 import '../../core/widgets/pg_moderation_sheet.dart';
-import '../../core/widgets/pg_snackbar.dart';
 import '../../data/models/chat.dart';
 import '../../data/models/report.dart';
 import '../../data/repositories/providers.dart';
@@ -76,10 +75,10 @@ class _ChatConversationScreenState extends ConsumerState<ChatConversationScreen>
               const SizedBox(width: 11),
               Expanded(child: Text(otherName, maxLines: 1, overflow: TextOverflow.ellipsis,
                 style: PgText.poppins(15, FontWeight.w700, color: c.text))),
-              GestureDetector(
-                onTap: () => showComingSoon(context, 'Calls'),
-                child: Icon(Icons.call_outlined, color: c.muted, size: 21)),
-              const SizedBox(width: 6),
+              // The prototype's call button is gone rather than stubbed: Pawgo
+              // has no telephony, and deliberately never exposes phone numbers
+              // (maskPhones strips them from messages), so a call affordance
+              // promises the one thing the product is designed not to do.
               GestureDetector(
                 onTap: () => showModerationSheet(context, ref,
                     targetType: ReportTargetType.user,

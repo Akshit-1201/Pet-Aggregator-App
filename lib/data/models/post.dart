@@ -18,11 +18,19 @@ class Post {
   final PostCategory category;
   final int replyCount, createdAt;
 
+  /// Optional photo. Matters most for Lost & Found, where a description alone
+  /// is rarely enough to recognise an animal.
+  final String photoUrl;
+
+  /// The author's area, captured at post time. Also mainly for Lost & Found —
+  /// "seen near Bandra West" is the difference between a useful post and noise.
+  final String area;
+
   const Post({
     this.id = '',
     required this.authorId, required this.authorName, required this.category,
     required this.title, required this.body, required this.createdAt,
-    this.replyCount = 0,
+    this.replyCount = 0, this.photoUrl = '', this.area = '',
   });
 
   Map<String, dynamic> toMap() => {
@@ -33,6 +41,8 @@ class Post {
         'body': body,
         'replyCount': replyCount,
         'createdAt': createdAt,
+        'photoUrl': photoUrl,
+        'area': area,
       };
 
   factory Post.fromMap(String id, Map<String, dynamic> m) => Post(
@@ -44,6 +54,8 @@ class Post {
         body: (m['body'] ?? '') as String,
         replyCount: (m['replyCount'] ?? 0) as int,
         createdAt: (m['createdAt'] ?? 0) as int,
+        photoUrl: (m['photoUrl'] ?? '') as String,
+        area: (m['area'] ?? '') as String,
       );
 
   static String timeAgo(int millis) {

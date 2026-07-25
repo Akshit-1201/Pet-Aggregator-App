@@ -133,9 +133,21 @@ class _PostCard extends StatelessWidget {
           ]),
           const SizedBox(height: 9),
           Text(post.title, style: PgText.poppins(15, FontWeight.w600, color: c.text)),
+          if (post.photoUrl.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(post.photoUrl,
+                  height: 160, width: double.infinity, fit: BoxFit.cover,
+                  errorBuilder: (_, _, _) => const SizedBox.shrink())),
+          ],
           const SizedBox(height: 11),
           Row(children: [
             Text(post.authorName, style: PgText.inter(12, FontWeight.w400, color: c.muted)),
+            if (post.area.isNotEmpty) ...[
+              const SizedBox(width: 6),
+              Text('· ${post.area}', style: PgText.inter(12, FontWeight.w400, color: c.faint)),
+            ],
             const SizedBox(width: 14),
             Text('💬 ${post.replyCount}', style: PgText.inter(12, FontWeight.w600, color: c.muted)),
           ]),

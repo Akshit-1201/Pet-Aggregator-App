@@ -48,6 +48,12 @@ class SettingsScreen extends ConsumerWidget {
             decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
                 borderRadius: BorderRadius.circular(16)),
             child: Column(children: [
+              // Not a toggle: masking is enforced server-side and is not
+              // something a user may switch off for themselves. Stated as fact
+              // so the row informs rather than pretending to be a control.
+              _staticInfoRow(c, '🛡️', 'Chat safety',
+                  'Phone numbers, emails and links are hidden in chat',
+                  border: true),
               _navRow(context, c, '🚫', 'Blocked users',
                   'People you have hidden across Pawgo',
                   () => context.push(Routes.blockedUsers), border: true),
@@ -92,6 +98,23 @@ class SettingsScreen extends ConsumerWidget {
             Icon(Icons.chevron_right, color: c.faint, size: 20),
           ]),
         ),
+      );
+
+  Widget _staticInfoRow(PgColors c, String emoji, String title, String subtitle,
+          {bool border = false}) =>
+      Container(
+        padding: const EdgeInsets.all(15),
+        decoration: BoxDecoration(
+            border: border ? Border(bottom: BorderSide(color: c.border)) : null),
+        child: Row(children: [
+          Text(emoji, style: const TextStyle(fontSize: 18)),
+          const SizedBox(width: 13),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: PgText.inter(14, FontWeight.w600, color: c.text)),
+            Text(subtitle, style: PgText.inter(12, FontWeight.w400, color: c.muted)),
+          ])),
+          Text('On', style: PgText.inter(12.5, FontWeight.w700, color: c.brand)),
+        ]),
       );
 
   Widget _staticRow(PgColors c, String title, String trailing) => Container(

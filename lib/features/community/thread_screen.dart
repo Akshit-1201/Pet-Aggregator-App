@@ -85,6 +85,14 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                     ),
                 ]),
                 const SizedBox(height: 12),
+                if (post.photoUrl.isNotEmpty) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Image.network(post.photoUrl,
+                        width: double.infinity, fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => const SizedBox.shrink())),
+                  const SizedBox(height: 12),
+                ],
                 Text(post.body, style: PgText.inter(14, FontWeight.w400, color: c.muted, height: 1.6)),
                 const SizedBox(height: 14),
                 Divider(color: c.border),

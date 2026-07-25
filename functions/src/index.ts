@@ -133,9 +133,36 @@ async function sendPushTo(
   logger.info("sendPushTo", {uid, sent: res.successCount, pruned: dead.length});
 }
 
+/**
+ * Server-side contact-detail masking.
+ *
+ * The client already masks phone numbers before writing (`maskPhones` in
+ * chat.dart), but that is a courtesy, not a control: the Firestore rules let a
+ * participant write any text they like, so anyone using the SDK directly
+ * bypasses it entirely. This re-masks after the fact, which is the version that
+ * actually holds.
+ *
+ * Deliberately narrow — phone numbers, emails and URLs. Trying to catch
+ * addresses would mean guessing at free text and mangling ordinary messages
+ * like "I'm on the second floor".
+ */
+const PHONE_RE = /\+?\d[\d\s().-]{5,}\d/g;
+const EMAIL_RE = /[\w.+-]+@[\w-]+\.[\w.-]+/g;
+const URL_RE = /\b(?:https?:\/\/|www\.)\S+/gi;
+
+export function maskContactDetails(text: string): string {
+  return text
+    .replace(EMAIL_RE, "••••")
+    .replace(URL_RE, "••••")
+    // Phones last: an email's digits shouldn't be re-matched as a number.
+    .replace(PHONE_RE, (m) => (m.replace(/\D/g, "").length >= 7 ? "••••" : m));
+}
+
 /** A new chat message notifies the other participant — but never someone who
  *  has blocked the sender, which would hand a blocked user a way to keep
- *  reaching into their notification tray. */
+ *  reaching into their notification tray.
+ *
+ *  Also enforces contact masking, since the client's version is bypassable. */
 export const onChatMessageCreated = onDocumentCreated(
   {region: REGION, document: "chats/{chatId}/messages/{messageId}"},
   async (event) => {
@@ -143,6 +170,22 @@ export const onChatMessageCreated = onDocumentCreated(
     if (!msg) return;
     const senderId = String(msg.senderId ?? "");
     const db = admin.firestore();
+
+    // Re-mask before anything else, so the recipient's push and the stored
+    // message both carry the masked text rather than the raw one.
+    const original = String(msg.text ?? "");
+    const masked = maskContactDetails(original);
+    let text = original;
+    if (masked !== original) {
+      text = masked;
+      try {
+        await event.data!.ref.update({text: masked, masked: true});
+        // The chat doc's lastMessage preview would otherwise still show it.
+        await db.collection("chats").doc(event.params.chatId).update({lastMessage: masked});
+      } catch (e) {
+        logger.error("contact masking failed to persist", {chatId: event.params.chatId, error: e});
+      }
+    }
     const chatSnap = await db.collection("chats").doc(event.params.chatId).get();
     const chat = chatSnap.data();
     if (!chat) return;
@@ -157,7 +200,7 @@ export const onChatMessageCreated = onDocumentCreated(
 
     const senderName = (chat.names ?? {})[senderId] ?? "Someone";
     await sendPushTo(recipient,
-      {title: senderName, body: String(msg.text ?? "").slice(0, 140)},
+      {title: senderName, body: text.slice(0, 140)},
       "/messages", "messages");
   });
 

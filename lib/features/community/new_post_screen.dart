@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,7 @@ class _NewPostScreenState extends ConsumerState<NewPostScreen> {
   PostCategory _category = PostCategory.health;
   final _title = TextEditingController();
   final _body = TextEditingController();
+  Uint8List? _photo;
   bool _posting = false;
   String? _error;
 
@@ -29,6 +31,15 @@ class _NewPostScreenState extends ConsumerState<NewPostScreen> {
     _title.dispose();
     _body.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickPhoto() async {
+    try {
+      final bytes = await ref.read(imagePickerServiceProvider).pickImage();
+      if (bytes != null && mounted) setState(() => _photo = bytes);
+    } catch (_) {
+      if (mounted) showPgSnack(context, "Couldn't open your photos. Please try again.");
+    }
   }
 
   Future<void> _post() async {
@@ -40,12 +51,38 @@ class _NewPostScreenState extends ConsumerState<NewPostScreen> {
     final me = ref.read(authRepositoryProvider).currentUser;
     if (me == null) return;
     setState(() { _posting = true; _error = null; });
-    final profile = await ref.read(userRepositoryProvider).watchUser(me.uid).first;
-    final created = await ref.read(postRepositoryProvider).createPost(Post(
-        authorId: me.uid, authorName: profile?.name ?? 'Someone', category: _category,
-        title: title, body: _body.text.trim(),
-        createdAt: DateTime.now().millisecondsSinceEpoch));
-    if (mounted) context.go(Routes.postLive, extra: created);
+    try {
+      final profile = await ref.read(userRepositoryProvider).watchUser(me.uid).first;
+
+      // Upload before creating the post. A post referencing an image that never
+      // uploaded would render a permanent broken slot; posting without the
+      // photo is the better failure.
+      var photoUrl = '';
+      if (_photo != null) {
+        try {
+          photoUrl = await ref.read(storageRepositoryProvider).uploadImage(
+                path: 'posts/${me.uid}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+                bytes: _photo!,
+              );
+        } catch (_) {
+          if (mounted) showPgSnack(context, "Couldn't upload the photo — posting without it.");
+        }
+      }
+
+      final created = await ref.read(postRepositoryProvider).createPost(Post(
+          authorId: me.uid, authorName: profile?.name ?? 'Someone', category: _category,
+          title: title, body: _body.text.trim(), photoUrl: photoUrl,
+          area: profile?.area ?? '',
+          createdAt: DateTime.now().millisecondsSinceEpoch));
+      if (mounted) context.go(Routes.postLive, extra: created);
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _posting = false;
+          _error = "Couldn't post that. Please try again.";
+        });
+      }
+    }
   }
 
   @override
@@ -84,10 +121,28 @@ class _NewPostScreenState extends ConsumerState<NewPostScreen> {
                 PgTextField(label: 'Details', controller: _body, maxLines: 6, hint: 'Share the details…'),
                 const SizedBox(height: 16),
                 Row(children: [
-                  _decoChip('📷 Photo', c, () => showComingSoon(context, 'Photos')),
-                  const SizedBox(width: 11),
-                  _decoChip('📍 Location', c, () => showComingSoon(context, 'Location')),
+                  _decoChip(_photo == null ? '📷 Photo' : '📷 Change photo', c, _pickPhoto),
+                  if (_photo != null) ...[
+                    const SizedBox(width: 11),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: Image.memory(_photo!, width: 44, height: 44, fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Container(
+                              width: 44, height: 44, color: c.surface2,
+                              child: Icon(Icons.broken_image_outlined,
+                                  color: c.muted, size: 18)))),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => setState(() => _photo = null),
+                      behavior: HitTestBehavior.opaque,
+                      child: Text('Remove',
+                          style: PgText.inter(12.5, FontWeight.w700, color: c.heart))),
+                  ],
                 ]),
+                // The prototype's "📍 Location" chip is gone: there is no
+                // per-post location to set. The author's area is attached
+                // automatically instead, which is the information that chip
+                // implied and is genuinely useful on Lost & Found.
                 if (_error != null)
                   Padding(padding: const EdgeInsets.only(top: 12),
                     child: Text(_error!, style: PgText.inter(13, FontWeight.w600, color: c.heart))),
