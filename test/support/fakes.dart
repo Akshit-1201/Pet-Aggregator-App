@@ -28,6 +28,8 @@ import 'package:pet_aggregator_app/data/models/report.dart';
 import 'package:pet_aggregator_app/data/repositories/block_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/report_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/push_token_repository.dart';
+import 'package:pet_aggregator_app/data/models/notification_record.dart';
+import 'package:pet_aggregator_app/data/repositories/notification_repository.dart';
 import 'package:pet_aggregator_app/data/models/verification_request.dart';
 import 'package:pet_aggregator_app/data/repositories/verification_repository.dart';
 import 'package:pet_aggregator_app/data/models/payout_account.dart';
@@ -830,6 +832,49 @@ class FakeImagePickerService implements ImagePickerService {
     calls++;
     if (shouldThrow) throw Exception('picker failed');
     return next;
+  }
+}
+
+class FakeNotificationRepository implements NotificationRepository {
+  final _controller = StreamController<List<NotificationRecord>>.broadcast();
+  List<NotificationRecord> records;
+
+  FakeNotificationRepository([this.records = const []]);
+
+  void emit(List<NotificationRecord> next) {
+    records = next;
+    _controller.add(next);
+  }
+
+  @override
+  Stream<List<NotificationRecord>> watch(String uid) async* {
+    yield records;
+    yield* _controller.stream;
+  }
+
+  @override
+  Future<void> markRead(String uid, String id) async {
+    emit([
+      for (final r in records)
+        if (r.id == id)
+          NotificationRecord(
+            id: r.id, scenario: r.scenario, category: r.category,
+            title: r.title, body: r.body, route: r.route,
+            createdAt: r.createdAt, read: true)
+        else
+          r,
+    ]);
+  }
+
+  @override
+  Future<void> markAllRead(String uid) async {
+    emit([
+      for (final r in records)
+        NotificationRecord(
+          id: r.id, scenario: r.scenario, category: r.category,
+          title: r.title, body: r.body, route: r.route,
+          createdAt: r.createdAt, read: true),
+    ]);
   }
 }
 

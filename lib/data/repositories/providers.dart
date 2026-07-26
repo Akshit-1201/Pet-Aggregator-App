@@ -26,6 +26,7 @@ import 'review_repository.dart';
 import 'block_repository.dart';
 import 'report_repository.dart';
 import 'push_token_repository.dart';
+import 'notification_repository.dart';
 import 'verification_repository.dart';
 import '../models/verification_request.dart';
 import 'payout_repository.dart';
@@ -49,6 +50,7 @@ import 'firebase/firestore_review_repository.dart';
 import 'firebase/firestore_block_repository.dart';
 import 'firebase/firestore_report_repository.dart';
 import 'firebase/firestore_push_token_repository.dart';
+import 'firebase/firestore_notification_repository.dart';
 import 'firebase/firestore_verification_repository.dart';
 import 'firebase/firestore_payout_repository.dart';
 import 'firebase/firebase_storage_repository.dart';
@@ -277,6 +279,9 @@ final receivedStayBookingsProvider = StreamProvider<List<HomestayBooking>>((ref)
   }
   return ref.watch(homestayBookingRepositoryProvider).watchBookingsForHost(user.uid);
 });
+
+final notificationRepositoryProvider =
+    Provider<NotificationRepository>((ref) => FirestoreNotificationRepository());
 
 final notificationsProvider = Provider<List<NotificationItem>>((ref) {
   final uid = ref.watch(authRepositoryProvider).currentUser?.uid ?? '';
