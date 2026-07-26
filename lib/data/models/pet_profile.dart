@@ -13,10 +13,23 @@ enum Species {
 }
 
 class PetProfile {
-  final String id, ownerId, name, breed, ageLabel, sex, area, photoUrl;
+  /// A pet profile has to actually show the animal: at least [minPhotos], at
+  /// most [maxPhotos]. Same shape as `Homestay`, so the setup screens behave
+  /// identically.
+  static const int minPhotos = 3;
+  static const int maxPhotos = 5;
+
+  final String id, ownerId, name, breed, ageLabel, sex, area;
   final Species species;
   final bool vaccinated;
   final Color accentColor;
+
+  final List<String> photoUrls;
+
+  /// The single image used wherever one thumbnail stands for the pet — rows,
+  /// the swipe deck, map sheets. Derived so every existing call site kept
+  /// working when pets went from one photo to a gallery.
+  String get photoUrl => photoUrls.isEmpty ? '' : photoUrls.first;
 
   /// The owner's display name, captured when the pet is created.
   ///
@@ -32,7 +45,7 @@ class PetProfile {
     required this.id, required this.ownerId, required this.name, required this.breed,
     required this.ageLabel, required this.sex, required this.area,
     required this.species, required this.vaccinated, required this.accentColor,
-    this.photoUrl = '', this.ownerName = '',
+    this.photoUrls = const [], this.ownerName = '',
   });
 
   /// Joins [parts] with ' · ', skipping blanks. Pet docs legitimately carry
@@ -53,6 +66,8 @@ class PetProfile {
         'sex': sex,
         'area': area,
         'vaccinated': vaccinated,
+        'photoUrls': photoUrls,
+        // Still written for anything reading the old single-photo field.
         'photoUrl': photoUrl,
         'ownerName': ownerName,
       };
@@ -68,9 +83,21 @@ class PetProfile {
         species: Species.fromStorage((m['species'] ?? 'dog') as String),
         vaccinated: (m['vaccinated'] ?? false) as bool,
         accentColor: accentFor((m['name'] ?? '') as String),
-        photoUrl: (m['photoUrl'] ?? '') as String,
+        // Falls back to the legacy single `photoUrl` so pets created before the
+        // gallery still render their one image instead of a placeholder.
+        photoUrls: _photosFrom(m),
         ownerName: (m['ownerName'] ?? '') as String,
       );
+
+  static List<String> _photosFrom(Map<String, dynamic> m) {
+    final list = (m['photoUrls'] as List?)
+        ?.whereType<String>()
+        .where((u) => u.isNotEmpty)
+        .toList();
+    if (list != null && list.isNotEmpty) return list;
+    final legacy = (m['photoUrl'] ?? '') as String;
+    return legacy.isEmpty ? const [] : [legacy];
+  }
 
   static const _accents = [
     Color(0xFFF0871E), Color(0xFFEC8FB0), Color(0xFF6B8DE0),

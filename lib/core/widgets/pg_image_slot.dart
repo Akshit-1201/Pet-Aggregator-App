@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import 'pg_network_image.dart';
 
 class PgImageSlot extends StatelessWidget {
   final double? size;
@@ -28,11 +29,11 @@ class PgImageSlot extends StatelessWidget {
         border: Border.all(color: c.border),
       ),
       child: hasImage
-          ? Image.network(url,
-              width: size ?? double.infinity, height: size ?? double.infinity, fit: BoxFit.cover,
-              loadingBuilder: (_, child, progress) =>
-                  progress == null ? child : Center(child: placeholder),
-              errorBuilder: (_, _, _) => Center(child: placeholder))
+          ? PgNetworkImage(
+              url: url,
+              width: size ?? double.infinity,
+              height: size ?? double.infinity,
+              placeholder: (_) => Center(child: placeholder))
           : placeholder,
     );
   }

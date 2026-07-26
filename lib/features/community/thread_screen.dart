@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/pg_network_image.dart';
 import '../../core/widgets/pg_app_bar.dart';
 import '../../core/widgets/pg_image_slot.dart';
 import '../../core/widgets/pg_moderation_sheet.dart';
@@ -91,9 +92,9 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
                 if (post.photoUrl.isNotEmpty) ...[
                   ClipRRect(
                     borderRadius: BorderRadius.circular(14),
-                    child: Image.network(post.photoUrl,
-                        width: double.infinity, fit: BoxFit.cover,
-                        errorBuilder: (_, _, _) => const SizedBox.shrink())),
+                    child: PgNetworkImage(url: post.photoUrl,
+                        height: 220,
+                        placeholder: (_) => const SizedBox.shrink())),
                   const SizedBox(height: 12),
                 ],
                 Text(post.body, style: PgText.inter(14, FontWeight.w400, color: c.muted, height: 1.6)),

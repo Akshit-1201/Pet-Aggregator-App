@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/pg_network_image.dart';
 import '../../data/models/post.dart';
 import '../../data/repositories/providers.dart';
 
@@ -137,9 +138,9 @@ class _PostCard extends StatelessWidget {
             const SizedBox(height: 10),
             ClipRRect(
               borderRadius: BorderRadius.circular(12),
-              child: Image.network(post.photoUrl,
-                  height: 160, width: double.infinity, fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) => const SizedBox.shrink())),
+              child: PgNetworkImage(url: post.photoUrl,
+                  height: 160,
+                  placeholder: (_) => const SizedBox.shrink())),
           ],
           const SizedBox(height: 11),
           Row(children: [

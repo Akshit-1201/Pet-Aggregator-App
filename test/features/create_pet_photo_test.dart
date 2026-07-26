@@ -1,92 +1,114 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:pet_aggregator_app/core/router/routes.dart';
-import 'package:pet_aggregator_app/core/widgets/pg_image_slot.dart';
+import 'package:pet_aggregator_app/data/models/pet_profile.dart';
 import 'package:pet_aggregator_app/data/models/role.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
 import 'package:pet_aggregator_app/data/repositories/providers.dart';
 import '../support/fakes.dart';
 import '../support/pump.dart';
 
-void main() {
-  testWidgets('picking a photo previews it; Finish uploads and saves photoUrl', (tester) async {
-    final auth = FakeAuthRepository();
+/// A pet now needs 3–5 photos, uploaded as they are picked (the same shape host
+/// setup uses) rather than one held in memory until save.
+
+final _bytes = Uint8List.fromList([1, 2, 3]);
+
+class _Harness {
+  final auth = FakeAuthRepository();
+  final users = InMemoryUserRepository();
+  final pets = InMemoryPetRepository();
+  final storage = InMemoryStorageRepository();
+  late final String uid;
+
+  Future<List<Override>> ready({Uint8List? picked}) async {
     await auth.signUp(email: 'me@x.com', password: 'secret1');
-    final uid = auth.currentUser!.uid;
-    final users = InMemoryUserRepository();
+    uid = auth.currentUser!.uid;
     await users.createUser(UserProfile(uid: uid, name: 'Radhika', email: 'me@x.com',
         area: 'Bandra West', role: Role.petParent));
-    final pets = InMemoryPetRepository();
-    final storage = InMemoryStorageRepository();
-    final picker = FakeImagePickerService(Uint8List.fromList([1, 2, 3]));
-
-    await pumpPgApp(tester, overrides: [
+    return [
       authRepositoryProvider.overrideWithValue(auth),
       userRepositoryProvider.overrideWithValue(users),
       petRepositoryProvider.overrideWithValue(pets),
       storageRepositoryProvider.overrideWithValue(storage),
-      imagePickerServiceProvider.overrideWithValue(picker),
+      imagePickerServiceProvider.overrideWithValue(FakeImagePickerService(picked)),
       chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
       reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
       bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
       homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
       proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
       homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
-    ], initialLocation: Routes.createPet);
+    ];
+  }
+}
+
+Future<void> _addPhotos(WidgetTester tester, int n) async {
+  for (var i = 0; i < n; i++) {
+    await tester.tap(find.byKey(const Key('add-pet-photo')));
+    await tester.pumpAndSettle();
+  }
+}
+
+void main() {
+  testWidgets('each picked photo uploads immediately and the pet saves the gallery',
+      (tester) async {
+    final h = _Harness();
+    await pumpPgApp(tester, overrides: await h.ready(picked: _bytes),
+        initialLocation: Routes.createPet);
     await tester.pumpAndSettle();
 
-    // Tap the photo slot -> picker runs -> the picked bytes preview.
-    await tester.tap(find.byType(PgImageSlot));
-    await tester.pumpAndSettle();
-    expect(picker.calls, 1);
-    expect(find.text('Tap to change photo'), findsOneWidget);
-    expect(find.byType(Image), findsOneWidget); // Image.memory preview
+    await _addPhotos(tester, PetProfile.minPhotos);
+    // Uploaded on pick, not deferred to save — so a saved pet never points at
+    // an object that failed to upload.
+    expect(h.storage.uploads.length, PetProfile.minPhotos);
+    expect(find.text('${PetProfile.minPhotos}/${PetProfile.maxPhotos}'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).first, 'Bruno');
     await tester.tap(find.text('Finish & explore Pawgo'));
     await tester.pumpAndSettle();
 
-    final saved = (await pets.watchMyPets(uid).first).single;
+    final saved = (await h.pets.watchMyPets(h.uid).first).single;
     expect(saved.name, 'Bruno');
-    expect(saved.photoUrl, startsWith('https://fake.storage/pets/$uid'));
-    expect(storage.uploads.length, 1);
+    expect(saved.photoUrls.length, PetProfile.minPhotos);
+    expect(saved.photoUrl, startsWith('https://fake.storage/pets/${h.uid}'));
   });
 
-  testWidgets('cancelling the picker leaves the placeholder and saves without a photo', (tester) async {
-    final auth = FakeAuthRepository();
-    await auth.signUp(email: 'me@x.com', password: 'secret1');
-    final uid = auth.currentUser!.uid;
-    final users = InMemoryUserRepository();
-    await users.createUser(UserProfile(uid: uid, name: 'Radhika', email: 'me@x.com',
-        area: 'Bandra West', role: Role.petParent));
-    final pets = InMemoryPetRepository();
-    final storage = InMemoryStorageRepository();
-
-    await pumpPgApp(tester, overrides: [
-      authRepositoryProvider.overrideWithValue(auth),
-      userRepositoryProvider.overrideWithValue(users),
-      petRepositoryProvider.overrideWithValue(pets),
-      storageRepositoryProvider.overrideWithValue(storage),
-      imagePickerServiceProvider.overrideWithValue(FakeImagePickerService()), // returns null
-      chatRepositoryProvider.overrideWithValue(InMemoryChatRepository()),
-      reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
-      bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
-      homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
-      proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
-      homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
-    ], initialLocation: Routes.createPet);
+  testWidgets('saving is refused below the minimum, and nothing is written',
+      (tester) async {
+    final h = _Harness();
+    await pumpPgApp(tester, overrides: await h.ready(picked: _bytes),
+        initialLocation: Routes.createPet);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byType(PgImageSlot));
-    await tester.pumpAndSettle();
-    expect(find.text('Upload a cute photo 📸'), findsOneWidget);
-
-    await tester.enterText(find.byType(TextField).first, 'Mochi');
+    await _addPhotos(tester, 1); // short of the minimum
+    await tester.enterText(find.byType(TextField).first, 'Bruno');
     await tester.tap(find.text('Finish & explore Pawgo'));
     await tester.pumpAndSettle();
 
-    expect((await pets.watchMyPets(uid).first).single.photoUrl, '');
-    expect(storage.uploads, isEmpty);
+    expect(find.textContaining('Add at least ${PetProfile.minPhotos} photos'), findsOneWidget);
+    expect(await h.pets.watchMyPets(h.uid).first, isEmpty);
+  });
+
+  testWidgets('cancelling the picker adds nothing and uploads nothing', (tester) async {
+    final h = _Harness();
+    await pumpPgApp(tester, overrides: await h.ready(), // picker returns null
+        initialLocation: Routes.createPet);
+    await tester.pumpAndSettle();
+
+    await _addPhotos(tester, 1);
+    expect(find.text('0/${PetProfile.maxPhotos}'), findsOneWidget);
+    expect(h.storage.uploads, isEmpty);
+  });
+
+  testWidgets('the add tile disappears at the maximum', (tester) async {
+    final h = _Harness();
+    await pumpPgApp(tester, overrides: await h.ready(picked: _bytes),
+        initialLocation: Routes.createPet);
+    await tester.pumpAndSettle();
+
+    await _addPhotos(tester, PetProfile.maxPhotos);
+    expect(find.text('${PetProfile.maxPhotos}/${PetProfile.maxPhotos}'), findsOneWidget);
+    expect(find.byKey(const Key('add-pet-photo')), findsNothing);
   });
 }

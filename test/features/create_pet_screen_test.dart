@@ -1,11 +1,29 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:pet_aggregator_app/core/router/routes.dart';
+import 'package:pet_aggregator_app/data/models/pet_profile.dart';
 import 'package:pet_aggregator_app/data/models/role.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
 import 'package:pet_aggregator_app/data/repositories/providers.dart';
 import '../support/fakes.dart';
 import '../support/pump.dart';
+
+/// A pet needs [PetProfile.minPhotos] before it can be saved, so every test
+/// here has to supply a picker and add photos first.
+List<Override> _photoOverrides() => [
+      storageRepositoryProvider.overrideWithValue(InMemoryStorageRepository()),
+      imagePickerServiceProvider
+          .overrideWithValue(FakeImagePickerService(Uint8List.fromList([1, 2, 3]))),
+    ];
+
+Future<void> _addMinimumPhotos(WidgetTester tester) async {
+  for (var i = 0; i < PetProfile.minPhotos; i++) {
+    await tester.tap(find.byKey(const Key('add-pet-photo')));
+    await tester.pumpAndSettle();
+  }
+}
 
 void main() {
   testWidgets('Finish writes a pet owned by the current user and goes Home', (tester) async {
@@ -22,9 +40,11 @@ void main() {
       homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
       proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
       homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
+      ..._photoOverrides(),
     ], initialLocation: Routes.createPet);
 
     expect(find.text('Add your pet'), findsOneWidget);
+    await _addMinimumPhotos(tester);
     await tester.enterText(find.byType(TextField).at(0), 'Bruno');   // Pet name
     await tester.enterText(find.byType(TextField).at(1), 'Labrador');// Breed
     await tester.enterText(find.byType(TextField).at(2), '2 yrs');   // Age
@@ -62,8 +82,10 @@ void main() {
       homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
       // Landing directly on Create Pet means nothing has listened to the
       // profile provider yet — exactly the onboarding path that broke.
+      ..._photoOverrides(),
     ], initialLocation: Routes.createPet);
 
+    await _addMinimumPhotos(tester);
     await tester.enterText(find.byType(TextField).at(0), 'Bruno');
     await tester.enterText(find.byType(TextField).at(1), 'Labrador');
     await tester.enterText(find.byType(TextField).at(2), '2 yrs');

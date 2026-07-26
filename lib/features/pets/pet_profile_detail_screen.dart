@@ -8,6 +8,7 @@ import '../../core/widgets/pg_image_slot.dart';
 import '../../data/models/pet_profile.dart';
 import '../../data/models/swipe.dart';
 import '../../data/repositories/providers.dart';
+import '../homestay/home_gallery.dart';
 
 class PetProfileDetailScreen extends ConsumerWidget {
   final PetProfile? pet;
@@ -36,14 +37,10 @@ class PetProfileDetailScreen extends ConsumerWidget {
       body: Column(children: [
         Expanded(child: ListView(padding: EdgeInsets.zero, children: [
           Stack(children: [
-            Container(
-              height: 280, width: double.infinity, color: c.surface2, alignment: Alignment.center,
-              child: p.photoUrl.isEmpty
-                  ? Text(_speciesEmoji(p.species), style: const TextStyle(fontSize: 64))
-                  : Image.network(p.photoUrl, height: 280, width: double.infinity, fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) =>
-                          Text(_speciesEmoji(p.species), style: const TextStyle(fontSize: 64))),
-            ),
+            // Same gallery the homestay listings use — swipeable, with a counter
+            // and dots — now that a pet carries up to five photos.
+            HomeGallery(photoUrls: p.photoUrls, emoji: _speciesEmoji(p.species),
+                height: 280),
             Positioned(top: 0, left: 0, child: SafeArea(child: Padding(
               padding: const EdgeInsets.all(14),
               child: GestureDetector(

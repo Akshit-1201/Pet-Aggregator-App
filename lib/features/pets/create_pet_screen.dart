@@ -1,4 +1,3 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -27,7 +26,11 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
   Species _species = Species.dog;
   bool _vaccinated = true;
   bool _saving = false;
-  Uint8List? _photoBytes;
+  bool _uploading = false;
+  /// Uploaded URLs, not raw bytes: each photo goes to Storage as it is picked,
+  /// so the saved pet only ever holds URLs that already exist — the same shape
+  /// host setup uses.
+  final List<String> _photos = [];
   String? _nameError;
 
   static const _speciesLabel = {
@@ -42,19 +45,28 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
     super.dispose();
   }
 
-  Future<void> _pickPhoto() async {
+  Future<void> _addPhoto() async {
+    if (_uploading || _photos.length >= PetProfile.maxPhotos) return;
+    final uid = ref.read(authRepositoryProvider).currentUser?.uid;
+    if (uid == null) return;
     try {
       final bytes = await ref.read(imagePickerServiceProvider).pickImage();
       if (!mounted || bytes == null) return;
-      setState(() => _photoBytes = bytes);
+      setState(() => _uploading = true);
+      final url = await ref.read(storageRepositoryProvider).uploadImage(
+          path: 'pets/${uid}_${DateTime.now().millisecondsSinceEpoch}.jpg', bytes: bytes);
+      if (!mounted) return;
+      setState(() => _photos.add(url));
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
           ..showSnackBar(const SnackBar(
-            content: Text("Couldn't open your photos. Please try again."),
+            content: Text("Couldn't add that photo. Please try again."),
             behavior: SnackBarBehavior.floating));
       }
+    } finally {
+      if (mounted && _uploading) setState(() => _uploading = false);
     }
   }
 
@@ -64,6 +76,12 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
     final name = _name.text.trim();
     if (name.isEmpty) {
       setState(() => _nameError = "Please enter your pet's name.");
+      return;
+    }
+    if (_photos.length < PetProfile.minPhotos) {
+      setState(() => _nameError =
+          'Add at least ${PetProfile.minPhotos} photos of your pet '
+          '(${_photos.length} so far).');
       return;
     }
     setState(() { _saving = true; _nameError = null; });
@@ -77,31 +95,16 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
     // show whose pet this is cannot look the name up later.
     final ownerName = profile?.name ?? '';
 
-    var photoUrl = '';
-    final bytes = _photoBytes;
-    if (bytes != null) {
-      try {
-        photoUrl = await ref.read(storageRepositoryProvider).uploadImage(
-            path: 'pets/${uid}_${DateTime.now().millisecondsSinceEpoch}.jpg', bytes: bytes);
-      } catch (_) {
-        if (mounted) {
-          ScaffoldMessenger.of(context)
-            ..hideCurrentSnackBar()
-            ..showSnackBar(const SnackBar(
-              content: Text("Couldn't upload the photo — saving without it."),
-              behavior: SnackBarBehavior.floating));
-        }
-      }
-    }
-
     if (!mounted) return;
 
     try {
+      // Photos are already uploaded — _photos holds Storage URLs, so there is
+      // no upload step here that could half-fail.
       await ref.read(petRepositoryProvider).addPet(PetProfile(
             id: '', ownerId: uid, name: name, breed: _breed.text.trim(),
             ageLabel: _age.text.trim(), sex: '', area: area, species: _species,
             vaccinated: _vaccinated, accentColor: PetProfile.accentFor(name),
-            photoUrl: photoUrl, ownerName: ownerName));
+            photoUrls: List.of(_photos), ownerName: ownerName));
     } catch (_) {
       if (mounted) {
         setState(() => _saving = false);
@@ -131,21 +134,19 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
             child: ListView(
               padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
               children: [
-                Center(child: Column(children: [
-                  GestureDetector(
-                    onTap: _pickPhoto,
-                    child: _photoBytes == null
-                        ? const PgImageSlot(size: 110, circle: true, emoji: '📸')
-                        : ClipOval(child: Image.memory(_photoBytes!,
-                            width: 110, height: 110, fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) =>
-                                const PgImageSlot(size: 110, circle: true, emoji: '📸'))),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(_photoBytes == null ? 'Upload a cute photo 📸' : 'Tap to change photo',
-                    style: PgText.inter(13, FontWeight.w600, color: c.brand)),
-                ])),
-                const SizedBox(height: 14),
+                Row(children: [
+                  Expanded(child: Text('Photos of your pet', style: PgText.label(context))),
+                  Text('${_photos.length}/${PetProfile.maxPhotos}',
+                      style: PgText.inter(12.5, FontWeight.w700,
+                          color: _photos.length < PetProfile.minPhotos ? c.heart : c.brand)),
+                ]),
+                const SizedBox(height: 6),
+                Text('Add ${PetProfile.minPhotos}–${PetProfile.maxPhotos} photos so other '
+                    'parents can recognise them.',
+                  style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
+                const SizedBox(height: 10),
+                _photoStrip(c),
+                const SizedBox(height: 18),
                 PgTextField(label: 'Pet name', controller: _name, hint: 'Bruno'),
                 if (_nameError != null)
                   Padding(
@@ -215,4 +216,38 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
       ),
     );
   }
+
+  Widget _photoStrip(PgColors c) => Wrap(spacing: 10, runSpacing: 10, children: [
+        for (var i = 0; i < _photos.length; i++)
+          Stack(children: [
+            SizedBox(width: 92, height: 92,
+                child: PgImageSlot(radius: 14, emoji: '🐾', imageUrl: _photos[i])),
+            Positioned(
+              top: 4, right: 4,
+              child: GestureDetector(
+                key: Key('remove-pet-photo-$i'),
+                onTap: () => setState(() => _photos.removeAt(i)),
+                child: Container(
+                  width: 24, height: 24, alignment: Alignment.center,
+                  decoration: BoxDecoration(color: c.ink, shape: BoxShape.circle),
+                  child: const Icon(Icons.close, size: 15, color: Colors.white)),
+              ),
+            ),
+          ]),
+        if (_photos.length < PetProfile.maxPhotos)
+          GestureDetector(
+            key: const Key('add-pet-photo'),
+            onTap: _uploading ? null : _addPhoto,
+            child: Container(
+              width: 92, height: 92, alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: c.surface2, borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: c.border)),
+              child: _uploading
+                  ? const SizedBox(width: 20, height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : Text('＋', style: PgText.poppins(22, FontWeight.w700, color: c.muted)),
+            ),
+          ),
+      ]);
 }

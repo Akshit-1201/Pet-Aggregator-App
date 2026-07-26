@@ -20,7 +20,7 @@ void main() {
       PetProfile(id: 'p1', ownerId: 'someone-else', name: 'Bruno', breed: 'Labrador',
           ageLabel: '2 yrs', sex: 'male', area: 'Bandra West', species: Species.dog,
           vaccinated: true, accentColor: PetProfile.accentFor('Bruno'),
-          photoUrl: 'https://x/bruno.jpg'),
+          photoUrls: const ['https://x/bruno.jpg']),
     ]);
 
     await pumpPgApp(tester, overrides: [
@@ -36,9 +36,16 @@ void main() {
     ], initialLocation: Routes.home);
     await tester.pumpAndSettle();
 
+    // Images now carry a decode hint, so the provider is a ResizeImage wrapping
+    // the NetworkImage rather than a bare one — unwrap before comparing.
+    String? urlOf(ImageProvider p) => switch (p) {
+          ResizeImage(imageProvider: final inner) => urlOf(inner),
+          NetworkImage(url: final u) => u,
+          _ => null,
+        };
+
     bool hasNetworkImage(String url) => find
-        .byWidgetPredicate((w) =>
-            w is Image && w.image is NetworkImage && (w.image as NetworkImage).url == url)
+        .byWidgetPredicate((w) => w is Image && urlOf(w.image) == url)
         .evaluate()
         .isNotEmpty;
 

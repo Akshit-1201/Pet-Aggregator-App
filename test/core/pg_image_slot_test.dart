@@ -4,13 +4,21 @@ import 'package:pet_aggregator_app/core/widgets/pg_image_slot.dart';
 import '../support/pump.dart';
 
 void main() {
-  testWidgets('renders a network image when imageUrl is set', (tester) async {
+  testWidgets('renders a network image, decoded at display size', (tester) async {
     await pumpPg(tester, const PgImageSlot(size: 60, emoji: '🐾', imageUrl: 'https://x/img.jpg'));
-    expect(
-      find.byWidgetPredicate((w) =>
-          w is Image && w.image is NetworkImage && (w.image as NetworkImage).url == 'https://x/img.jpg'),
-      findsOneWidget,
-    );
+
+    final provider = tester.widget<Image>(find.byType(Image)).image;
+    // A cacheWidth/cacheHeight hint makes Image.network wrap the NetworkImage
+    // in a ResizeImage. Without it a 60px avatar decodes the full 1080px upload
+    // into memory, which is the whole point of PgNetworkImage.
+    expect(provider, isA<ResizeImage>());
+    final resize = provider as ResizeImage;
+    expect((resize.imageProvider as NetworkImage).url, 'https://x/img.jpg');
+    // In physical pixels, so it scales with the device pixel ratio rather than
+    // decoding a blurry 60px bitmap on a 3x screen.
+    final dpr = tester.view.devicePixelRatio;
+    expect(resize.width, (60 * dpr).ceil());
+    expect(resize.height, (60 * dpr).ceil());
   });
 
   testWidgets('renders the emoji placeholder when imageUrl is null or empty', (tester) async {

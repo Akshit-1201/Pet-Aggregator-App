@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/pg_network_image.dart';
 import '../../core/widgets/pg_image_slot.dart';
 import '../../core/widgets/pg_page_dots.dart';
 
@@ -152,8 +153,10 @@ class _PhotoViewerScreenState extends State<PhotoViewerScreen> {
                 InteractiveViewer(
                   minScale: 1, maxScale: 4,
                   child: Center(
-                    child: Image.network(url, fit: BoxFit.contain,
-                        errorBuilder: (_, _, _) => Text(widget.emoji,
+                    // contain, not cover: this is the full-screen viewer, where
+                    // cropping the photo would defeat the point of opening it.
+                    child: PgNetworkImage(url: url, fit: BoxFit.contain,
+                        placeholder: (_) => Text(widget.emoji,
                             style: const TextStyle(fontSize: 56))),
                   ),
                 ),
