@@ -6,7 +6,6 @@ import * as logger from "firebase-functions/logger";
 import * as crypto from "crypto";
 import Razorpay from "razorpay";
 import * as admin from "firebase-admin";
-import {sendInvoiceEmail, sendRefundEmail, InvoiceLine} from "./invoice";
 import {recordPayoutOwed, reversePayout, type PayoutStatus} from "./payouts";
 import {createLinkedAccount, readBankDetails, savePayoutAccount} from "./payout-account";
 import {notify} from "./notify/notify";
@@ -228,37 +227,26 @@ export const verifyBookingPayment = onCall(
       logger.error("verifyBookingPayment: payout record failed", {bookingId, error: e});
     }
 
-    // Receipt. Awaited so a hard failure is visible in the logs, but never
-    // allowed to throw — the money has moved and the booking is confirmed, so
-    // a mail outage must not surface to the user as a failed payment.
+    // Receipt — push AND email, both owned by the catalogue. Never allowed to
+    // throw: the money has moved and the booking is confirmed, so a mail or
+    // FCM outage must not surface to the user as a failed payment.
     try {
       const b = (await ref.get()).data() ?? {};
-      const to = await verifiedEmailFor(uid);
       const p = amounts.parts;
-      const lines: InvoiceLine[] = kind === "service" ?
-        [{label: `${b.serviceType ?? "Service"} with ${b.proName ?? "your pro"}`,
-          amount: Number(p.rate ?? 0)},
-        {label: "Pawgo service fee", amount: Number(p.fee ?? 0)}] :
-        [{label: `${p.nights ?? 0} nights at ${b.homeName ?? "the home"}`,
-          amount: Number(p.subtotal ?? 0)},
-        {label: "Pawgo service fee", amount: Number(p.fee ?? 0)}];
-
-      await sendInvoiceEmail(resendApiKey.value(), MAIL_FROM, {
-        to,
-        customerName: "",
-        heading: kind === "service" ?
-          `${b.serviceType ?? "Service"} with ${b.proName ?? "your pro"}` :
-          `${b.petName ?? "Your pet"} at ${b.homeName ?? "the home"}`,
-        subheading: kind === "service" ?
-          `${b.dateLabel ?? ""} ${b.timeSlot ?? ""}`.trim() :
-          `${b.checkIn ?? ""} → ${b.checkOut ?? ""}`,
-        lines,
-        total: amounts.total,
-        paymentId,
-        bookingId,
+      await notify({
+        scenario: "PAY1", uid, key: `PAY1_${paymentId}`,
+        apiKey: resendApiKey.value(), from: MAIL_FROM,
+        params: {
+          kind, bookingId, paymentId, total: amounts.total,
+          rate: p.rate, fee: p.fee, subtotal: p.subtotal, nights: p.nights,
+          serviceType: b.serviceType, proName: b.proName,
+          dateLabel: b.dateLabel, timeSlot: b.timeSlot,
+          petName: b.petName, homeName: b.homeName,
+          checkInLabel: String(b.checkIn ?? ""), checkOutLabel: String(b.checkOut ?? ""),
+        },
       });
     } catch (e) {
-      logger.error("verifyBookingPayment: receipt email failed", {bookingId, error: e});
+      logger.error("verifyBookingPayment: receipt notification failed", {bookingId, error: e});
     }
 
     return {confirmed: true, paymentId};
@@ -645,20 +633,26 @@ export const refundBookingPayment = onCall(
           "refundBookingPayment: refund SUCCEEDED but persisting refundId failed",
           {bookingId, refundId, error: e});
       }
-      try {
-        const b = (await ref.get()).data() ?? {};
-        await sendRefundEmail(resendApiKey.value(), MAIL_FROM, {
-          to: await verifiedEmailFor(uid),
-          homeName: kind === "service"
-            ? `your ${String(b.serviceType ?? "booking")} with ${b.proName ?? "your pro"}`
-            : String(b.homeName ?? "the home"),
-          amount: claim.refundAmount,
-          bookingId,
-          refundId,
-        });
-      } catch (e) {
-        logger.error("refundBookingPayment: refund email failed", {bookingId, error: e});
-      }
+    }
+
+    // Confirmation regardless of amount. A same-day cancellation refunds ₹0 —
+    // which is exactly when someone most wants to be told, in writing, why no
+    // money is coming back.
+    try {
+      const b = (await ref.get()).data() ?? {};
+      const paid = claim.refundAmount > 0;
+      await notify({
+        scenario: paid ? "PAY2" : "PAY3",
+        uid,
+        key: `${paid ? "PAY2" : "PAY3"}_${bookingId}`,
+        apiKey: resendApiKey.value(), from: MAIL_FROM,
+        params: {
+          kind, bookingId, refundId, amount: claim.refundAmount,
+          serviceType: b.serviceType, proName: b.proName, homeName: b.homeName,
+        },
+      });
+    } catch (e) {
+      logger.error("refundBookingPayment: notification failed", {bookingId, error: e});
     }
     return {refundAmount: claim.refundAmount, refundId};
   });
