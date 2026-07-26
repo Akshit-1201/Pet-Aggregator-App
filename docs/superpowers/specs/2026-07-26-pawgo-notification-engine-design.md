@@ -23,7 +23,7 @@ Notifications work in places, but the *system* around them doesn't exist. Four s
 
 `RESEND_API_KEY` holds the literal string `"unset"`, and `isMailConfigured()` treats that as "email is off" — it logs a warning instead of calling Resend. **Every email in this spec is dead on arrival until a real key is set.** The placeholder exists because the Firebase CLI refuses to deploy *any* function while a declared secret has no value.
 
-To switch email on: create a Resend account → verify a sending domain → `firebase functions:secrets:set RESEND_API_KEY` → confirm `MAIL_FROM` in `functions/src/index.ts` (currently assumes `receipts@pawgo.app`) → redeploy.
+To switch email on: create a Resend account → verify a sending domain → `firebase functions:secrets:set RESEND_API_KEY` → confirm `MAIL_FROM` in `functions/src/notify/email.ts` (currently assumes `receipts@pawgo.app`; `index.ts` only imports it) → redeploy.
 
 Building the email scenarios before the key exists is still correct — they deploy inert and start working the moment the key lands, with no code change. But **do not treat this slice as closing the "user gets no confirmation" gap until the key is set.** Until then, push is the only channel that actually reaches anyone.
 

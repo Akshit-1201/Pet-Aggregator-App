@@ -6,6 +6,28 @@ import '../../core/router/routes.dart';
 import '../../core/widgets/pg_snackbar.dart';
 import '../../data/repositories/providers.dart';
 
+/// Where a tapped notification goes.
+///
+/// The allowlist is every distinct `route` the server-side catalogue can emit
+/// (`functions/src/notify/catalog.ts`) — `/bookings`, `/messages`, `/discover`,
+/// `/community`, `/payments`, `/profile` — plus `/home` and `/notifications`.
+/// Anything else falls back to the Notifications screen: a payload naming a
+/// route this build doesn't have must land somewhere sane rather than crash,
+/// which matters because an installed app can be older than the Functions
+/// sending to it.
+///
+/// Top-level and pure so it can be tested without a router. The tap handler
+/// itself calls `context.go`, which needs a live GoRouter; the decision this
+/// function makes is the part worth pinning.
+String resolveTapRoute(String? route) {
+  const known = {
+    Routes.bookings, Routes.chatList, Routes.notifications,
+    Routes.home, Routes.discover, Routes.community, Routes.payments,
+    Routes.profile,
+  };
+  return known.contains(route) ? route! : Routes.notifications;
+}
+
 /// Connects the signed-in user to their device's push token, and routes taps.
 ///
 /// Wraps the app rather than living on a screen, because all three jobs outlive
@@ -66,16 +88,11 @@ class _PushRegistrarState extends ConsumerState<PushRegistrar> {
     if (initial != null) _handleTap(initial);
   }
 
-  /// Notification payloads carry a `route` the server chose. Anything unknown
-  /// falls back to the Notifications screen instead of crashing on a bad path.
+  /// Notification payloads carry a `route` the server chose. See
+  /// [resolveTapRoute] for the allowlist and the fallback.
   void _handleTap(Map<String, String> payload) {
     if (!mounted) return;
-    const known = {
-      Routes.bookings, Routes.chatList, Routes.notifications,
-      Routes.home, Routes.discover, Routes.community, Routes.payments,
-    };
-    final route = payload['route'];
-    context.go(known.contains(route) ? route! : Routes.notifications);
+    context.go(resolveTapRoute(payload['route']));
   }
 
   Future<void> _syncRegistration(String? uid) async {

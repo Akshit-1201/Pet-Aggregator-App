@@ -127,13 +127,12 @@ class SettingsScreen extends ConsumerWidget {
       );
 }
 
-/// The three push categories, each mapping to real server triggers.
+/// The five controllable push categories, plus the essential tier stated as a
+/// fact.
 ///
-/// The prototype's third row, "Nearby pet alerts", is deliberately absent:
-/// there is no nearby-pet notification anywhere in the app, so the switch would
-/// control nothing. A row for **New messages** takes its place — chat is by far
-/// the highest-volume push, and it would be odd to let someone silence rare
-/// Woof matches but not the notification they actually get every day.
+/// The prototype's "Nearby pet alerts" row is deliberately absent: there is no
+/// nearby-pet notification anywhere in the app, so the switch would control
+/// nothing.
 class _NotificationPrefsCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -166,7 +165,14 @@ class _NotificationPrefsCard extends ConsumerWidget {
             'Requests, confirmations, cancellations & reviews',
             prefs.bookings, (v) => save(prefs.copyWith(bookings: v)), border: true),
         _toggleRow(c, '🐾', 'New Woofs & matches', 'When you and another pet match',
-            prefs.woofs, (v) => save(prefs.copyWith(woofs: v))),
+            prefs.woofs, (v) => save(prefs.copyWith(woofs: v)), border: true),
+        _toggleRow(c, '💭', 'Community replies', 'When someone comments on your post',
+            prefs.community, (v) => save(prefs.copyWith(community: v)), border: true),
+        _toggleRow(c, '⏰', 'Reminders',
+            'Upcoming bookings, payments due & review prompts',
+            prefs.reminders, (v) => save(prefs.copyWith(reminders: v)), border: true),
+        _alwaysOnRow(c, '💰', 'Payments & account',
+            'Receipts, refunds, payouts & ID verification'),
       ]),
     );
   }
@@ -185,6 +191,24 @@ class _NotificationPrefsCard extends ConsumerWidget {
             Text(subtitle, style: PgText.inter(12, FontWeight.w400, color: c.muted)),
           ])),
           PgToggle(value: value, onChanged: onChanged),
+        ]),
+      );
+
+  /// The essential tier, shown rather than hidden. Silently failing to tell
+  /// someone their refund landed or their ID was rejected is a support
+  /// incident, not a preference — so this row states the fact instead of
+  /// offering a switch that would be a lie.
+  Widget _alwaysOnRow(PgColors c, String emoji, String title, String subtitle) =>
+      Padding(
+        padding: const EdgeInsets.all(15),
+        child: Row(children: [
+          Text(emoji, style: const TextStyle(fontSize: 18)),
+          const SizedBox(width: 13),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: PgText.inter(14, FontWeight.w600, color: c.text)),
+            Text(subtitle, style: PgText.inter(12, FontWeight.w400, color: c.muted)),
+          ])),
+          Text('Always on', style: PgText.inter(12, FontWeight.w600, color: c.muted)),
         ]),
       );
 }

@@ -6,7 +6,8 @@
   },
   "main": "lib/index.js",
   "scripts": {
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest run"
   },
   "dependencies": {
     "firebase-admin": "^13.0.0",
@@ -15,6 +16,7 @@
     "resend": "^6.18.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.0"
   }
 }

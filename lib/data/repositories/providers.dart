@@ -10,7 +10,7 @@ import '../models/homestay_booking.dart';
 import '../models/post.dart';
 import '../models/chat.dart';
 import '../models/review.dart';
-import '../../features/notifications/notification_item.dart';
+import '../models/notification_record.dart';
 import 'auth_repository.dart';
 import 'booking_repository.dart';
 import 'user_repository.dart';
@@ -26,6 +26,7 @@ import 'review_repository.dart';
 import 'block_repository.dart';
 import 'report_repository.dart';
 import 'push_token_repository.dart';
+import 'notification_repository.dart';
 import 'verification_repository.dart';
 import '../models/verification_request.dart';
 import 'payout_repository.dart';
@@ -49,6 +50,7 @@ import 'firebase/firestore_review_repository.dart';
 import 'firebase/firestore_block_repository.dart';
 import 'firebase/firestore_report_repository.dart';
 import 'firebase/firestore_push_token_repository.dart';
+import 'firebase/firestore_notification_repository.dart';
 import 'firebase/firestore_verification_repository.dart';
 import 'firebase/firestore_payout_repository.dart';
 import 'firebase/firebase_storage_repository.dart';
@@ -278,25 +280,24 @@ final receivedStayBookingsProvider = StreamProvider<List<HomestayBooking>>((ref)
   return ref.watch(homestayBookingRepositoryProvider).watchBookingsForHost(user.uid);
 });
 
-final notificationsProvider = Provider<List<NotificationItem>>((ref) {
-  final uid = ref.watch(authRepositoryProvider).currentUser?.uid ?? '';
-  final seenAt = ref.watch(currentUserProfileProvider).value?.notifsSeenAt ?? 0;
-  return buildNotifications(
-    myUid: uid,
-    seenAt: seenAt,
-    chats: ref.watch(myChatsProvider).value ?? const [],
-    reviews: ref.watch(reviewsProvider(uid)).value ?? const [],
-    bookings: ref.watch(myBookingsProvider).value ?? const [],
-    homestays: ref.watch(myHomestayBookingsProvider).value ?? const [],
-    receivedBookings: ref.watch(receivedServiceBookingsProvider).value ?? const [],
-    receivedStays: ref.watch(receivedStayBookingsProvider).value ?? const [],
-    myPro: ref.watch(currentProProvider).value,
-    myHomestay: ref.watch(currentHomestayProvider).value,
-  );
+final notificationRepositoryProvider =
+    Provider<NotificationRepository>((ref) => FirestoreNotificationRepository());
+
+/// Server-authored notification records, newest first.
+///
+/// Replaces the old client-side derivation: push, email and this feed are now
+/// written by one call in the Cloud Functions, so they cannot disagree — and
+/// scenarios with no client-readable source (a KYC verdict, a released payout,
+/// a reminder) can appear here at all.
+final notificationsProvider = StreamProvider<List<NotificationRecord>>((ref) {
+  final uid = ref.watch(authStateProvider).value?.uid ?? '';
+  if (uid.isEmpty) return Stream.value(const []);
+  return ref.watch(notificationRepositoryProvider).watch(uid);
 });
 
-final hasUnreadNotificationsProvider =
-    Provider<bool>((ref) => ref.watch(notificationsProvider).any((n) => !n.read));
+final hasUnreadNotificationsProvider = Provider<bool>((ref) =>
+    (ref.watch(notificationsProvider).value ?? const <NotificationRecord>[])
+        .any((n) => !n.read));
 
 final storageRepositoryProvider =
     Provider<StorageRepository>((ref) => FirebaseStorageRepository());

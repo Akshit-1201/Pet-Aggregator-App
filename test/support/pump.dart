@@ -41,6 +41,9 @@ Future<void> pumpPgApp(
   /// and the override list gives no public way to inspect what is in it — so a
   /// test that supplies its own post repository has to say so.
   bool providesPostRepository = false,
+  /// Set when [overrides] already contains a `notificationRepositoryProvider`.
+  /// See [providesPostRepository] for why this flag exists.
+  bool providesNotificationRepository = false,
 }) async {
   tester.view.physicalSize = const Size(420, 920);
   tester.view.devicePixelRatio = 1.0;
@@ -49,9 +52,11 @@ Future<void> pumpPgApp(
 
   // Cross-cutting repositories that almost every screen reaches indirectly:
   // block/report (every list filters blocked users), verification + payout
-  // (both setup screens embed those cards), and posts (Home shows the newest
-  // one under "Community picks"). Without defaults, each of ~20 unrelated tests
-  // would have to override them purely to avoid hitting real Firestore.
+  // (both setup screens embed those cards), posts (Home shows the newest one
+  // under "Community picks"), and notifications (Home's bell icon watches
+  // hasUnreadNotificationsProvider on every render). Without defaults, each of
+  // ~20 unrelated tests would have to override them purely to avoid hitting
+  // real Firestore.
   //
   // No test overrides the first four, so they are always safe to default.
   final container = ProviderContainer(overrides: [
@@ -61,6 +66,8 @@ Future<void> pumpPgApp(
     payoutRepositoryProvider.overrideWithValue(InMemoryPayoutRepository()),
     if (!providesPostRepository)
       postRepositoryProvider.overrideWithValue(InMemoryPostRepository()),
+    if (!providesNotificationRepository)
+      notificationRepositoryProvider.overrideWithValue(FakeNotificationRepository()),
     ...overrides,
   ]);
   addTearDown(container.dispose);

@@ -40,6 +40,21 @@ service cloud.firestore {
       }
     }
 
+    // Server-authored notification records. Read-only to their owner, who may
+    // flip `read` and nothing else.
+    //
+    // No client create: a client that can write one of these can forge "your
+    // refund was processed". No client delete: one that can remove them can
+    // hide a KYC rejection. The Functions write with the Admin SDK, which
+    // bypasses rules entirely.
+    match /notifications/{uid}/items/{id} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow update: if request.auth != null && request.auth.uid == uid
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['read']);
+      allow create, delete: if false;
+    }
+
     // A partner's own KYC application. They may submit and re-submit, but never
     // touch the review verdict — status is pinned to 'pending' on any client
     // write, so nobody can self-approve their way to a verified badge.

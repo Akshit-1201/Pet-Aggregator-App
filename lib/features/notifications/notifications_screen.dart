@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../data/models/notification_record.dart';
 import '../../data/models/post.dart'; // reuse Post.timeAgo
 import '../../data/repositories/providers.dart';
-import 'notification_item.dart';
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
@@ -14,9 +14,13 @@ class NotificationsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.pg;
-    final items = ref.watch(notificationsProvider);
+    final items = ref.watch(notificationsProvider).value ?? const <NotificationRecord>[];
     final hasUnread = ref.watch(hasUnreadNotificationsProvider);
-    final myUid = ref.watch(authRepositoryProvider).currentUser?.uid ?? '';
+    // Same source as notificationsProvider (authStateProvider), not
+    // authRepositoryProvider.currentUser — during a sign-in/out transition the
+    // two can disagree, and a mismatched uid makes markRead/markAllRead a
+    // rules-rejected no-op against the wrong path.
+    final myUid = ref.watch(authStateProvider).value?.uid ?? '';
 
     return Scaffold(
       backgroundColor: c.bg,
@@ -37,19 +41,22 @@ class NotificationsScreen extends ConsumerWidget {
                 style: PgText.poppins(19, FontWeight.w800, color: c.text))),
               if (hasUnread)
                 GestureDetector(
-                  onTap: () => ref.read(userRepositoryProvider).markNotificationsSeen(myUid),
-                  child: Text('Mark all read', style: PgText.inter(12.5, FontWeight.w600, color: c.brand))),
+                  onTap: () =>
+                      ref.read(notificationRepositoryProvider).markAllRead(myUid),
+                  child: Text('Mark all read',
+                    style: PgText.inter(12.5, FontWeight.w600, color: c.brand))),
             ]),
           ),
           Expanded(child: items.isEmpty
             ? Center(child: Padding(
                 padding: const EdgeInsets.all(30),
                 child: Text("You're all caught up — no notifications yet.",
-                  textAlign: TextAlign.center, style: PgText.inter(13.5, FontWeight.w400, color: c.muted))))
+                  textAlign: TextAlign.center,
+                  style: PgText.inter(13.5, FontWeight.w400, color: c.muted))))
             : ListView.builder(
                 padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
                 itemCount: items.length,
-                itemBuilder: (_, i) => _NotifRow(item: items[i]),
+                itemBuilder: (_, i) => _NotifRow(item: items[i], myUid: myUid),
               )),
         ]),
       ),
@@ -57,16 +64,23 @@ class NotificationsScreen extends ConsumerWidget {
   }
 }
 
-class _NotifRow extends StatelessWidget {
-  final NotificationItem item;
-  const _NotifRow({required this.item});
+class _NotifRow extends ConsumerWidget {
+  final NotificationRecord item;
+  final String myUid;
+  const _NotifRow({required this.item, required this.myUid});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final c = context.pg;
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      onTap: item.route == null ? null : () => context.push(item.route!, extra: item.extra),
+      onTap: () async {
+        if (!item.read) {
+          await ref.read(notificationRepositoryProvider).markRead(myUid, item.id);
+        }
+        if (!context.mounted || item.route.isEmpty) return;
+        context.go(item.route);
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(13),
@@ -78,24 +92,17 @@ class _NotifRow extends StatelessWidget {
             width: 42, height: 42, alignment: Alignment.center,
             decoration: BoxDecoration(color: item.accent.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(13)),
-            child: Text(item.icon, style: const TextStyle(fontSize: 19))),
-          const SizedBox(width: 13),
+            child: Text(item.emoji, style: const TextStyle(fontSize: 18))),
+          const SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis,
-              style: PgText.poppins(14, FontWeight.w700, color: c.text)),
-            const SizedBox(height: 3),
-            Text(item.body, maxLines: 1, overflow: TextOverflow.ellipsis,
+            Text(item.title, style: PgText.inter(13.5, FontWeight.w700, color: c.text)),
+            const SizedBox(height: 2),
+            Text(item.body, maxLines: 2, overflow: TextOverflow.ellipsis,
               style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
+            const SizedBox(height: 4),
+            Text(Post.timeAgo(item.createdAt),
+              style: PgText.inter(11, FontWeight.w400, color: c.muted)),
           ])),
-          const SizedBox(width: 10),
-          Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(Post.timeAgo(item.timestamp), style: PgText.inter(11, FontWeight.w400, color: c.faint)),
-            if (!item.read) ...[
-              const SizedBox(height: 6),
-              Container(width: 8, height: 8,
-                decoration: BoxDecoration(color: c.brand, shape: BoxShape.circle)),
-            ],
-          ]),
         ]),
       ),
     );
