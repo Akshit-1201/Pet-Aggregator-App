@@ -16,7 +16,11 @@ class NotificationsScreen extends ConsumerWidget {
     final c = context.pg;
     final items = ref.watch(notificationsProvider).value ?? const <NotificationRecord>[];
     final hasUnread = ref.watch(hasUnreadNotificationsProvider);
-    final myUid = ref.watch(authRepositoryProvider).currentUser?.uid ?? '';
+    // Same source as notificationsProvider (authStateProvider), not
+    // authRepositoryProvider.currentUser — during a sign-in/out transition the
+    // two can disagree, and a mismatched uid makes markRead/markAllRead a
+    // rules-rejected no-op against the wrong path.
+    final myUid = ref.watch(authStateProvider).value?.uid ?? '';
 
     return Scaffold(
       backgroundColor: c.bg,

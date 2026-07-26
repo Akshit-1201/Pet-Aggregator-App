@@ -7,19 +7,13 @@ import type {ScenarioId} from "./catalog";
 import {bookingKey, chatKey, matchKey, postKey, verdictKey} from "./keys";
 import {maskContactDetails} from "./mask";
 import {MAIL_FROM} from "./email";
+import {fmtDay} from "./dates";
 
 const REGION = "asia-south1";
 const resendApiKey = defineSecret("RESEND_API_KEY");
 
 /** Every email-capable trigger needs the secret bound and the sender passed. */
 const mail = () => ({apiKey: resendApiKey.value(), from: MAIL_FROM});
-
-const fmtDay = (iso: string) => {
-  const d = new Date(`${String(iso).slice(0, 10)}T00:00:00+05:30`);
-  return Number.isFinite(d.getTime()) ?
-    d.toLocaleDateString("en-IN", {weekday: "short", day: "numeric", month: "short",
-      timeZone: "Asia/Kolkata"}) : String(iso);
-};
 
 /** A new chat message notifies the other participant — never someone who has
  *  blocked the sender, which would hand a blocked user a way to keep reaching

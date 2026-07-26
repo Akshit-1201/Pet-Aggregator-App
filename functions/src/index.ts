@@ -9,9 +9,10 @@ import * as admin from "firebase-admin";
 import {recordPayoutOwed, reversePayout, type PayoutStatus} from "./payouts";
 import {createLinkedAccount, readBankDetails, savePayoutAccount} from "./payout-account";
 import {notify} from "./notify/notify";
-import {bookingKey} from "./notify/keys";
+import {bookingKey, scenarioKey} from "./notify/keys";
 import {maskContactDetails} from "./notify/mask";
 import {MAIL_FROM} from "./notify/email";
+import {fmtDay} from "./notify/dates";
 export {maskContactDetails};
 
 admin.initializeApp();
@@ -19,20 +20,6 @@ admin.initializeApp();
 const razorpayKeyId = defineSecret("RAZORPAY_KEY_ID");
 const razorpayKeySecret = defineSecret("RAZORPAY_KEY_SECRET");
 const resendApiKey = defineSecret("RESEND_API_KEY");
-
-/** Receipts go to the address on the auth record, not to anything the client
- *  passed in — the client could send someone else's. Since signup now requires
- *  clicking a verification link, that address is also known to be real and
- *  owned by this user. */
-async function verifiedEmailFor(uid: string): Promise<string> {
-  try {
-    const user = await admin.auth().getUser(uid);
-    return user.emailVerified && user.email ? user.email : "";
-  } catch (e) {
-    logger.error("verifiedEmailFor failed", {uid, error: e});
-    return "";
-  }
-}
 
 type Kind = "service" | "homestay";
 
@@ -234,7 +221,7 @@ export const verifyBookingPayment = onCall(
       const b = (await ref.get()).data() ?? {};
       const p = amounts.parts;
       await notify({
-        scenario: "PAY1", uid, key: `PAY1_${paymentId}`,
+        scenario: "PAY1", uid, key: scenarioKey("PAY1", paymentId),
         apiKey: resendApiKey.value(), from: MAIL_FROM,
         params: {
           kind, bookingId, paymentId, total: amounts.total,
@@ -242,7 +229,7 @@ export const verifyBookingPayment = onCall(
           serviceType: b.serviceType, proName: b.proName,
           dateLabel: b.dateLabel, timeSlot: b.timeSlot,
           petName: b.petName, homeName: b.homeName,
-          checkInLabel: String(b.checkIn ?? ""), checkOutLabel: String(b.checkOut ?? ""),
+          checkInLabel: fmtDay(String(b.checkIn ?? "")), checkOutLabel: fmtDay(String(b.checkOut ?? "")),
         },
       });
     } catch (e) {
@@ -361,7 +348,7 @@ export const processPayouts = onSchedule(
         await rzp.transfers.edit(String(p.transferId), {on_hold: false});
         await setStatus(doc.ref, "released", {releasedAt: Date.now(), error: ""});
         await notify({
-          scenario: "PAY4", uid: String(p.partnerId ?? ""), key: `PAY4_${doc.id}`,
+          scenario: "PAY4", uid: String(p.partnerId ?? ""), key: scenarioKey("PAY4", doc.id),
           apiKey: resendApiKey.value(), from: MAIL_FROM,
           params: {amount: Number(p.amount ?? 0), bookingId: String(p.bookingId ?? "")},
         });
@@ -463,7 +450,7 @@ async function anonymizeAll(
  *  transaction:
  *
  *  - DELETED outright: the auth account and everything purely personal —
- *    profile, pets, swipes, and the pro/homestay listings.
+ *    profile, pets, swipes, notifications, and the pro/homestay listings.
  *  - ANONYMIZED: reviews, posts and comments keep their text but lose the
  *    author. Hard-deleting these would gut community threads other people are
  *    reading and silently drop ratings that other users' decisions rest on.
@@ -487,6 +474,7 @@ export const deleteMyAccount = onCall(
     // Personal content -> gone.
     await deleteAll(db.collection("pets").where("ownerId", "==", uid), db);
     await deleteAll(db.collection("swipes").where("fromUid", "==", uid), db);
+    await deleteAll(db.collection("notifications").doc(uid).collection("items"), db);
     await db.collection("pros").doc(uid).delete();
     await db.collection("homestays").doc(uid).delete();
 
@@ -649,7 +637,7 @@ export const refundBookingPayment = onCall(
       await notify({
         scenario: paid ? "PAY2" : "PAY3",
         uid,
-        key: `${paid ? "PAY2" : "PAY3"}_${bookingId}`,
+        key: scenarioKey(paid ? "PAY2" : "PAY3", bookingId),
         apiKey: resendApiKey.value(), from: MAIL_FROM,
         params: {
           kind, bookingId, refundId, amount: claim.refundAmount,

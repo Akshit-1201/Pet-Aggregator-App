@@ -4,6 +4,9 @@
  *  a scenario sent to two people can safely share one key. */
 
 export const bookingKey = (scenario: string, bookingId: string) => `${scenario}_${bookingId}`;
+/** Same shape as {@link bookingKey}, named generically because it also keys a
+ *  `paymentId` and a `payoutId`, not just a booking. */
+export const scenarioKey = (scenario: string, id: string) => `${scenario}_${id}`;
 export const chatKey = (chatId: string) => `chat_${chatId}`;
 export const postKey = (postId: string) => `post_${postId}`;
 export const matchKey = (otherUid: string) => `WOOF1_${otherUid}`;

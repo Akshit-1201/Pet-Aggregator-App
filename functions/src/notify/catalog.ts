@@ -55,15 +55,36 @@ const s = (p: P, k: string, fallback = "") => {
 const n = (p: P, k: string) => Number(p[k] ?? 0);
 const inr = (v: number) => `₹${Number(v || 0).toLocaleString("en-IN")}`;
 
+/** Human labels for the `serviceType` storage key that every producer forwards
+ *  straight from Firestore — `lib/data/models/booking.dart` writes
+ *  `serviceType.storageKey`, and `lib/data/models/pro.dart`'s `ServiceType`
+ *  enum is the single source of truth for these four keys and their labels.
+ *  Without this, the raw key ("walker") reaches users as prose, e.g. "walker
+ *  with Rahul was cancelled too late for a refund". */
+const SERVICE_LABEL: Record<string, string> = {
+  walker: "Dog Walker",
+  sitter: "Pet Sitter",
+  groomer: "Groomer",
+  trainer: "Trainer",
+};
+
+/** Resolves `serviceType` to its human label. An unrecognised key falls back
+ *  to the raw value — today's behaviour — rather than rendering empty; a
+ *  missing value falls back to `fallback`, same as every other field here. */
+const serviceLabel = (p: P, fallback = "") => {
+  const raw = s(p, "serviceType", "");
+  return raw ? (SERVICE_LABEL[raw] ?? raw) : fallback;
+};
+
 /** What was booked, in words, for whichever pillar this is. Keeps every
  *  money template pillar-correct — the bug that made refund emails say
  *  "Your stay at your Dog walking with Rahul was cancelled". */
 const subject = (p: P) => s(p, "kind") === "service" ?
-  `${s(p, "serviceType", "your booking")} with ${s(p, "proName", "your pro")}` :
+  `${serviceLabel(p, "your booking")} with ${s(p, "proName", "your pro")}` :
   `your stay at ${s(p, "homeName", "the home")}`;
 
 const receiptLines = (p: P): EmailRow[] => s(p, "kind") === "service" ?
-  [{label: `${s(p, "serviceType", "Service")} with ${s(p, "proName", "your pro")}`, amount: n(p, "rate")},
+  [{label: `${serviceLabel(p, "Service")} with ${s(p, "proName", "your pro")}`, amount: n(p, "rate")},
     {label: "Pawgo service fee", amount: n(p, "fee")}] :
   [{label: `${n(p, "nights")} nights at ${s(p, "homeName", "the home")}`, amount: n(p, "subtotal")},
     {label: "Pawgo service fee", amount: n(p, "fee")}];
@@ -86,7 +107,7 @@ export const CATALOG: Record<ScenarioId, Scenario> = {
       body: `${s(p, "petName", "A pet")} · ${s(p, "dateLabel")}`.trim()}),
     email: (p) => ({
       subject: `New Pawgo booking · ${s(p, "dateLabel")}`,
-      body: {heading: `${s(p, "serviceType", "A booking")} for ${s(p, "petName", "a pet")}`,
+      body: {heading: `${serviceLabel(p, "A booking")} for ${s(p, "petName", "a pet")}`,
         subheading: `${s(p, "dateLabel")} ${s(p, "timeSlot")}`.trim(),
         paragraphs: ["This booking is paid and confirmed. You'll be paid out after it's done."],
         footer: [`Booking ${s(p, "bookingId")}`]},
@@ -99,7 +120,7 @@ export const CATALOG: Record<ScenarioId, Scenario> = {
       body: `${s(p, "petName", "A pet")} · ${s(p, "dateLabel")}`.trim()}),
     email: (p) => ({
       subject: `Cancelled · ${s(p, "dateLabel")}`,
-      body: {heading: `${s(p, "serviceType", "A booking")} was cancelled`,
+      body: {heading: `${serviceLabel(p, "A booking")} was cancelled`,
         subheading: `${s(p, "petName", "A pet")} · ${s(p, "dateLabel")}`,
         paragraphs: ["That slot is free again in your calendar."]},
     }),
@@ -191,10 +212,10 @@ export const CATALOG: Record<ScenarioId, Scenario> = {
     category: "bookings", essential: false, collapse: false,
     route: BOOKINGS, channels: ["email"],
     render: (p) => ({title: "Booking created — pay to confirm",
-      body: `${s(p, "serviceType", "Service")} · ${s(p, "dateLabel")}`}),
+      body: `${serviceLabel(p, "Service")} · ${s(p, "dateLabel")}`}),
     email: (p) => ({
-      subject: `Pay to confirm · ${s(p, "serviceType", "your booking")}`,
-      body: {heading: `${s(p, "serviceType", "Your booking")} with ${s(p, "proName", "your pro")}`,
+      subject: `Pay to confirm · ${serviceLabel(p, "your booking")}`,
+      body: {heading: `${serviceLabel(p, "Your booking")} with ${s(p, "proName", "your pro")}`,
         subheading: `${s(p, "dateLabel")} ${s(p, "timeSlot")}`.trim(),
         paragraphs: [`Pay ${inr(n(p, "total"))} in the Pawgo app to confirm. ` +
           "Unpaid bookings expire on the day of service."],
@@ -226,7 +247,7 @@ export const CATALOG: Record<ScenarioId, Scenario> = {
     email: (p) => ({
       subject: `Your Pawgo receipt · ${inr(n(p, "total"))}`,
       body: {heading: s(p, "kind") === "service" ?
-        `${s(p, "serviceType", "Service")} with ${s(p, "proName", "your pro")}` :
+        `${serviceLabel(p, "Service")} with ${s(p, "proName", "your pro")}` :
         `${s(p, "petName", "Your pet")} at ${s(p, "homeName", "the home")}`,
       subheading: s(p, "kind") === "service" ?
         `${s(p, "dateLabel")} ${s(p, "timeSlot")}`.trim() :
@@ -321,7 +342,7 @@ export const CATALOG: Record<ScenarioId, Scenario> = {
     category: "reminders", essential: false, collapse: false,
     route: BOOKINGS, channels: ["push"],
     render: (p) => ({title: "Pay today or this booking expires",
-      body: `${s(p, "serviceType", "Your booking")} with ${s(p, "proName", "your pro")} · today`}),
+      body: `${serviceLabel(p, "Your booking")} with ${s(p, "proName", "your pro")} · today`}),
   },
   REM2: {
     category: "reminders", essential: false, collapse: false,
@@ -333,7 +354,7 @@ export const CATALOG: Record<ScenarioId, Scenario> = {
     category: "reminders", essential: false, collapse: false,
     route: BOOKINGS, channels: ["push"],
     render: (p) => ({title: "Appointment tomorrow",
-      body: `${s(p, "serviceType", "Booking")} · ${s(p, "petName", "your pet")} · ${s(p, "timeSlot")}`}),
+      body: `${serviceLabel(p, "Booking")} · ${s(p, "petName", "your pet")} · ${s(p, "timeSlot")}`}),
   },
   REM4: {
     category: "reminders", essential: false, collapse: false,
