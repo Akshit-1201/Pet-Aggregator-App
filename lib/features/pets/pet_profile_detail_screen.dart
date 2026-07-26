@@ -39,8 +39,12 @@ class PetProfileDetailScreen extends ConsumerWidget {
           Stack(children: [
             // Same gallery the homestay listings use — swipeable, with a counter
             // and dots — now that a pet carries up to five photos.
+            //
+            // dotsBottomInset clears the detail card below, which is pulled up
+            // 26px over the gallery: at the default inset the dots render behind
+            // it and only the counter is visible.
             HomeGallery(photoUrls: p.photoUrls, emoji: _speciesEmoji(p.species),
-                height: 280),
+                height: 280, dotsBottomInset: 46),
             Positioned(top: 0, left: 0, child: SafeArea(child: Padding(
               padding: const EdgeInsets.all(14),
               child: GestureDetector(

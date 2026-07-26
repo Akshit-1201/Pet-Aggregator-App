@@ -32,6 +32,10 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
   /// host setup uses.
   final List<String> _photos = [];
   String? _nameError;
+  /// Separate from [_nameError] so the photo complaint renders beside the photo
+  /// strip rather than under the name field, and so adding a photo can clear it
+  /// without touching the name's own validation.
+  String? _photoError;
 
   static const _speciesLabel = {
     Species.dog: '🐶 Dog', Species.cat: '🐱 Cat', Species.other: '🐦 Other',
@@ -56,7 +60,12 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
       final url = await ref.read(storageRepositoryProvider).uploadImage(
           path: 'pets/${uid}_${DateTime.now().millisecondsSinceEpoch}.jpg', bytes: bytes);
       if (!mounted) return;
-      setState(() => _photos.add(url));
+      // Clear the complaint as soon as it stops being true — otherwise the
+      // counter reads 3/5 in brand orange while a red "(0 so far)" sits below it.
+      setState(() {
+        _photos.add(url);
+        _photoError = null;
+      });
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -79,12 +88,12 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
       return;
     }
     if (_photos.length < PetProfile.minPhotos) {
-      setState(() => _nameError =
+      setState(() => _photoError =
           'Add at least ${PetProfile.minPhotos} photos of your pet '
           '(${_photos.length} so far).');
       return;
     }
-    setState(() { _saving = true; _nameError = null; });
+    setState(() { _saving = true; _nameError = null; _photoError = null; });
     // Await the profile rather than cold-reading currentUserProfileProvider:
     // arriving here straight from onboarding, that provider is still
     // AsyncLoading, so `.value?.area` silently yielded '' and the pet was
@@ -146,6 +155,11 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
                   style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
                 const SizedBox(height: 10),
                 _photoStrip(c),
+                if (_photoError != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(_photoError!,
+                        style: PgText.inter(13, FontWeight.w600, color: c.heart))),
                 const SizedBox(height: 18),
                 PgTextField(label: 'Pet name', controller: _name, hint: 'Bruno'),
                 if (_nameError != null)
@@ -226,7 +240,10 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
               top: 4, right: 4,
               child: GestureDetector(
                 key: Key('remove-pet-photo-$i'),
-                onTap: () => setState(() => _photos.removeAt(i)),
+                onTap: () => setState(() {
+                  _photos.removeAt(i);
+                  _photoError = null;
+                }),
                 child: Container(
                   width: 24, height: 24, alignment: Alignment.center,
                   decoration: BoxDecoration(color: c.ink, shape: BoxShape.circle),

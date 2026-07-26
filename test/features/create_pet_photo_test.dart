@@ -88,6 +88,12 @@ void main() {
 
     expect(find.textContaining('Add at least ${PetProfile.minPhotos} photos'), findsOneWidget);
     expect(await h.pets.watchMyPets(h.uid).first, isEmpty);
+
+    // Adding the missing photos must clear the complaint. It used to linger,
+    // so the counter read "3/5" in brand orange with a red "(1 so far)"
+    // underneath it — which reads as broken.
+    await _addPhotos(tester, PetProfile.minPhotos - 1);
+    expect(find.textContaining('Add at least ${PetProfile.minPhotos} photos'), findsNothing);
   });
 
   testWidgets('cancelling the picker adds nothing and uploads nothing', (tester) async {
