@@ -3,7 +3,7 @@ import {defineSecret} from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
 import * as admin from "firebase-admin";
 import {notify} from "./notify";
-import {bookingKey, chatKey, matchKey, postKey} from "./keys";
+import {bookingKey, chatKey, matchKey, postKey, verdictKey} from "./keys";
 import {maskContactDetails} from "./mask";
 import {MAIL_FROM} from "./email";
 
@@ -211,5 +211,26 @@ export const onServiceBookingCreated = onDocumentCreated(
       ...mail(),
       params: {serviceType: b.serviceType, proName: b.proName, dateLabel: b.dateLabel,
         timeSlot: b.timeSlot, total: b.total, bookingId: id},
+    });
+  });
+
+/** The admin panel's verdict on a KYC submission. Until now the panel flipped
+ *  `verified` and the partner was told nothing — so approval was invisible and
+ *  rejection looked like the feature was broken. Essential category: a partner
+ *  who muted notifications still needs to know their ID check failed. */
+export const onVerificationReviewed = onDocumentUpdated(
+  {region: REGION, document: "verificationRequests/{uid}", secrets: [resendApiKey]},
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after || before.status === after.status) return;
+    if (after.status !== "approved" && after.status !== "rejected") return;
+
+    const scenario = after.status === "approved" ? "ACC1" : "ACC2";
+    const reviewedAt = Number(after.reviewedAt ?? Date.now());
+    await notify({
+      scenario, uid: event.params.uid, key: verdictKey(scenario, reviewedAt),
+      ...mail(),
+      params: {reason: String(after.reason ?? "")},
     });
   });

@@ -305,7 +305,7 @@ export const createPayoutAccount = onCall(
  */
 export const processPayouts = onSchedule(
   {region: REGION, schedule: "every day 02:00", timeZone: "Asia/Kolkata",
-    secrets: [razorpayKeyId, razorpayKeySecret]},
+    secrets: [razorpayKeyId, razorpayKeySecret, resendApiKey]},
   async () => {
     const db = admin.firestore();
     const rzp = new Razorpay({
@@ -360,6 +360,11 @@ export const processPayouts = onSchedule(
       try {
         await rzp.transfers.edit(String(p.transferId), {on_hold: false});
         await setStatus(doc.ref, "released", {releasedAt: Date.now(), error: ""});
+        await notify({
+          scenario: "PAY4", uid: String(p.partnerId ?? ""), key: `PAY4_${doc.id}`,
+          apiKey: resendApiKey.value(), from: MAIL_FROM,
+          params: {amount: Number(p.amount ?? 0), bookingId: String(p.bookingId ?? "")},
+        });
       } catch (e) {
         logger.error("payout release failed", {payoutId: doc.id, error: e});
         await doc.ref.update({error: "release failed", updatedAt: Date.now()});
