@@ -1,5 +1,5 @@
 import {describe, it, expect} from "vitest";
-import {istDay} from "./reminders";
+import {istDay, sumOwedByPartner} from "./reminders";
 
 describe("istDay", () => {
   it("returns today in IST for offset 0", () => {
@@ -33,5 +33,53 @@ describe("istDay", () => {
   it("handles a leap day", () => {
     const at = Date.parse("2028-02-28T09:00:00+05:30");
     expect(istDay(at, 1)).toBe("2028-02-29");
+  });
+});
+
+describe("sumOwedByPartner", () => {
+  it("sums multiple owed payouts for one partner into a single total", () => {
+    const totals = sumOwedByPartner([
+      {partnerId: "p1", amount: 100},
+      {partnerId: "p1", amount: 250},
+    ]);
+    expect(totals.get("p1")).toBe(350);
+    expect(totals.size).toBe(1);
+  });
+
+  it("keeps two partners separate", () => {
+    const totals = sumOwedByPartner([
+      {partnerId: "p1", amount: 100},
+      {partnerId: "p2", amount: 200},
+    ]);
+    expect(totals.get("p1")).toBe(100);
+    expect(totals.get("p2")).toBe(200);
+    expect(totals.size).toBe(2);
+  });
+
+  it("skips a payout with a missing or empty partnerId, not bucketed under \"\"", () => {
+    const totals = sumOwedByPartner([
+      {partnerId: "", amount: 100},
+      {amount: 50}, // partnerId entirely absent
+      {partnerId: "p1", amount: 10},
+    ]);
+    expect(totals.has("")).toBe(false);
+    expect(totals.size).toBe(1);
+    expect(totals.get("p1")).toBe(10);
+  });
+
+  it("treats a non-numeric or absent amount as 0, not NaN", () => {
+    const totals = sumOwedByPartner([
+      {partnerId: "p1", amount: "not-a-number"},
+      {partnerId: "p1"}, // amount entirely absent
+      {partnerId: "p2", amount: 100},
+    ]);
+    expect(totals.get("p1")).toBe(0);
+    expect(Number.isNaN(totals.get("p1"))).toBe(false);
+    expect(totals.get("p2")).toBe(100);
+  });
+
+  it("returns an empty map for empty input", () => {
+    const totals = sumOwedByPartner([]);
+    expect(totals.size).toBe(0);
   });
 });

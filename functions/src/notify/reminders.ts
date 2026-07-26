@@ -39,6 +39,28 @@ async function step(name: string, fn: () => Promise<void>) {
   }
 }
 
+export type OwedPayout = {partnerId?: unknown; amount?: unknown};
+
+/**
+ * What each partner is owed, summed across their `owed` payout records.
+ *
+ * Pure — no Firestore, no I/O — so the arithmetic is unit-testable without a
+ * database: a blank/missing partnerId must be skipped rather than bucketed
+ * under `""`, and a missing or non-numeric amount must contribute 0 rather
+ * than poisoning the running total with NaN (which would render as the
+ * literal string "₹NaN" in the reminder email).
+ */
+export function sumOwedByPartner(payouts: OwedPayout[]): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const p of payouts) {
+    const partnerId = String(p.partnerId ?? "");
+    if (!partnerId) continue;
+    const amount = Number(p.amount);
+    totals.set(partnerId, (totals.get(partnerId) ?? 0) + (Number.isFinite(amount) ? amount : 0));
+  }
+  return totals;
+}
+
 export const dailyNotifications = onSchedule(
   {region: REGION, schedule: "every day 09:00", timeZone: "Asia/Kolkata",
     secrets: [resendApiKey]},
@@ -125,13 +147,7 @@ export const dailyNotifications = onSchedule(
     await step("PAY5", async () => {
       const owed = await db.collection("payouts")
         .where("status", "==", "owed").limit(500).get();
-      const totals = new Map<string, number>();
-      for (const d of owed.docs) {
-        const p = d.data();
-        const partnerId = String(p.partnerId ?? "");
-        if (!partnerId) continue;
-        totals.set(partnerId, (totals.get(partnerId) ?? 0) + Number(p.amount ?? 0));
-      }
+      const totals = sumOwedByPartner(owed.docs.map((d) => d.data()));
       for (const [partnerId, amount] of totals) {
         const account = await db.collection("payoutAccounts").doc(partnerId).get();
         if (account.data()?.razorpayAccountId) continue; // they can be paid
@@ -140,17 +156,34 @@ export const dailyNotifications = onSchedule(
       }
     });
 
-    // Retention.
+    // Retention. Drains in bounded pages rather than a single limited read:
+    // one page per day would cap daily reclaim below daily production once
+    // the app passes PAGE notifications/day, and the feed would grow faster
+    // than retention clears it — a slow leak invisible until long after
+    // launch. PAGE stays at or below Firestore's 500-write batch cap;
+    // MAX_PAGES bounds the run itself so a pathological backlog cannot make
+    // the scheduled job run forever.
     await step("retention", async () => {
       const cutoff = now - RETENTION_MS;
-      const stale = await db.collectionGroup("items")
-        .where("createdAt", "<", cutoff).limit(400).get();
-      for (let i = 0; i < stale.docs.length; i += 400) {
+      const PAGE = 400;
+      const MAX_PAGES = 25; // 10,000 records/run safety bound.
+      let deleted = 0;
+      let pagesRun = 0;
+      for (; pagesRun < MAX_PAGES; pagesRun++) {
+        const stale = await db.collectionGroup("items")
+          .where("createdAt", "<", cutoff).limit(PAGE).get();
+        if (stale.empty) break;
         const batch = db.batch();
-        stale.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+        stale.docs.forEach((d) => batch.delete(d.ref));
         await batch.commit();
+        deleted += stale.size;
+        if (stale.size < PAGE) break; // fewer than a full page: nothing left
       }
-      logger.info("notification retention swept", {deleted: stale.size});
+      if (pagesRun >= MAX_PAGES) {
+        logger.error("notification retention hit the page safety bound; " +
+          "more stale records may remain for tomorrow's run", {deleted, MAX_PAGES});
+      }
+      logger.info("notification retention swept", {deleted, pages: pagesRun});
     });
 
     logger.info("dailyNotifications done", {today, tomorrow, yesterday});
