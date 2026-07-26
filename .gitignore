@@ -44,3 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 backup/
+
+# Subagent-driven-development scratch (ledgers, briefs, review packages)
+.superpowers/
