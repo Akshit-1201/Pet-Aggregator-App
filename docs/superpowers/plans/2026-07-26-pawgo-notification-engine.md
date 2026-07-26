@@ -74,7 +74,7 @@ Run: `npm --prefix functions install`
 Create `functions/src/notify/email.test.ts`:
 
 ```ts
-import {describe, it, expect} from "vitest";
+import {describe, it, expect, vi, beforeEach} from "vitest";
 import {renderEmail, sendEmail} from "./email";
 
 describe("renderEmail", () => {
@@ -115,19 +115,54 @@ describe("renderEmail", () => {
     const {text} = renderEmail({heading: "x", footer: ["Payment ID pay_123"]});
     expect(text).toContain("Payment ID pay_123");
   });
+
+  // A receipt is the one body that uses rows AND footer together, and it is the
+  // most-sent email in the catalogue. Pin the order in both renderings.
+  it("puts the footer below the line items in HTML, matching the text order", () => {
+    const body = {
+      heading: "Dog walk with Rahul",
+      rows: [{label: "Dog walk", amount: 400}],
+      footer: ["Payment ID pay_123"],
+    };
+    const {html, text} = renderEmail(body);
+    expect(html.indexOf("Payment ID pay_123")).toBeGreaterThan(html.indexOf("Dog walk</td>"));
+    expect(text.indexOf("Payment ID pay_123")).toBeGreaterThan(text.indexOf("Dog walk: ₹400"));
+  });
 });
 
+// Spy on the SDK itself. Asserting only the return value would not catch a
+// regressed `isMailConfigured` guard: execution would fall through to a real
+// `new Resend("unset").emails.send(...)`, still return false via the catch
+// path, and leave this suite green while firing live API calls.
+const sendSpy = vi.fn(async () => ({data: {id: "e_1"}, error: null}));
+vi.mock("resend", () => ({
+  Resend: vi.fn().mockImplementation(() => ({emails: {send: sendSpy}})),
+}));
+
 describe("sendEmail", () => {
-  it("returns false without calling Resend when the key is the placeholder", async () => {
+  beforeEach(() => sendSpy.mockClear());
+
+  it("returns false WITHOUT calling Resend when the key is the placeholder", async () => {
     const ok = await sendEmail("unset", "Pawgo <a@b.com>", "x@y.com", "Subject",
       {heading: "x"});
     expect(ok).toBe(false);
+    expect(sendSpy).not.toHaveBeenCalled();
   });
 
-  it("returns false when there is no recipient", async () => {
+  it("returns false WITHOUT calling Resend when there is no recipient", async () => {
     const ok = await sendEmail("re_realkey", "Pawgo <a@b.com>", "", "Subject",
       {heading: "x"});
     expect(ok).toBe(false);
+    expect(sendSpy).not.toHaveBeenCalled();
+  });
+
+  // Positive control: without this, a spy that never fires would make both
+  // assertions above vacuously true.
+  it("does call Resend with a configured key and a real recipient", async () => {
+    const ok = await sendEmail("re_realkey", "Pawgo <a@b.com>", "x@y.com", "Subject",
+      {heading: "x"});
+    expect(ok).toBe(true);
+    expect(sendSpy).toHaveBeenCalledTimes(1);
   });
 });
 ```
@@ -200,10 +235,16 @@ export function renderEmail(b: EmailBody): {html: string; text: string} {
           <div style="color:#6B7280;font-size:14px;margin-top:8px;line-height:1.6;">${esc(p)}</div>`)
     .join("");
 
+  // Rendered AFTER the line-item table, matching the text alternative's order.
+  // A receipt's small print (payment id, booking id) belongs below the total —
+  // putting it in the heading block instead would place it above the items in
+  // HTML while the plain-text version put it below, and PAY1 uses both.
   const footHtml = (b.footer ?? []).length === 0 ? "" : `
-          <div style="color:#9CA3AF;font-size:12px;line-height:1.6;margin-top:18px;">
+        <tr><td style="padding:14px 26px 0;">
+          <div style="color:#9CA3AF;font-size:12px;line-height:1.6;">
             ${(b.footer ?? []).map(esc).join("<br/>")}
-          </div>`;
+          </div>
+        </td></tr>`;
 
   const html = `<!doctype html>
 <html><body style="margin:0;padding:0;background:#FBF1E8;">
@@ -216,8 +257,8 @@ export function renderEmail(b: EmailBody): {html: string; text: string} {
         <tr><td style="padding:24px 26px 8px;">
           <div style="color:#111827;font-size:17px;font-weight:700;">${esc(b.heading)}</div>
           ${b.subheading ? `<div style="color:#6B7280;font-size:13px;margin-top:3px;">${esc(b.subheading)}</div>` : ""}
-          ${paraHtml}${footHtml}
-        </td></tr>${tableHtml}
+          ${paraHtml}
+        </td></tr>${tableHtml}${footHtml}
         <tr><td style="padding:20px 26px 26px;">
           <div style="color:#9CA3AF;font-size:12px;line-height:1.6;">
             Questions? Just reply to this email.
@@ -278,7 +319,7 @@ export async function sendEmail(
 - [ ] **Step 5: Run the tests and the build**
 
 Run: `npm --prefix functions test`
-Expected: PASS — 7 tests
+Expected: PASS — 9 tests
 
 Run: `npm --prefix functions run build`
 Expected: exit 0, no output
