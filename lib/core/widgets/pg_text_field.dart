@@ -28,6 +28,10 @@ class PgTextField extends StatelessWidget {
     final c = context.pg;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      // Size to the label + box. Forms give this unbounded height so max and
+      // min look identical there, but anything that hands it bounded height —
+      // an AlertDialog's content, say — gets a field stretched to fill it.
+      mainAxisSize: MainAxisSize.min,
       children: [
         if (label.isNotEmpty)
           Padding(

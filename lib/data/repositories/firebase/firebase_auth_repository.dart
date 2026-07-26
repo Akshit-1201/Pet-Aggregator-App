@@ -86,7 +86,14 @@ class FirebaseAuthRepository implements AuthRepository {
       await user.reauthenticateWithCredential(
           EmailAuthProvider.credential(email: email, password: password));
     } on FirebaseAuthException catch (e) {
-      throw AuthFailure.fromCode(e.code);
+      final f = AuthFailure.fromCode(e.code);
+      // fromCode's wording is written for sign-in ("Incorrect email or
+      // password"), but re-auth only ever asks for the password — the email is
+      // the one already signed in, so it cannot be the wrong half.
+      if (f.type == AuthFailureType.invalidCredentials) {
+        throw const AuthFailure(AuthFailureType.invalidCredentials, 'Incorrect password.');
+      }
+      throw f;
     }
   }
 

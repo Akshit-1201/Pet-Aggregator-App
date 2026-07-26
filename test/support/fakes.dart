@@ -125,7 +125,9 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> reauthenticate(String password) async {
     final email = _current?.email;
     if (email == null || _passwords[email] != password) {
-      throw const AuthFailure(AuthFailureType.invalidCredentials, 'Incorrect email or password.');
+      // Same wording the real repo uses here: re-auth only asks for the
+      // password, so blaming the email would be misleading.
+      throw const AuthFailure(AuthFailureType.invalidCredentials, 'Incorrect password.');
     }
   }
 
