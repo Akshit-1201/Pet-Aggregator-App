@@ -15,7 +15,7 @@ class NotificationsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.pg;
     final items = ref.watch(notificationsProvider).value ?? const <NotificationRecord>[];
-    final hasUnread = items.any((n) => !n.read);
+    final hasUnread = ref.watch(hasUnreadNotificationsProvider);
     final myUid = ref.watch(authRepositoryProvider).currentUser?.uid ?? '';
 
     return Scaffold(

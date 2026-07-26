@@ -90,4 +90,25 @@ void main() {
     await t.pumpAndSettle();
     expect(find.text('Mark all read'), findsNothing);
   });
+
+  testWidgets('tapping an unread row marks it read and navigates to its route', (t) async {
+    final auth = await _signedInAuth();
+    final repo = FakeNotificationRepository([_rec('a')]);
+    await pumpPgApp(t, overrides: [
+      authRepositoryProvider.overrideWithValue(auth),
+      notificationRepositoryProvider.overrideWithValue(repo),
+      // The row's onTap navigates via context.go(item.route) to /payments,
+      // which reads these two directly (not defaulted by pumpPgApp).
+      bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
+      homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
+    ], initialLocation: Routes.notifications, providesNotificationRepository: true);
+    await t.pumpAndSettle();
+
+    expect(repo.records.single.read, isFalse);
+    await t.tap(find.text('Payment received'));
+    await t.pumpAndSettle();
+
+    expect(repo.records.single.read, isTrue);
+    expect(find.text('Payments'), findsOneWidget); // landed on /payments
+  });
 }
