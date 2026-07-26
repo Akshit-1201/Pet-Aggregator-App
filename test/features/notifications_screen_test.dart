@@ -18,7 +18,8 @@ NotificationRecord _rec(String id,
 /// Notifications is a protected route (see `_protected` in app_router.dart),
 /// so every test here needs a signed-in user or the router bounces to Welcome
 /// before the screen — and NotificationsScreen itself reads `myUid` off
-/// authRepositoryProvider — before it ever gets to the repository override.
+/// authStateProvider (the same source notificationsProvider uses) — before it
+/// ever gets to the repository override.
 Future<FakeAuthRepository> _signedInAuth() async {
   final auth = FakeAuthRepository();
   await auth.signUp(email: 'me@x.com', password: 'secret1');

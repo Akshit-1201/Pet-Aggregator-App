@@ -1,5 +1,5 @@
 import {describe, it, expect} from "vitest";
-import {bookingKey, chatKey, postKey, matchKey, monthKey, verdictKey} from "./keys";
+import {bookingKey, scenarioKey, chatKey, postKey, matchKey, monthKey, verdictKey} from "./keys";
 
 describe("dedupe keys", () => {
   it("are stable across calls", () => {
@@ -20,6 +20,12 @@ describe("dedupe keys", () => {
     expect(postKey("p1")).toBe("post_p1");
     expect(matchKey("u2")).toBe("WOOF1_u2");
     expect(verdictKey("ACC1", 1753500000000)).toBe("ACC1_1753500000000");
+  });
+
+  it("scenarioKey builds the same shape as bookingKey, for non-booking ids", () => {
+    expect(scenarioKey("PAY1", "pay_123")).toBe("PAY1_pay_123");
+    expect(scenarioKey("PAY4", "payout_1")).toBe("PAY4_payout_1");
+    expect(scenarioKey("PAY1", "x")).toBe(bookingKey("PAY1", "x"));
   });
 
   it("buckets monthly keys by IST calendar month", () => {

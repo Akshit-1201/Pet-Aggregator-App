@@ -136,11 +136,19 @@ describe("notify", () => {
     expect(pushed).toHaveLength(0);
   });
 
-  it("never throws when the record write fails", async () => {
+  it("a failed record write still sends both channels (delivery beats dedupe)", async () => {
+    // Pins a deliberate ruling: `fresh` defaults `true` *before* the write is
+    // attempted, so a record-write failure degrades to "no feed row" rather
+    // than "no notification at all". A refactor that initialises `fresh` to
+    // `false`, or moves the `if (!fresh) return` inside the try, would
+    // silently turn an essential-tier delivery failure into total silence —
+    // with `resolves.toBeUndefined()` alone still green.
     setNotifyDeps({writeRecord: async () => {
       throw new Error("firestore down");
     }});
     await expect(notify({...base, scenario: "PAY1", params: {}})).resolves.toBeUndefined();
+    expect(pushed).toHaveLength(1);
+    expect(emailed).toHaveLength(1);
   });
 
   afterEach(() => resetNotifyDeps());
