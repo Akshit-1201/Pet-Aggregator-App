@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart' show ThemeMode;
+import 'package:flutter/material.dart' show ThemeMode, Scrollable;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pet_aggregator_app/core/router/routes.dart';
 import 'package:pet_aggregator_app/core/widgets/pg_toggle.dart';
@@ -42,6 +42,12 @@ void main() {
     expect(find.text('Booking updates'), findsOneWidget);
     expect(find.text('Chat safety'), findsOneWidget);
     expect(find.text('Location sharing'), findsNothing);
+    // The notification card now has five toggles plus the essential row,
+    // which pushes "About Pawgo" below the fold on the test's phone-sized
+    // surface.
+    await tester.dragUntilVisible(
+        find.text('About Pawgo'), find.byType(Scrollable), const Offset(0, -200));
+    await tester.pumpAndSettle();
     expect(find.text('About Pawgo'), findsOneWidget);
   });
 }

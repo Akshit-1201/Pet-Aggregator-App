@@ -29,6 +29,11 @@ Future<FakeAuthRepository> _openDialog(WidgetTester tester) async {
   ], initialLocation: Routes.settings);
   await tester.pumpAndSettle();
 
+  // The notification card now has five toggles plus the essential row, which
+  // pushes "Delete account" below the fold on the test's phone-sized surface.
+  await tester.dragUntilVisible(
+      find.text('Delete account'), find.byType(Scrollable), const Offset(0, -200));
+  await tester.pumpAndSettle();
   await tester.tap(find.text('Delete account'));
   await tester.pumpAndSettle();
   return auth;

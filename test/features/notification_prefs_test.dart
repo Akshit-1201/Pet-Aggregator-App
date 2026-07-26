@@ -75,4 +75,54 @@ void main() {
 
     expect(find.text('Nearby pet alerts'), findsNothing);
   });
+
+  test('community and reminders default to ON when absent', () {
+    final p = NotificationPrefs.fromMap(const {});
+    expect(p.community, isTrue);
+    expect(p.reminders, isTrue);
+  });
+
+  test('round-trips all five flags', () {
+    const p = NotificationPrefs(
+        messages: false, bookings: true, woofs: false,
+        community: false, reminders: true);
+    final back = NotificationPrefs.fromMap(p.toMap());
+    expect(back.messages, isFalse);
+    expect(back.bookings, isTrue);
+    expect(back.woofs, isFalse);
+    expect(back.community, isFalse);
+    expect(back.reminders, isTrue);
+  });
+
+  test('copyWith touches only the named flag', () {
+    const p = NotificationPrefs();
+    expect(p.copyWith(community: false).community, isFalse);
+    expect(p.copyWith(community: false).reminders, isTrue);
+  });
+
+  testWidgets('renders five toggles and an always-on essential row',
+      (tester) async {
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    final users = InMemoryUserRepository();
+    final uid = auth.currentUser!.uid;
+    await users.createUser(UserProfile(
+        uid: uid, name: 'Radhika Nair', email: 'me@x.com',
+        area: 'Bandra West', role: Role.petParent));
+
+    await pumpPgApp(tester, overrides: [
+      authRepositoryProvider.overrideWithValue(auth),
+      userRepositoryProvider.overrideWithValue(users),
+      preferencesRepositoryProvider.overrideWithValue(InMemoryPreferencesRepository()),
+    ], initialLocation: Routes.settings);
+    await tester.pumpAndSettle();
+
+    expect(find.text('New messages'), findsOneWidget);
+    expect(find.text('Booking updates'), findsOneWidget);
+    expect(find.text('New Woofs & matches'), findsOneWidget);
+    expect(find.text('Community replies'), findsOneWidget);
+    expect(find.text('Reminders'), findsOneWidget);
+    expect(find.text('Payments & account'), findsOneWidget);
+    expect(find.text('Always on'), findsOneWidget);
+  });
 }
