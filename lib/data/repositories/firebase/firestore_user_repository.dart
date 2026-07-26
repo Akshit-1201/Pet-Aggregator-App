@@ -18,10 +18,6 @@ class FirestoreUserRepository implements UserRepository {
   Future<void> updateArea(String uid, String area) => _col.doc(uid).update({'area': area});
 
   @override
-  Future<void> markNotificationsSeen(String uid) =>
-      _col.doc(uid).update({'notifsSeenAt': DateTime.now().millisecondsSinceEpoch});
-
-  @override
   Future<void> setPhotoUrl(String uid, String url) => _col.doc(uid).update({'photoUrl': url});
 
   @override

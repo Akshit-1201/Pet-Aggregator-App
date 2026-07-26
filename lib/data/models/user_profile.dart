@@ -37,12 +37,11 @@ class NotificationPrefs {
 class UserProfile {
   final String uid, name, email, area, photoUrl;
   final Role role;
-  final int notifsSeenAt;
   final NotificationPrefs notify;
 
   const UserProfile({
     required this.uid, required this.name, required this.email,
-    required this.area, required this.role, this.notifsSeenAt = 0,
+    required this.area, required this.role,
     this.photoUrl = '', this.notify = const NotificationPrefs(),
   });
 
@@ -51,7 +50,6 @@ class UserProfile {
         'email': email,
         'area': area,
         'role': role.storageKey,
-        'notifsSeenAt': notifsSeenAt,
         'photoUrl': photoUrl,
         ...notify.toMap(),
       };
@@ -62,17 +60,15 @@ class UserProfile {
         email: (m['email'] ?? '') as String,
         area: (m['area'] ?? '') as String,
         role: Role.fromStorage((m['role'] ?? 'petParent') as String),
-        notifsSeenAt: (m['notifsSeenAt'] ?? 0) as int,
         photoUrl: (m['photoUrl'] ?? '') as String,
         notify: NotificationPrefs.fromMap(m),
       );
 
   UserProfile copyWith({
-    String? area, int? notifsSeenAt, String? photoUrl, NotificationPrefs? notify,
+    String? area, String? photoUrl, NotificationPrefs? notify,
   }) =>
       UserProfile(
         uid: uid, name: name, email: email, area: area ?? this.area, role: role,
-        notifsSeenAt: notifsSeenAt ?? this.notifsSeenAt,
         photoUrl: photoUrl ?? this.photoUrl,
         notify: notify ?? this.notify,
       );
