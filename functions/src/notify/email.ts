@@ -72,9 +72,10 @@ export function renderEmail(b: EmailBody): {html: string; text: string} {
         <tr><td style="padding:24px 26px 8px;">
           <div style="color:#111827;font-size:17px;font-weight:700;">${esc(b.heading)}</div>
           ${b.subheading ? `<div style="color:#6B7280;font-size:13px;margin-top:3px;">${esc(b.subheading)}</div>` : ""}
-          ${paraHtml}${footHtml}
+          ${paraHtml}
         </td></tr>${tableHtml}
         <tr><td style="padding:20px 26px 26px;">
+          ${footHtml}
           <div style="color:#9CA3AF;font-size:12px;line-height:1.6;">
             Questions? Just reply to this email.
           </div>
