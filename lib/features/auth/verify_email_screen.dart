@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -95,57 +96,66 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
     final c = context.pg;
     final email = ref.watch(authRepositoryProvider).currentUser?.email ?? 'your email';
 
-    return Scaffold(
-      backgroundColor: c.bg,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(28, 20, 28, 24),
-          child: Column(children: [
-            const Spacer(),
-            const Text('📬', style: TextStyle(fontSize: 58)),
-            const SizedBox(height: 20),
-            Text('Confirm your email',
-                textAlign: TextAlign.center,
-                style: PgText.poppins(23, FontWeight.w800, color: c.text)),
-            const SizedBox(height: 10),
-            Text('We sent a link to', textAlign: TextAlign.center,
-                style: PgText.inter(14, FontWeight.w400, color: c.muted)),
-            const SizedBox(height: 3),
-            Text(email, textAlign: TextAlign.center,
-                style: PgText.inter(14.5, FontWeight.w700, color: c.text)),
-            const SizedBox(height: 14),
-            Text('Tap it, then come back here. This keeps Pawgo free of fake '
-                'accounts so pet parents and pros can trust each other.',
-                textAlign: TextAlign.center,
-                style: PgText.inter(13, FontWeight.w400, color: c.muted, height: 1.55)),
-            const Spacer(),
-            PgPrimaryButton(label: "I've confirmed it", onPressed: _check),
-            const SizedBox(height: 12),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: _resendCooldown > 0 ? null : _resend,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                    _resendCooldown > 0
-                        ? 'Resend email in ${_resendCooldown}s'
-                        : 'Resend email',
-                    textAlign: TextAlign.center,
-                    style: PgText.inter(13.5, FontWeight.w700,
-                        color: _resendCooldown > 0 ? c.faint : c.brand)),
+    return PgBackScope(
+      // Every meaningful route is gated behind verification, so a plain pop
+      // would land back on a protected route, get bounced here by the
+      // redirect, and leave the person stuck with no way out but killing the
+      // app. Sign out first, then force Welcome regardless of what's on the
+      // stack — a pop is never the right answer from this screen.
+      upTo: Routes.welcome,
+      onBeforeLeave: () => ref.read(authRepositoryProvider).signOut(),
+      child: Scaffold(
+        backgroundColor: c.bg,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(28, 20, 28, 24),
+            child: Column(children: [
+              const Spacer(),
+              const Text('📬', style: TextStyle(fontSize: 58)),
+              const SizedBox(height: 20),
+              Text('Confirm your email',
+                  textAlign: TextAlign.center,
+                  style: PgText.poppins(23, FontWeight.w800, color: c.text)),
+              const SizedBox(height: 10),
+              Text('We sent a link to', textAlign: TextAlign.center,
+                  style: PgText.inter(14, FontWeight.w400, color: c.muted)),
+              const SizedBox(height: 3),
+              Text(email, textAlign: TextAlign.center,
+                  style: PgText.inter(14.5, FontWeight.w700, color: c.text)),
+              const SizedBox(height: 14),
+              Text('Tap it, then come back here. This keeps Pawgo free of fake '
+                  'accounts so pet parents and pros can trust each other.',
+                  textAlign: TextAlign.center,
+                  style: PgText.inter(13, FontWeight.w400, color: c.muted, height: 1.55)),
+              const Spacer(),
+              PgPrimaryButton(label: "I've confirmed it", onPressed: _check),
+              const SizedBox(height: 12),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: _resendCooldown > 0 ? null : _resend,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                      _resendCooldown > 0
+                          ? 'Resend email in ${_resendCooldown}s'
+                          : 'Resend email',
+                      textAlign: TextAlign.center,
+                      style: PgText.inter(13.5, FontWeight.w700,
+                          color: _resendCooldown > 0 ? c.faint : c.brand)),
+                ),
               ),
-            ),
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => ref.read(authRepositoryProvider).signOut(),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text('Use a different email',
-                    textAlign: TextAlign.center,
-                    style: PgText.inter(13, FontWeight.w600, color: c.muted)),
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => ref.read(authRepositoryProvider).signOut(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text('Use a different email',
+                      textAlign: TextAlign.center,
+                      style: PgText.inter(13, FontWeight.w600, color: c.muted)),
+                ),
               ),
-            ),
-          ]),
+            ]),
+          ),
         ),
       ),
     );

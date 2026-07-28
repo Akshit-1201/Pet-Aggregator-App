@@ -374,4 +374,49 @@ void main() {
     expect(find.text('Press back again to exit'), findsOneWidget);
     expect(find.text('DETAIL'), findsOneWidget);
   });
+
+  // onBeforeLeave: verify-email's real use is signing out before the forced
+  // upTo navigate — this pins the ordering generically, without an auth repo.
+  testWidgets('onBeforeLeave runs exactly once, before navigation', (t) async {
+    var calls = 0;
+    final r = _router(
+      initial: '/parent',
+      detail: () => PgBackScope(
+        upTo: '/parent',
+        onBeforeLeave: () async {
+          calls++;
+          // Still on DETAIL at this point — the navigate that upTo performs
+          // happens only after this future completes.
+          expect(find.text('DETAIL'), findsOneWidget);
+        },
+        child: const Scaffold(body: Text('DETAIL')),
+      ),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+
+    await _systemBack(t);
+    expect(calls, 1);
+    expect(find.text('PARENT'), findsOneWidget);
+  });
+
+  testWidgets(
+      'an empty blockMessage suppresses the snack but still blocks', (t) async {
+    final r = _router(
+      initial: '/parent',
+      detail: () => PgBackScope(
+        blockWhen: () => true,
+        blockMessage: '',
+        child: const Scaffold(body: Text('DETAIL')),
+      ),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+
+    await _systemBack(t);
+    expect(find.byType(SnackBar), findsNothing);
+    expect(find.text('DETAIL'), findsOneWidget); // still blocked, still here
+  });
 }

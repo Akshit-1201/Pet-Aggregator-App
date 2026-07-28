@@ -41,9 +41,22 @@ class PgBackScope extends StatelessWidget {
   final String confirmTitle;
   final String confirmMessage;
 
-  /// Refuse back outright, e.g. while a payment is verifying.
+  /// Refuse back outright, e.g. while a payment is verifying. A predicate that
+  /// also performs its own side effect (e.g. onboarding stepping to the
+  /// previous page) is fine here — see the evaluation-order note on
+  /// [_nativePop] for why that doesn't fire on unrelated rebuilds.
   final BackPredicate? blockWhen;
+
+  /// Shown when [blockWhen] refuses back. Leave empty to suppress the snack
+  /// entirely — for a block that already communicates itself another way
+  /// (onboarding's page-back animation).
   final String blockMessage;
+
+  /// Runs after any confirm and immediately before navigating — for a side
+  /// effect that must happen on the way out, e.g. signing out before the
+  /// verify-email gate redirects. Guarded by `context.mounted` after the
+  /// await, same as everything else in [_resolve].
+  final Future<void> Function()? onBeforeLeave;
 
   const PgBackScope({
     super.key,
@@ -56,6 +69,7 @@ class PgBackScope extends StatelessWidget {
     this.confirmMessage = "You haven't saved this yet. Leaving now loses it.",
     this.blockWhen,
     this.blockMessage = 'Please wait — this is still in progress.',
+    this.onBeforeLeave,
   });
 
   /// Runs the nearest scope's resolver — the same path the OS back takes.
@@ -81,16 +95,24 @@ class PgBackScope extends StatelessWidget {
   // is nothing to pop, so a poppable stack must still let the OS handle back
   // natively (predictive-back animation intact) rather than being
   // intercepted here.
+  //
+  // `confirmExit`/`upTo` are checked before `blockWhen`/`confirmWhen` on
+  // purpose: this getter reruns on every rebuild of the screen (any parent
+  // `setState` reconstructs this widget), not only on an actual back press.
+  // `confirmExit`/`upTo` are plain fields, safe to re-read for free, and once
+  // either rules native pop out the `&&` chain short-circuits — so a
+  // `blockWhen` that also performs a side effect (onboarding's page-back)
+  // never runs here, only from an actual back attempt in [_resolve].
   bool _nativePop(BuildContext context) =>
-      !_safe(blockWhen) &&
-      !_safe(confirmWhen) &&
       !confirmExit &&
       upTo == null &&
+      !_safe(blockWhen) &&
+      !_safe(confirmWhen) &&
       context.canPop();
 
   Future<void> _resolve(BuildContext context) async {
     if (_safe(blockWhen)) {
-      showPgSnack(context, blockMessage);
+      if (blockMessage.isNotEmpty) showPgSnack(context, blockMessage);
       return;
     }
 
@@ -113,6 +135,11 @@ class PgBackScope extends StatelessWidget {
         ),
       );
       if (leave != true || !context.mounted) return;
+    }
+
+    if (onBeforeLeave != null) {
+      await onBeforeLeave!();
+      if (!context.mounted) return;
     }
 
     if (confirmExit) {
