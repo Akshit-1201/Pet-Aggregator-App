@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -25,7 +26,7 @@ class PaymentsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: c.bg,
       body: SafeArea(child: Column(children: [
-        PgAppBar(title: 'Payments', onBack: () => context.pop()),
+        PgAppBar(title: 'Payments', onBack: () => PgBackScope.pop(context)),
         Expanded(
           child: records.isEmpty
               ? _empty(c)

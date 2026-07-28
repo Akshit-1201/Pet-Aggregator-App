@@ -98,7 +98,8 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
           backgroundColor: c.surface,
           body: SafeArea(
             child: Column(children: [
-              PgAppBar(title: 'Offer your services', onBack: _exit),
+              Builder(builder: (ctx) =>
+                PgAppBar(title: 'Offer your services', onBack: () => PgBackScope.pop(ctx))),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),

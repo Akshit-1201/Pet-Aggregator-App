@@ -108,7 +108,8 @@ class _NewPostScreenState extends ConsumerState<NewPostScreen> {
           backgroundColor: c.surface,
           body: SafeArea(
             child: Column(children: [
-              PgAppBar(title: 'New post', onBack: () => context.pop()),
+              Builder(builder: (ctx) =>
+                PgAppBar(title: 'New post', onBack: () => PgBackScope.pop(ctx))),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(22, 8, 22, 24),

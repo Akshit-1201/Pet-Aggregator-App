@@ -153,10 +153,8 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
           backgroundColor: c.surface,
           body: SafeArea(
             child: Column(children: [
-              PgAppBar(title: 'Add your pet',
-                onBack: () => widget.fromOnboarding
-                    ? context.go(Routes.location)
-                    : (context.canPop() ? context.pop() : context.go(Routes.home))),
+              Builder(builder: (ctx) => PgAppBar(title: 'Add your pet',
+                onBack: () => PgBackScope.pop(ctx))),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),

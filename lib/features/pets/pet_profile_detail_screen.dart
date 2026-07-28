@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../core/router/routes.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
@@ -48,7 +47,7 @@ class PetProfileDetailScreen extends ConsumerWidget {
             Positioned(top: 0, left: 0, child: SafeArea(child: Padding(
               padding: const EdgeInsets.all(14),
               child: GestureDetector(
-                onTap: () => context.canPop() ? context.pop() : context.go(Routes.home),
+                onTap: () => PgBackScope.pop(context),
                 child: Container(width: 40, height: 40, alignment: Alignment.center,
                   decoration: BoxDecoration(color: c.surface, borderRadius: BorderRadius.circular(12), boxShadow: c.shadowSm),
                   child: Icon(Icons.chevron_left, color: c.text)))))),

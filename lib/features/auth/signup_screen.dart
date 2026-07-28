@@ -78,7 +78,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         backgroundColor: c.surface,
         body: SafeArea(
           child: Column(children: [
-            PgAppBar(title: 'Create account', onBack: () => context.go(Routes.welcome)),
+            Builder(builder: (ctx) =>
+              PgAppBar(title: 'Create account', onBack: () => PgBackScope.pop(ctx))),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),

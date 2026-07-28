@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_app_bar.dart';
@@ -20,7 +20,7 @@ class BlockedUsersScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: c.bg,
       body: SafeArea(child: Column(children: [
-        PgAppBar(title: 'Blocked users', onBack: () => context.pop()),
+        PgAppBar(title: 'Blocked users', onBack: () => PgBackScope.pop(context)),
         Expanded(child: blockedAsync.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (e, _) => Center(child: Text('Could not load your blocked list.',

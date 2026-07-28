@@ -145,12 +145,10 @@ class _HostSetupScreenState extends ConsumerState<HostSetupScreen> {
           backgroundColor: c.surface,
           body: SafeArea(
             child: Column(children: [
-              PgAppBar(
+              Builder(builder: (ctx) => PgAppBar(
                 title: 'List your home',
-                onBack: () => widget.fromOnboarding
-                    ? _exit()
-                    : (context.canPop() ? context.pop() : context.go(Routes.homestay)),
-              ),
+                onBack: () => PgBackScope.pop(ctx),
+              )),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
@@ -78,12 +77,10 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
         body: SafeArea(
           child: Column(
             children: [
-              PgAppBar(
+              Builder(builder: (ctx) => PgAppBar(
                 title: post.category.label,
-                onBack: () => context.canPop()
-                    ? context.pop()
-                    : context.go(Routes.community),
-              ),
+                onBack: () => PgBackScope.pop(ctx),
+              )),
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(22, 8, 22, 20),

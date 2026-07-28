@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -42,7 +43,7 @@ class _MyBookingsScreenState extends ConsumerState<MyBookingsScreen> {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           PgAppBar(
               title: hasListing ? 'Bookings' : 'My Bookings',
-              onBack: () => context.canPop() ? context.pop() : context.go(Routes.home)),
+              onBack: () => PgBackScope.pop(context)),
           if (hasListing)
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 2, 20, 6),

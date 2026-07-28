@@ -83,7 +83,8 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         backgroundColor: c.bg,
         body: SafeArea(
           child: Column(children: [
-            PgAppBar(title: 'Payment', onBack: () => context.pop()),
+            Builder(builder: (ctx) =>
+              PgAppBar(title: 'Payment', onBack: () => PgBackScope.pop(ctx))),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(22, 8, 22, 24),

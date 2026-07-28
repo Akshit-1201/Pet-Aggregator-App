@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -23,7 +24,7 @@ class ChatListScreen extends ConsumerWidget {
       backgroundColor: c.bg,
       body: SafeArea(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          PgAppBar(title: 'Messages', onBack: () => context.canPop() ? context.pop() : context.go(Routes.home)),
+          PgAppBar(title: 'Messages', onBack: () => PgBackScope.pop(context)),
           Padding(
             padding: const EdgeInsets.fromLTRB(22, 2, 22, 10),
             child: Container(

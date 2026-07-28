@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/router/routes.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/pg_app_bar.dart';
 import '../../data/models/notification_record.dart';
 import '../../data/models/post.dart'; // reuse Post.timeAgo
 import '../../data/repositories/providers.dart';
@@ -26,27 +27,22 @@ class NotificationsScreen extends ConsumerWidget {
       backgroundColor: c.bg,
       body: SafeArea(
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 12, 22, 10),
-            child: Row(children: [
-              GestureDetector(
-                onTap: () => context.canPop() ? context.pop() : context.go(Routes.home),
-                child: Container(
-                  width: 42, height: 42, alignment: Alignment.center,
-                  decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
-                    borderRadius: BorderRadius.circular(13)),
-                  child: Icon(Icons.chevron_left, color: c.text))),
-              const SizedBox(width: 14),
-              Expanded(child: Text('Notifications',
-                style: PgText.poppins(19, FontWeight.w800, color: c.text))),
-              if (hasUnread)
-                GestureDetector(
+          Row(children: [
+            Expanded(
+              child: PgAppBar(
+                title: 'Notifications',
+                onBack: () => PgBackScope.pop(context)),
+            ),
+            if (hasUnread)
+              Padding(
+                padding: const EdgeInsets.only(right: 24),
+                child: GestureDetector(
                   onTap: () =>
                       ref.read(notificationRepositoryProvider).markAllRead(myUid),
                   child: Text('Mark all read',
                     style: PgText.inter(12.5, FontWeight.w600, color: c.brand))),
-            ]),
-          ),
+              ),
+          ]),
           Expanded(child: items.isEmpty
             ? Center(child: Padding(
                 padding: const EdgeInsets.all(30),

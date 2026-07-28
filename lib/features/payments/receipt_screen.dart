@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
@@ -25,7 +24,8 @@ class ReceiptScreen extends StatelessWidget {
         body: SafeArea(
           child: Column(
             children: [
-              PgAppBar(title: 'Receipt', onBack: () => context.pop()),
+              Builder(builder: (ctx) =>
+                PgAppBar(title: 'Receipt', onBack: () => PgBackScope.pop(ctx))),
               Expanded(
                 child: r == null
                     ? Center(
