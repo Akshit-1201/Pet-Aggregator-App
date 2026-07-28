@@ -62,7 +62,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final post = widget.post;
     if (post == null) {
       return PgBackScope(
-        upTo: Routes.community,
+        upToIfEmpty: Routes.community,
         child: Scaffold(
           appBar: AppBar(),
           body: const Center(child: Text('No post')),
@@ -72,7 +72,7 @@ class _ThreadScreenState extends ConsumerState<ThreadScreen> {
     final commentsAsync = ref.watch(commentsProvider(post.id));
 
     return PgBackScope(
-      upTo: Routes.community,
+      upToIfEmpty: Routes.community,
       child: Scaffold(
         backgroundColor: c.bg,
         body: SafeArea(

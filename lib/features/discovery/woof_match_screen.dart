@@ -22,7 +22,7 @@ class WoofMatchScreen extends ConsumerWidget {
         ? pet!.ownerName
         : 'Pet parent';
     return PgBackScope(
-      upTo: Routes.discover,
+      upToIfEmpty: Routes.discover,
       child: Scaffold(
         body: Container(
           decoration: const BoxDecoration(

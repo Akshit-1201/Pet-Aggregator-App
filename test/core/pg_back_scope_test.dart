@@ -5,12 +5,23 @@ import 'package:pet_aggregator_app/core/navigation/exit_confirm.dart';
 import 'package:pet_aggregator_app/core/navigation/pg_back_scope.dart';
 
 /// A two-route app so we can test both "there is a stack" and "there is not".
-GoRouter _router({required Widget Function() detail, String initial = '/detail'}) =>
-    GoRouter(initialLocation: initial, routes: [
-      GoRoute(path: '/', builder: (_, _) => const Scaffold(body: Text('ROOT'))),
-      GoRoute(path: '/parent', builder: (_, _) => const Scaffold(body: Text('PARENT'))),
-      GoRoute(path: '/detail', builder: (_, _) => detail()),
-    ]);
+GoRouter _router({
+  required Widget Function() detail,
+  String initial = '/detail',
+}) => GoRouter(
+  initialLocation: initial,
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (_, _) => const Scaffold(body: Text('ROOT')),
+    ),
+    GoRoute(
+      path: '/parent',
+      builder: (_, _) => const Scaffold(body: Text('PARENT')),
+    ),
+    GoRoute(path: '/detail', builder: (_, _) => detail()),
+  ],
+);
 
 Future<void> _pump(WidgetTester t, GoRouter r) async {
   await t.pumpWidget(MaterialApp.router(routerConfig: r));
@@ -25,8 +36,9 @@ Future<void> _systemBack(WidgetTester t) async {
 
 void main() {
   testWidgets('with no options and a stack, back pops natively', (t) async {
-    final r = _router(detail: () => const PgBackScope(
-        child: Scaffold(body: Text('DETAIL'))));
+    final r = _router(
+      detail: () => const PgBackScope(child: Scaffold(body: Text('DETAIL'))),
+    );
     await _pump(t, r);
     r.push('/parent');
     await t.pumpAndSettle();
@@ -55,7 +67,9 @@ void main() {
     // `find.byType(PopScope)` does an exact Type match, which misses this
     // Flutter version's generic `PopScope<Object>` runtime type; a predicate
     // using `is` accounts for the type argument.
-    final scope = t.widget<PopScope>(find.byWidgetPredicate((w) => w is PopScope).last);
+    final scope = t.widget<PopScope>(
+      find.byWidgetPredicate((w) => w is PopScope).last,
+    );
     expect(scope.canPop, isTrue);
   });
 
@@ -71,7 +85,9 @@ void main() {
     final r = _router(
       initial: '/',
       detail: () => const PgBackScope(
-          upTo: '/parent', child: Scaffold(body: Text('DETAIL'))),
+        upTo: '/parent',
+        child: Scaffold(body: Text('DETAIL')),
+      ),
     );
     await _pump(t, r);
     r.push('/detail');
@@ -83,9 +99,15 @@ void main() {
     expect(find.text('PARENT'), findsOneWidget);
   });
 
-  testWidgets('upTo is used when there is NO stack (cold-start deep link)', (t) async {
-    final r = _router(detail: () => const PgBackScope(
-        upTo: '/parent', child: Scaffold(body: Text('DETAIL'))));
+  testWidgets('upTo is used when there is NO stack (cold-start deep link)', (
+    t,
+  ) async {
+    final r = _router(
+      detail: () => const PgBackScope(
+        upTo: '/parent',
+        child: Scaffold(body: Text('DETAIL')),
+      ),
+    );
     await _pump(t, r);
     expect(find.text('DETAIL'), findsOneWidget);
 
@@ -94,21 +116,98 @@ void main() {
   });
 
   testWidgets('canPop is false when upTo is set, so we intercept', (t) async {
-    final r = _router(detail: () => const PgBackScope(
-        upTo: '/parent', child: Scaffold(body: Text('DETAIL'))));
+    final r = _router(
+      detail: () => const PgBackScope(
+        upTo: '/parent',
+        child: Scaffold(body: Text('DETAIL')),
+      ),
+    );
     await _pump(t, r);
-    final scope = t.widget<PopScope>(find.byWidgetPredicate((w) => w is PopScope).last);
+    final scope = t.widget<PopScope>(
+      find.byWidgetPredicate((w) => w is PopScope).last,
+    );
     expect(scope.canPop, isFalse);
   });
 
-  testWidgets('PgBackScope.pop runs the same resolver as system back', (t) async {
+  // upToIfEmpty: unlike upTo, a real pop wins whenever a stack exists — it
+  // only fires as a fallback for the empty-stack / cold-start case. This is
+  // what lets a screen reached by `push` (thread, woof-match, receipt) return
+  // to its live parent with state intact, instead of `go` rebuilding it.
+
+  testWidgets('upToIfEmpty does NOT suppress a real pop: a poppable stack pops '
+      'to the actual parent, not to upToIfEmpty', (t) async {
+    final r = _router(
+      initial: '/',
+      detail: () => const PgBackScope(
+        upToIfEmpty: '/parent',
+        child: Scaffold(body: Text('DETAIL')),
+      ),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+    expect(find.text('DETAIL'), findsOneWidget);
+
+    await _systemBack(t);
+    // The real stack pop wins: back lands on ROOT (the actual parent
+    // beneath DETAIL), never on '/parent' — upToIfEmpty didn't fire because
+    // there was something to pop to.
+    expect(find.text('ROOT'), findsOneWidget);
+    expect(find.text('PARENT'), findsNothing);
+  });
+
+  testWidgets(
+    'upToIfEmpty is used when there is NO stack (cold-start deep link)',
+    (t) async {
+      final r = _router(
+        detail: () => const PgBackScope(
+          upToIfEmpty: '/parent',
+          child: Scaffold(body: Text('DETAIL')),
+        ),
+      );
+      await _pump(t, r);
+      expect(find.text('DETAIL'), findsOneWidget);
+
+      await _systemBack(t);
+      expect(find.text('PARENT'), findsOneWidget);
+    },
+  );
+
+  testWidgets('canPop is true when only upToIfEmpty is set and a stack exists '
+      '(predictive back preserved)', (t) async {
+    final r = _router(
+      initial: '/',
+      detail: () => const PgBackScope(
+        upToIfEmpty: '/parent',
+        child: Scaffold(body: Text('DETAIL')),
+      ),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+    final scope = t.widget<PopScope>(
+      find.byWidgetPredicate((w) => w is PopScope).last,
+    );
+    expect(scope.canPop, isTrue);
+  });
+
+  testWidgets('PgBackScope.pop runs the same resolver as system back', (
+    t,
+  ) async {
     late BuildContext inner;
-    final r = _router(detail: () => PgBackScope(
+    final r = _router(
+      detail: () => PgBackScope(
         upTo: '/parent',
-        child: Scaffold(body: Builder(builder: (c) {
-          inner = c;
-          return const Text('DETAIL');
-        }))));
+        child: Scaffold(
+          body: Builder(
+            builder: (c) {
+              inner = c;
+              return const Text('DETAIL');
+            },
+          ),
+        ),
+      ),
+    );
     await _pump(t, r);
 
     await PgBackScope.pop(inner);
@@ -116,12 +215,20 @@ void main() {
     expect(find.text('PARENT'), findsOneWidget);
   });
 
-  testWidgets('PgBackScope.pop without a scope falls back to a plain pop', (t) async {
+  testWidgets('PgBackScope.pop without a scope falls back to a plain pop', (
+    t,
+  ) async {
     late BuildContext inner;
-    final r = _router(detail: () => Scaffold(body: Builder(builder: (c) {
-          inner = c;
-          return const Text('DETAIL');
-        })));
+    final r = _router(
+      detail: () => Scaffold(
+        body: Builder(
+          builder: (c) {
+            inner = c;
+            return const Text('DETAIL');
+          },
+        ),
+      ),
+    );
     await _pump(t, r);
     r.push('/parent');
     await t.pumpAndSettle();
@@ -147,7 +254,9 @@ void main() {
     final r = _router(
       initial: '/parent',
       detail: () => PgBackScope(
-          confirmWhen: () => false, child: const Scaffold(body: Text('DETAIL'))),
+        confirmWhen: () => false,
+        child: const Scaffold(body: Text('DETAIL')),
+      ),
     );
     await _pump(t, r);
     r.push('/detail');
@@ -158,11 +267,15 @@ void main() {
     expect(find.text('PARENT'), findsOneWidget); // popped silently
   });
 
-  testWidgets('confirmWhen true shows a dialog; Keep editing stays put', (t) async {
+  testWidgets('confirmWhen true shows a dialog; Keep editing stays put', (
+    t,
+  ) async {
     final r = _router(
       initial: '/parent',
       detail: () => PgBackScope(
-          confirmWhen: () => true, child: const Scaffold(body: Text('DETAIL'))),
+        confirmWhen: () => true,
+        child: const Scaffold(body: Text('DETAIL')),
+      ),
     );
     await _pump(t, r);
     r.push('/detail');
@@ -179,7 +292,9 @@ void main() {
     final r = _router(
       initial: '/parent',
       detail: () => PgBackScope(
-          confirmWhen: () => true, child: const Scaffold(body: Text('DETAIL'))),
+        confirmWhen: () => true,
+        child: const Scaffold(body: Text('DETAIL')),
+      ),
     );
     await _pump(t, r);
     r.push('/detail');
@@ -195,9 +310,10 @@ void main() {
     final r = _router(
       initial: '/parent',
       detail: () => PgBackScope(
-          blockWhen: () => true,
-          blockMessage: 'Payment in progress',
-          child: const Scaffold(body: Text('DETAIL'))),
+        blockWhen: () => true,
+        blockMessage: 'Payment in progress',
+        child: const Scaffold(body: Text('DETAIL')),
+      ),
     );
     await _pump(t, r);
     r.push('/detail');
@@ -212,9 +328,10 @@ void main() {
     final r = _router(
       initial: '/parent',
       detail: () => PgBackScope(
-          blockWhen: () => true,
-          confirmWhen: () => true,
-          child: const Scaffold(body: Text('DETAIL'))),
+        blockWhen: () => true,
+        confirmWhen: () => true,
+        child: const Scaffold(body: Text('DETAIL')),
+      ),
     );
     await _pump(t, r);
     r.push('/detail');
@@ -225,12 +342,15 @@ void main() {
     expect(find.text('DETAIL'), findsOneWidget); // still here
   });
 
-  testWidgets('a throwing predicate is treated as false, never traps', (t) async {
+  testWidgets('a throwing predicate is treated as false, never traps', (
+    t,
+  ) async {
     final r = _router(
       initial: '/parent',
       detail: () => PgBackScope(
-          blockWhen: () => throw StateError('boom'),
-          child: const Scaffold(body: Text('DETAIL'))),
+        blockWhen: () => throw StateError('boom'),
+        child: const Scaffold(body: Text('DETAIL')),
+      ),
     );
     await _pump(t, r);
     r.push('/detail');
@@ -242,8 +362,12 @@ void main() {
 
   testWidgets('confirmExit shows the toast first, does not leave', (t) async {
     PgExitConfirm.reset();
-    final r = _router(detail: () => const PgBackScope(
-        confirmExit: true, child: Scaffold(body: Text('DETAIL'))));
+    final r = _router(
+      detail: () => const PgBackScope(
+        confirmExit: true,
+        child: Scaffold(body: Text('DETAIL')),
+      ),
+    );
     await _pump(t, r);
 
     await _systemBack(t);

@@ -19,7 +19,7 @@ class ReceiptScreen extends StatelessWidget {
     final c = context.pg;
     final r = record;
     return PgBackScope(
-      upTo: Routes.payments,
+      upToIfEmpty: Routes.payments,
       child: Scaffold(
         backgroundColor: c.bg,
         body: SafeArea(

@@ -9,18 +9,27 @@ typedef BackPredicate = bool Function();
 /// Declares what back does on one screen — for the hardware/gesture back AND
 /// the on-screen chevron, which route through the same resolver here.
 ///
-/// Resolution order is **block → confirm → upTo → pop**. Omit every option and
-/// this is an ordinary pop, so wrapping a screen costs nothing.
+/// Resolution order is **block → confirm → confirmExit → upTo → pop →
+/// upToIfEmpty → exit**. Omit every option and this is an ordinary pop, so
+/// wrapping a screen costs nothing.
 ///
 /// Wrap the widget your screen's `build` returns, not something above the
 /// `State` — a `setState` must rebuild this so the predicates re-evaluate.
 class PgBackScope extends StatelessWidget {
   final Widget child;
 
-  /// Forced destination, and the fallback when there is nothing to pop.
-  /// Always a `Routes.*` constant: go_router throws on an unknown path, so a
-  /// constant turns a typo into a compile error.
+  /// Forced destination — wins even when a poppable stack exists. Use this
+  /// only where a real pop would be wrong (e.g. it would re-enter a finished
+  /// checkout): screens reached exclusively via `go`. Always a `Routes.*`
+  /// constant: go_router throws on an unknown path, so a constant turns a
+  /// typo into a compile error.
   final String? upTo;
+
+  /// Where to go when there is nothing to pop — a cold-start deep link, or
+  /// arrival via `go`. Unlike [upTo], a normal pop wins when a stack exists,
+  /// so a screen pushed from a live parent returns to it with its state
+  /// intact. Use this for screens reached by `push` from a live parent.
+  final String? upToIfEmpty;
 
   /// For screens with nowhere to go up to. Shows "Press back again to exit"
   /// and exits only on a second press inside [PgExitConfirm.window].
@@ -40,6 +49,7 @@ class PgBackScope extends StatelessWidget {
     super.key,
     required this.child,
     this.upTo,
+    this.upToIfEmpty,
     this.confirmExit = false,
     this.confirmWhen,
     this.confirmTitle = 'Discard changes?',
@@ -67,6 +77,10 @@ class PgBackScope extends StatelessWidget {
     }
   }
 
+  // Deliberately does not mention `upToIfEmpty`: it only applies when there
+  // is nothing to pop, so a poppable stack must still let the OS handle back
+  // natively (predictive-back animation intact) rather than being
+  // intercepted here.
   bool _nativePop(BuildContext context) =>
       !_safe(blockWhen) &&
       !_safe(confirmWhen) &&
@@ -87,8 +101,14 @@ class PgBackScope extends StatelessWidget {
           title: Text(confirmTitle),
           content: Text(confirmMessage),
           actions: [
-            TextButton(onPressed: () => Navigator.of(d).pop(false), child: const Text('Keep editing')),
-            TextButton(onPressed: () => Navigator.of(d).pop(true), child: const Text('Discard')),
+            TextButton(
+              onPressed: () => Navigator.of(d).pop(false),
+              child: const Text('Keep editing'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(d).pop(true),
+              child: const Text('Discard'),
+            ),
           ],
         ),
       );
@@ -112,6 +132,10 @@ class PgBackScope extends StatelessWidget {
       context.pop();
       return;
     }
+    if (upToIfEmpty != null) {
+      context.go(upToIfEmpty!);
+      return;
+    }
     // Nothing above this screen and no destination declared: leave the app.
     await SystemNavigator.pop();
   }
@@ -124,10 +148,7 @@ class PgBackScope extends StatelessWidget {
         if (didPop) return;
         await _resolve(context);
       },
-      child: _PgBackScopeData(
-        resolve: () => _resolve(context),
-        child: child,
-      ),
+      child: _PgBackScopeData(resolve: () => _resolve(context), child: child),
     );
   }
 }
