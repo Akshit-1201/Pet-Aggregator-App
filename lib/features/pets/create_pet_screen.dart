@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -131,102 +132,121 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
   @override
   Widget build(BuildContext context) {
     final c = context.pg;
-    return Scaffold(
-      backgroundColor: c.surface,
-      body: SafeArea(
-        child: Column(children: [
-          PgAppBar(title: 'Add your pet',
-            onBack: () => widget.fromOnboarding
-                ? context.go(Routes.location)
-                : (context.canPop() ? context.pop() : context.go(Routes.home))),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
-              children: [
-                Row(children: [
-                  Expanded(child: Text('Photos of your pet', style: PgText.label(context))),
-                  Text('${_photos.length}/${PetProfile.maxPhotos}',
-                      style: PgText.inter(12.5, FontWeight.w700,
-                          color: _photos.length < PetProfile.minPhotos ? c.heart : c.brand)),
-                ]),
-                const SizedBox(height: 6),
-                Text('Add ${PetProfile.minPhotos}–${PetProfile.maxPhotos} photos so other '
-                    'parents can recognise them.',
-                  style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
-                const SizedBox(height: 10),
-                _photoStrip(c),
-                if (_photoError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(_photoError!,
-                        style: PgText.inter(13, FontWeight.w600, color: c.heart))),
-                const SizedBox(height: 18),
-                PgTextField(label: 'Pet name', controller: _name, hint: 'Bruno'),
-                if (_nameError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 6, left: 4),
-                    child: Text(_nameError!, style: PgText.inter(13, FontWeight.w600, color: c.heart))),
-                const SizedBox(height: 14),
-                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Expanded(child: PgTextField(label: 'Breed', controller: _breed, hint: 'Labrador')),
-                  const SizedBox(width: 12),
-                  SizedBox(width: 104, child: PgTextField(label: 'Age', controller: _age, hint: '2 yrs')),
-                ]),
-                const SizedBox(height: 14),
-                Text('Species', style: PgText.label(context)),
-                const SizedBox(height: 8),
-                Row(children: [
-                  for (final s in Species.values) ...[
-                    Expanded(child: GestureDetector(
-                      onTap: () => setState(() => _species = s),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: _species == s ? c.brandSoft : null,
-                          border: Border.all(
-                            color: _species == s ? c.brand : c.border, width: _species == s ? 2 : 1),
-                          borderRadius: BorderRadius.circular(13)),
-                        child: Text(_speciesLabel[s]!,
-                          style: PgText.inter(13.5, FontWeight.w600,
-                            color: _species == s ? c.brand : c.muted)),
-                      ),
-                    )),
-                    if (s != Species.other) const SizedBox(width: 9),
+    // Rebuilds this subtree whenever a tracked controller changes, so
+    // PopScope's canPop (baked in at build time — see PgBackScope's own
+    // doc comment) reflects the current dirty state. Plain text edits
+    // otherwise never trigger a rebuild here: PgTextField has no onChanged
+    // wired to setState, so a stray back right after typing would slip
+    // through on the stale (clean) canPop from initial build.
+    return ListenableBuilder(
+      listenable: Listenable.merge([_name, _breed, _age]),
+      builder: (context, _) => PgBackScope(
+        // Only where leaving destroys real work. Photos are the expensive case:
+        // three to five uploads gone on a stray back press.
+        confirmWhen: () =>
+            _photos.isNotEmpty ||
+            _name.text.trim().isNotEmpty ||
+            _breed.text.trim().isNotEmpty ||
+            _age.text.trim().isNotEmpty,
+        confirmMessage: "This pet isn't saved yet. Leaving now discards it.",
+        child: Scaffold(
+          backgroundColor: c.surface,
+          body: SafeArea(
+            child: Column(children: [
+              PgAppBar(title: 'Add your pet',
+                onBack: () => widget.fromOnboarding
+                    ? context.go(Routes.location)
+                    : (context.canPop() ? context.pop() : context.go(Routes.home))),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
+                  children: [
+                    Row(children: [
+                      Expanded(child: Text('Photos of your pet', style: PgText.label(context))),
+                      Text('${_photos.length}/${PetProfile.maxPhotos}',
+                          style: PgText.inter(12.5, FontWeight.w700,
+                              color: _photos.length < PetProfile.minPhotos ? c.heart : c.brand)),
+                    ]),
+                    const SizedBox(height: 6),
+                    Text('Add ${PetProfile.minPhotos}–${PetProfile.maxPhotos} photos so other '
+                        'parents can recognise them.',
+                      style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
+                    const SizedBox(height: 10),
+                    _photoStrip(c),
+                    if (_photoError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(_photoError!,
+                            style: PgText.inter(13, FontWeight.w600, color: c.heart))),
+                    const SizedBox(height: 18),
+                    PgTextField(label: 'Pet name', controller: _name, hint: 'Bruno'),
+                    if (_nameError != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6, left: 4),
+                        child: Text(_nameError!, style: PgText.inter(13, FontWeight.w600, color: c.heart))),
+                    const SizedBox(height: 14),
+                    Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Expanded(child: PgTextField(label: 'Breed', controller: _breed, hint: 'Labrador')),
+                      const SizedBox(width: 12),
+                      SizedBox(width: 104, child: PgTextField(label: 'Age', controller: _age, hint: '2 yrs')),
+                    ]),
+                    const SizedBox(height: 14),
+                    Text('Species', style: PgText.label(context)),
+                    const SizedBox(height: 8),
+                    Row(children: [
+                      for (final s in Species.values) ...[
+                        Expanded(child: GestureDetector(
+                          onTap: () => setState(() => _species = s),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: _species == s ? c.brandSoft : null,
+                              border: Border.all(
+                                color: _species == s ? c.brand : c.border, width: _species == s ? 2 : 1),
+                              borderRadius: BorderRadius.circular(13)),
+                            child: Text(_speciesLabel[s]!,
+                              style: PgText.inter(13.5, FontWeight.w600,
+                                color: _species == s ? c.brand : c.muted)),
+                          ),
+                        )),
+                        if (s != Species.other) const SizedBox(width: 9),
+                      ],
+                    ]),
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+                      decoration: BoxDecoration(color: c.brandSoft, borderRadius: BorderRadius.circular(14)),
+                      child: Row(children: [
+                        const Text('💉', style: TextStyle(fontSize: 17)),
+                        const SizedBox(width: 10),
+                        Text('Vaccinated', style: PgText.inter(14, FontWeight.w600, color: c.text)),
+                        const Spacer(),
+                        PgToggle(value: _vaccinated, onChanged: (v) => setState(() => _vaccinated = v)),
+                      ]),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
+                padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  PgPrimaryButton(
+                    label: _saving ? 'Saving…' : 'Finish & explore Pawgo',
+                    onPressed: _saving ? () {} : _finish),
+                  if (widget.fromOnboarding) ...[
+                    const SizedBox(height: 6),
+                    TextButton(
+                      onPressed: _saving ? null : () => context.go(Routes.home),
+                      child: Text('Skip for now',
+                        style: PgText.inter(13.5, FontWeight.w600, color: c.muted))),
                   ],
                 ]),
-                const SizedBox(height: 14),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-                  decoration: BoxDecoration(color: c.brandSoft, borderRadius: BorderRadius.circular(14)),
-                  child: Row(children: [
-                    const Text('💉', style: TextStyle(fontSize: 17)),
-                    const SizedBox(width: 10),
-                    Text('Vaccinated', style: PgText.inter(14, FontWeight.w600, color: c.text)),
-                    const Spacer(),
-                    PgToggle(value: _vaccinated, onChanged: (v) => setState(() => _vaccinated = v)),
-                  ]),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              PgPrimaryButton(
-                label: _saving ? 'Saving…' : 'Finish & explore Pawgo',
-                onPressed: _saving ? () {} : _finish),
-              if (widget.fromOnboarding) ...[
-                const SizedBox(height: 6),
-                TextButton(
-                  onPressed: _saving ? null : () => context.go(Routes.home),
-                  child: Text('Skip for now',
-                    style: PgText.inter(13.5, FontWeight.w600, color: c.muted))),
-              ],
+              ),
             ]),
           ),
-        ]),
+        ),
       ),
     );
   }
