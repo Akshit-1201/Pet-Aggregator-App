@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pet_aggregator_app/core/navigation/exit_confirm.dart';
 import 'package:pet_aggregator_app/core/navigation/pg_back_scope.dart';
 
 /// A two-route app so we can test both "there is a stack" and "there is not".
@@ -127,6 +128,126 @@ void main() {
 
     await PgBackScope.pop(inner);
     await t.pumpAndSettle();
+    expect(find.text('DETAIL'), findsOneWidget);
+  });
+
+  // The five tests below all need DETAIL — the screen carrying the
+  // PgBackScope under test — to be the *active* route when system back
+  // fires, per the ordering gotcha documented above ("canPop is true when
+  // nothing needs interception"): pushing an unwrapped '/parent' on top of
+  // DETAIL just exercises PARENT's own (nonexistent) guard, popping it
+  // trivially and never reaching DETAIL's resolver at all. So each starts at
+  // '/parent' and pushes '/detail' on top instead, matching the fix already
+  // applied to the 'upTo' tests above. That flips which screen remains
+  // visible after a successful pop (PARENT, not DETAIL) — the assertions
+  // below reflect that, while pinning the exact same guarantees the brief
+  // named (dialog shown or not, which button does what, block beats confirm).
+
+  testWidgets('confirmWhen false pops silently, no dialog', (t) async {
+    final r = _router(
+      initial: '/parent',
+      detail: () => PgBackScope(
+          confirmWhen: () => false, child: const Scaffold(body: Text('DETAIL'))),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+
+    await _systemBack(t);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('PARENT'), findsOneWidget); // popped silently
+  });
+
+  testWidgets('confirmWhen true shows a dialog; Keep editing stays put', (t) async {
+    final r = _router(
+      initial: '/parent',
+      detail: () => PgBackScope(
+          confirmWhen: () => true, child: const Scaffold(body: Text('DETAIL'))),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+    await _systemBack(t);
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await t.tap(find.text('Keep editing'));
+    await t.pumpAndSettle();
+    expect(find.text('DETAIL'), findsOneWidget); // never left
+  });
+
+  testWidgets('confirmWhen true then Discard leaves the screen', (t) async {
+    final r = _router(
+      initial: '/parent',
+      detail: () => PgBackScope(
+          confirmWhen: () => true, child: const Scaffold(body: Text('DETAIL'))),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+    await _systemBack(t);
+
+    await t.tap(find.text('Discard'));
+    await t.pumpAndSettle();
+    expect(find.text('PARENT'), findsOneWidget); // left the screen
+  });
+
+  testWidgets('blockWhen refuses back and shows the message', (t) async {
+    final r = _router(
+      initial: '/parent',
+      detail: () => PgBackScope(
+          blockWhen: () => true,
+          blockMessage: 'Payment in progress',
+          child: const Scaffold(body: Text('DETAIL'))),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+    await _systemBack(t);
+
+    expect(find.text('DETAIL'), findsOneWidget); // still here
+    expect(find.text('Payment in progress'), findsOneWidget);
+  });
+
+  testWidgets('blocked wins over dirty — no dialog is shown', (t) async {
+    final r = _router(
+      initial: '/parent',
+      detail: () => PgBackScope(
+          blockWhen: () => true,
+          confirmWhen: () => true,
+          child: const Scaffold(body: Text('DETAIL'))),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+    await _systemBack(t);
+
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.text('DETAIL'), findsOneWidget); // still here
+  });
+
+  testWidgets('a throwing predicate is treated as false, never traps', (t) async {
+    final r = _router(
+      initial: '/parent',
+      detail: () => PgBackScope(
+          blockWhen: () => throw StateError('boom'),
+          child: const Scaffold(body: Text('DETAIL'))),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+    await _systemBack(t);
+
+    expect(find.text('PARENT'), findsOneWidget); // it popped
+  });
+
+  testWidgets('confirmExit shows the toast first, does not leave', (t) async {
+    PgExitConfirm.reset();
+    final r = _router(detail: () => const PgBackScope(
+        confirmExit: true, child: Scaffold(body: Text('DETAIL'))));
+    await _pump(t, r);
+
+    await _systemBack(t);
+    expect(find.text('Press back again to exit'), findsOneWidget);
     expect(find.text('DETAIL'), findsOneWidget);
   });
 }
