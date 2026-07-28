@@ -64,6 +64,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       // the first steps to the previous page instead of touching the exit
       // counter at all. Only once back reaches page 0 does confirmExit's
       // "press again to exit" take over.
+      //
+      // This is a deliberate exception to PgBackScope.blockWhen's "must be
+      // pure" rule: it animates the page controller as a side effect. That's
+      // safe only because confirmExit: true is set above — PgBackScope's
+      // _nativePop checks confirmExit before blockWhen and short-circuits
+      // there, so this never fires merely from an unrelated rebuild (e.g.
+      // tapping Next), only from an actual back attempt handled in
+      // _resolve. Do not copy this pattern onto a screen without
+      // confirmExit or upTo set.
       blockWhen: () {
         if (_index > 0) {
           _controller.previousPage(

@@ -419,4 +419,52 @@ void main() {
     expect(find.byType(SnackBar), findsNothing);
     expect(find.text('DETAIL'), findsOneWidget); // still blocked, still here
   });
+
+  // A broken onBeforeLeave must never trap someone here — verify-email's
+  // real onBeforeLeave signs out before forcing Welcome, and if that threw
+  // unguarded, the user would stay stuck on the gated screen this task
+  // exists to give an exit from. Leaving anyway is the safe direction.
+  testWidgets(
+      'a throwing onBeforeLeave still navigates — leaving is the safe direction',
+      (t) async {
+    final r = _router(
+      initial: '/parent',
+      detail: () => PgBackScope(
+        upTo: '/parent',
+        onBeforeLeave: () async => throw StateError('side effect failed'),
+        child: const Scaffold(body: Text('DETAIL')),
+      ),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+
+    await _systemBack(t);
+    expect(find.text('PARENT'), findsOneWidget);
+  });
+
+  testWidgets('onBeforeLeave does not run when confirmWhen is cancelled', (
+    t,
+  ) async {
+    var calls = 0;
+    final r = _router(
+      initial: '/parent',
+      detail: () => PgBackScope(
+        confirmWhen: () => true,
+        onBeforeLeave: () async => calls++,
+        child: const Scaffold(body: Text('DETAIL')),
+      ),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+    await _systemBack(t);
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await t.tap(find.text('Keep editing'));
+    await t.pumpAndSettle();
+
+    expect(calls, 0);
+    expect(find.text('DETAIL'), findsOneWidget); // never left
+  });
 }

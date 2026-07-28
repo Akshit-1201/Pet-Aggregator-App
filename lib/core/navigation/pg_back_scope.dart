@@ -36,15 +36,25 @@ class PgBackScope extends StatelessWidget {
   final bool confirmExit;
 
   /// Ask before leaving. Only where leaving destroys real work — prompting on
-  /// a two-field form trains people to dismiss the dialog unread.
+  /// a two-field form trains people to dismiss the dialog unread. Must be
+  /// pure, same as [blockWhen]: also re-evaluated on every rebuild, not only
+  /// on a back attempt.
   final BackPredicate? confirmWhen;
   final String confirmTitle;
   final String confirmMessage;
 
-  /// Refuse back outright, e.g. while a payment is verifying. A predicate that
-  /// also performs its own side effect (e.g. onboarding stepping to the
-  /// previous page) is fine here — see the evaluation-order note on
-  /// [_nativePop] for why that doesn't fire on unrelated rebuilds.
+  /// Refuse back outright, e.g. while a payment is verifying.
+  ///
+  /// Must be pure. [_nativePop] evaluates this on every rebuild of the
+  /// wrapped screen — not only on an actual back attempt — so a predicate
+  /// with a side effect fires whenever anything else on the screen triggers
+  /// a rebuild, not just when back is pressed. Onboarding's page-back
+  /// predicate is the one documented exception, and it is only safe because
+  /// `confirmExit`/`upTo` are checked *before* `blockWhen` in [_nativePop]'s
+  /// chain and short-circuit ahead of it there. A screen with a
+  /// side-effecting `blockWhen` and neither `confirmExit` nor `upTo` set
+  /// would have that side effect fire from [_nativePop] on every unrelated
+  /// rebuild — do not copy the onboarding pattern without one of those set.
   final BackPredicate? blockWhen;
 
   /// Shown when [blockWhen] refuses back. Leave empty to suppress the snack
@@ -99,10 +109,11 @@ class PgBackScope extends StatelessWidget {
   // `confirmExit`/`upTo` are checked before `blockWhen`/`confirmWhen` on
   // purpose: this getter reruns on every rebuild of the screen (any parent
   // `setState` reconstructs this widget), not only on an actual back press.
-  // `confirmExit`/`upTo` are plain fields, safe to re-read for free, and once
-  // either rules native pop out the `&&` chain short-circuits — so a
-  // `blockWhen` that also performs a side effect (onboarding's page-back)
-  // never runs here, only from an actual back attempt in [_resolve].
+  // `blockWhen`/`confirmWhen` must be pure (see their doc comments) — this
+  // ordering is what makes onboarding's documented side-effecting exception
+  // safe, not a general guarantee. A screen with a side-effecting
+  // `blockWhen` and neither `confirmExit` nor `upTo` set would still have
+  // that side effect fire from here, on every rebuild, not just on back.
   bool _nativePop(BuildContext context) =>
       !confirmExit &&
       upTo == null &&
@@ -138,7 +149,19 @@ class PgBackScope extends StatelessWidget {
     }
 
     if (onBeforeLeave != null) {
-      await onBeforeLeave!();
+      try {
+        await onBeforeLeave!();
+      } catch (e) {
+        // A broken side effect must never trap someone here, same principle
+        // as _safe() above. Concretely: verify-email's onBeforeLeave signs
+        // out before forcing Welcome — if that throws (no network, a
+        // Firebase error) and this were left unguarded, _resolve would throw
+        // before reaching the upTo branch, leaving an unverified user stuck
+        // on verify-email, which is exactly the gated loop this task closes.
+        // Leaving anyway is the safe direction: a sign-out that silently
+        // failed and gets retried next launch beats a user with no exit.
+        debugPrint('PgBackScope.onBeforeLeave threw, leaving anyway: $e');
+      }
       if (!context.mounted) return;
     }
 
