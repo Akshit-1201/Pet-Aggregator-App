@@ -172,7 +172,7 @@ The 15 `context.go(Routes.home)` calls are untouched — every one is a flow com
 | `upTo` set but the route does not exist | go_router throws on an unknown path, so `upTo` values are `Routes.*` constants only — a typo is a compile error, not a runtime crash |
 | Back pressed while a dialog or sheet is open | The dialog's own route pops first; `PgBackScope` never sees it |
 | Back pressed twice rapidly on a guarded form | The confirm dialog is a route; the second press dismisses the dialog, not the screen |
-| Exit timer still pending when the user navigates away | Timer is cancelled in `dispose`; a stale timer must not exit the app later |
+| Exit window still open when the user navigates away | The window is a stored **timestamp**, compared on the next press — not a live `Timer`. There is nothing to cancel and nothing to leak, and a stale window simply expires. |
 | `confirmWhen`/`blockWhen` throws | Treated as `false` — a broken predicate must not trap the user on a screen |
 
 ## Testing
