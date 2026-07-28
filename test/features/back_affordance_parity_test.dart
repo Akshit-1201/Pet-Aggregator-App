@@ -28,6 +28,7 @@ import 'package:pet_aggregator_app/data/models/role.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
 import 'package:pet_aggregator_app/data/repositories/providers.dart';
 import 'package:pet_aggregator_app/data/services/payment_service.dart';
+import 'package:pet_aggregator_app/features/auth/onboarding_arg.dart';
 import 'package:pet_aggregator_app/features/discovery/nearby_map_screen.dart';
 import 'package:pet_aggregator_app/features/payments/receipt_screen.dart';
 import '../support/fakes.dart';
@@ -113,8 +114,19 @@ void main() {
     ], initialLocation: Routes.proSetup);
     await t.pumpAndSettle();
 
-    final bar = t.widget<PgAppBar>(find.byType(PgAppBar));
-    expect(bar.onBack, isNotNull);
+    // Behavioural, not cosmetic: a bare `onBack != null` check also passes
+    // for `onBack: () {}`. Typing a field dirties the form, so tapping the
+    // chevron must run PgBackScope's confirmWhen and show the discard
+    // dialog — proof the tap actually reaches the resolver rather than
+    // doing nothing.
+    await t.enterText(find.byType(TextField).at(0), '300'); // rate
+    await t.pump();
+    await t.tap(find.byIcon(Icons.chevron_left));
+    await t.pumpAndSettle();
+
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text("Your service listing isn't saved yet. Leaving now discards it."),
+        findsOneWidget);
   });
 
   group('safety gap 1 — payment chevron honours the verifying block', () {
@@ -210,6 +222,77 @@ void main() {
       expect(find.text('Payment'), findsOneWidget); // still here
       expect(find.text('Verifying…'), findsOneWidget); // still verifying
       expect(find.text('Payment in progress — please wait.'), findsOneWidget);
+    });
+  });
+
+  group('fix round 1 — cold onboarding entry no longer quits the app', () {
+    // location_screen.dart routes fromOnboarding into each of these three via
+    // context.go(target, extra: OnboardingArg(fromOnboarding: true)) — `go`
+    // replaces the whole stack, so canPop() is false on arrival. Each screen's
+    // PgBackScope declared only confirmWhen (no upTo/upToIfEmpty), so with an
+    // untouched form _resolve fell all the way through — not blocked, no
+    // confirm, no upTo, nothing to pop, no upToIfEmpty — to
+    // SystemNavigator.pop(): back quit the app instead of returning to
+    // Location. `upToIfEmpty: Routes.location` fixes it. These tests land
+    // exactly as location_screen does (no stack) and must fail if that
+    // declaration were removed.
+    testWidgets('create-pet entered cold from onboarding: back reaches Location', (t) async {
+      final auth = FakeAuthRepository();
+      await auth.signUp(email: 'me@x.com', password: 'secret1');
+      await pumpPgApp(t, overrides: [
+        authRepositoryProvider.overrideWithValue(auth),
+      ], initialLocation: Routes.createPet, extra: const OnboardingArg(fromOnboarding: true));
+      await t.pumpAndSettle();
+      expect(find.text('Add your pet'), findsOneWidget);
+
+      await _systemBack(t);
+
+      // Not "no exception" — must actually be Location, not the app having
+      // silently done nothing (which is what SystemNavigator.pop() looks like
+      // under flutter_test: no platform to actually exit, so the old screen
+      // would still be showing).
+      expect(find.text('Choose your area'), findsOneWidget);
+      expect(find.text('Add your pet'), findsNothing);
+    });
+
+    testWidgets('host-setup entered cold from onboarding: back reaches Location', (t) async {
+      final auth = FakeAuthRepository();
+      await auth.signUp(email: 'me@x.com', password: 'secret1');
+      final users = InMemoryUserRepository();
+      await users.createUser(UserProfile(uid: auth.currentUser!.uid, name: 'Me',
+          email: 'me@x.com', area: 'Khar', role: Role.homestayHost));
+      await pumpPgApp(t, overrides: [
+        authRepositoryProvider.overrideWithValue(auth),
+        userRepositoryProvider.overrideWithValue(users),
+        homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
+      ], initialLocation: Routes.hostSetup, extra: const OnboardingArg(fromOnboarding: true));
+      await t.pumpAndSettle();
+      expect(find.text('List your home'), findsOneWidget);
+
+      await _systemBack(t);
+
+      expect(find.text('Choose your area'), findsOneWidget);
+      expect(find.text('List your home'), findsNothing);
+    });
+
+    testWidgets('pro-setup entered cold from onboarding: back reaches Location', (t) async {
+      final auth = FakeAuthRepository();
+      await auth.signUp(email: 'me@x.com', password: 'secret1');
+      final users = InMemoryUserRepository();
+      await users.createUser(UserProfile(uid: auth.currentUser!.uid, name: 'Me',
+          email: 'me@x.com', area: 'Khar', role: Role.servicePro));
+      await pumpPgApp(t, overrides: [
+        authRepositoryProvider.overrideWithValue(auth),
+        userRepositoryProvider.overrideWithValue(users),
+        proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+      ], initialLocation: Routes.proSetup, extra: const OnboardingArg(fromOnboarding: true));
+      await t.pumpAndSettle();
+      expect(find.text('Offer your services'), findsOneWidget);
+
+      await _systemBack(t);
+
+      expect(find.text('Choose your area'), findsOneWidget);
+      expect(find.text('Offer your services'), findsNothing);
     });
   });
 

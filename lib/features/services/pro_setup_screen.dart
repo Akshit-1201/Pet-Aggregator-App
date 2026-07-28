@@ -94,6 +94,13 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
             _exp.text.trim().isNotEmpty ||
             _bio.text.trim().isNotEmpty,
         confirmMessage: "Your service listing isn't saved yet. Leaving now discards it.",
+        // Reached fromOnboarding via location_screen's context.go(...), which
+        // replaces the whole stack — canPop() is false, so with nothing else
+        // declared this fell through to SystemNavigator.pop() and quit the
+        // app. A real pop still wins whenever one exists (e.g. pushed from
+        // Services' "Set up your services"), so this only ever fires for the
+        // cold, nothing-to-pop-to case.
+        upToIfEmpty: Routes.location,
         child: Scaffold(
           backgroundColor: c.surface,
           body: SafeArea(
