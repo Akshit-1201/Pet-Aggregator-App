@@ -94,7 +94,7 @@ class HomeScreen extends ConsumerWidget {
                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   Text('Pets near you', style: PgText.sectionHeader(context)),
                   GestureDetector(
-                    onTap: () => context.go(Routes.nearby),
+                    onTap: () => context.push(Routes.nearby),
                     child: Text('See map →', style: PgText.inter(12.5, FontWeight.w600, color: c.brand))),
                 ]),
                 const SizedBox(height: 13),
