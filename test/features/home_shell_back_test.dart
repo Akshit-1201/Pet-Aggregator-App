@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:pet_aggregator_app/core/navigation/exit_confirm.dart';
 import 'package:pet_aggregator_app/core/router/routes.dart';
 import 'package:pet_aggregator_app/data/repositories/providers.dart';
+import 'package:pet_aggregator_app/features/profile/profile_screen.dart';
 import '../support/fakes.dart';
 import '../support/pump.dart';
 
@@ -52,6 +53,13 @@ void main() {
 
     await _systemBack(t);
     expect(find.text('Home'), findsWidgets); // the Home tab is selected
+    // Discriminating: 'Home' also matches the bottom-nav label on every
+    // branch, so it alone would still pass if goBranch() were deleted
+    // entirely and back did nothing. Asserting Profile is gone is what
+    // actually proves the branch switch happened — this is the regression
+    // guard for the bug that motivated the whole slice ("back on Profile
+    // exits Pawgo").
+    expect(find.byType(ProfileScreen), findsNothing);
     expect(find.text('Press back again to exit'), findsNothing);
   });
 

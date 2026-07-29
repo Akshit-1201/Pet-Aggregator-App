@@ -112,6 +112,34 @@ final _stay = HomestayBooking(
 
 void main() {
   group('services payment screen', () {
+    // Finding 3 of the final review: the block used to gate on `_busy`
+    // (`_phase != idle`), which also covers `opening` — the wait for
+    // createBookingOrder before Razorpay even opens. Nothing has been
+    // charged during that window, so blocking there only traps the user
+    // with no money to protect (and doubly so if the Razorpay callback is
+    // ever lost: the completer never settles and `_busy` would stay true
+    // forever). Only `verifying` should refuse back.
+    testWidgets('back during opening (pre-checkout) is allowed, not refused', (t) async {
+      final auth = await _signedIn();
+      await _pushOverHome(t,
+          overrides: [
+            ..._homeOverrides(auth),
+            paymentServiceProvider
+                .overrideWithValue(FakePaymentService(gate: Completer())),
+          ],
+          route: Routes.payment,
+          extra: _booking);
+
+      await t.tap(find.text('Pay ₹275'));
+      await t.pump();
+      expect(find.text('Opening…'), findsOneWidget);
+
+      await _systemBack(t);
+
+      expect(find.text('Payment'), findsNothing); // left the screen
+      expect(find.text('Opening…'), findsNothing);
+    });
+
     testWidgets('back before checkout starts leaves the screen', (t) async {
       final auth = await _signedIn();
       await _pushOverHome(t,
@@ -152,6 +180,29 @@ void main() {
   });
 
   group('homestay payment screen', () {
+    // See the services group's identical case above for why: only
+    // `verifying` should refuse back, not `opening`.
+    testWidgets('back during opening (pre-checkout) is allowed, not refused', (t) async {
+      final auth = await _signedIn();
+      await _pushOverHome(t,
+          overrides: [
+            ..._homeOverrides(auth),
+            paymentServiceProvider
+                .overrideWithValue(FakePaymentService(gate: Completer())),
+          ],
+          route: Routes.homestayPayment,
+          extra: _stay);
+
+      await t.tap(find.text('Pay ₹2850'));
+      await t.pump();
+      expect(find.text('Opening…'), findsOneWidget);
+
+      await _systemBack(t);
+
+      expect(find.text('Payment'), findsNothing); // left the screen
+      expect(find.text('Opening…'), findsNothing);
+    });
+
     testWidgets('back before checkout starts leaves the screen', (t) async {
       final auth = await _signedIn();
       await _pushOverHome(t,

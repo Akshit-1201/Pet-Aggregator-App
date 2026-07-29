@@ -443,6 +443,35 @@ void main() {
     expect(find.text('PARENT'), findsOneWidget);
   });
 
+  // Finding 2 of the final review: onBeforeLeave was missing from
+  // _nativePop's guard, so a scope declaring ONLY onBeforeLeave (no
+  // confirmExit/upTo/blockWhen/confirmWhen) on a poppable stack computed
+  // canPop == true, the OS popped natively, _resolve never ran, and the
+  // side effect was silently dropped. This scope has nothing else set, so a
+  // regression here reproduces exactly that: the callback would never fire
+  // and PARENT would still be reached (a native pop still lands there), but
+  // `calls` would stay 0.
+  testWidgets(
+      'onBeforeLeave alone still runs before a pop on a poppable stack', (
+    t,
+  ) async {
+    var calls = 0;
+    final r = _router(
+      initial: '/parent',
+      detail: () => PgBackScope(
+        onBeforeLeave: () async => calls++,
+        child: const Scaffold(body: Text('DETAIL')),
+      ),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+
+    await _systemBack(t);
+    expect(calls, 1);
+    expect(find.text('PARENT'), findsOneWidget);
+  });
+
   testWidgets('onBeforeLeave does not run when confirmWhen is cancelled', (
     t,
   ) async {

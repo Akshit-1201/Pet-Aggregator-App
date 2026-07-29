@@ -4,12 +4,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pet_aggregator_app/core/navigation/pg_back_scope.dart';
 import 'package:pet_aggregator_app/core/router/routes.dart';
+import 'package:pet_aggregator_app/data/repositories/providers.dart';
+import 'package:pet_aggregator_app/features/bookings/my_bookings_screen.dart';
 import 'package:pet_aggregator_app/features/community/post_live_screen.dart';
 import 'package:pet_aggregator_app/features/community/thread_screen.dart';
 import 'package:pet_aggregator_app/features/discovery/woof_match_screen.dart';
 import 'package:pet_aggregator_app/features/homestay/host_accepted_screen.dart';
 import 'package:pet_aggregator_app/features/payments/receipt_screen.dart';
 import 'package:pet_aggregator_app/features/services/booking_confirmed_screen.dart';
+import '../support/fakes.dart';
 
 /// [isUpToIfEmpty] distinguishes the two fields `PgBackScope` exposes:
 /// - false → `upTo`, a forced destination (this screen is only ever reached
@@ -148,9 +151,21 @@ void main() {
 
   // The highest-stakes case end to end: after paying, back must reach My
   // Bookings and never re-enter the checkout that produced it.
+  //
+  // Uses the real MyBookingsScreen (not a fake stub) at Routes.bookings —
+  // an earlier version of this test stubbed that route as a bare
+  // `Scaffold(body: Text('MY BOOKINGS'))`, which is exactly why the terminal
+  // test passed while the real destination could still be a dead end (see
+  // finding 1 of the final review): MyBookingsScreen itself wrapped nothing
+  // in a PgBackScope, so once you actually landed there, back closed the app.
+  // Building it here needs the same repository fakes
+  // `profile_bookings_nav_test.dart` uses to reach the same screen.
   testWidgets(
     'BookingConfirmed back reaches My Bookings, not the payment screen',
     (t) async {
+      final auth = FakeAuthRepository();
+      await auth.signUp(email: 'me@x.com', password: 'secret1');
+
       final router = GoRouter(
         initialLocation: '/pay',
         routes: [
@@ -164,13 +179,31 @@ void main() {
           ),
           GoRoute(
             path: Routes.bookings,
-            builder: (_, _) => const Scaffold(body: Text('MY BOOKINGS')),
+            builder: (_, _) => const MyBookingsScreen(),
           ),
         ],
       );
 
       await t.pumpWidget(
-        ProviderScope(child: MaterialApp.router(routerConfig: router)),
+        ProviderScope(
+          overrides: [
+            authRepositoryProvider.overrideWithValue(auth),
+            userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
+            petRepositoryProvider.overrideWithValue(InMemoryPetRepository()),
+            bookingRepositoryProvider
+                .overrideWithValue(InMemoryBookingRepository()),
+            homestayBookingRepositoryProvider
+                .overrideWithValue(InMemoryHomestayBookingRepository()),
+            reviewRepositoryProvider
+                .overrideWithValue(InMemoryReviewRepository()),
+            swipeRepositoryProvider
+                .overrideWithValue(InMemorySwipeRepository()),
+            proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+            homestayRepositoryProvider
+                .overrideWithValue(InMemoryHomestayRepository()),
+          ],
+          child: MaterialApp.router(routerConfig: router),
+        ),
       );
       await t.pumpAndSettle();
 
@@ -180,7 +213,10 @@ void main() {
       await t.binding.handlePopRoute();
       await t.pumpAndSettle();
 
-      expect(find.text('MY BOOKINGS'), findsOneWidget);
+      expect(find.byType(MyBookingsScreen), findsOneWidget);
+      // No listing and no seeded bookings for this uid, so the real screen's
+      // empty state proves it actually rendered, not just routed.
+      expect(find.textContaining('No bookings yet'), findsOneWidget);
       expect(find.text('PAYMENT'), findsNothing);
     },
   );
