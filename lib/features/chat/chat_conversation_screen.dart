@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import '../../core/router/routes.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
@@ -68,7 +67,7 @@ class _ChatConversationScreenState extends ConsumerState<ChatConversationScreen>
             decoration: BoxDecoration(color: c.surface, border: Border(bottom: BorderSide(color: c.border))),
             child: Row(children: [
               GestureDetector(
-                onTap: () => context.canPop() ? context.pop() : context.go(Routes.home),
+                onTap: () => PgBackScope.pop(context),
                 child: SizedBox(width: 40, height: 40,
                   child: Icon(Icons.chevron_left, color: c.text))),
               const PgImageSlot(size: 42, circle: true, emoji: '🙂'),

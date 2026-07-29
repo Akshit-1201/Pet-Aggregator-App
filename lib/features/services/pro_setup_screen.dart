@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -79,72 +80,96 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
       }
     });
 
-    return Scaffold(
-      backgroundColor: c.surface,
-      body: SafeArea(
-        child: Column(children: [
-          PgAppBar(title: 'Offer your services', onBack: _exit),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
-              children: [
-                Text('Set up your listing so pet parents can find and book you.',
-                    style: PgText.inter(14, FontWeight.w400, color: c.muted, height: 1.5)),
-                const SizedBox(height: 16),
-                Text('Service type', style: PgText.label(context)),
-                const SizedBox(height: 8),
-                Wrap(spacing: 9, runSpacing: 9, children: [
-                  for (final t in ServiceType.values)
-                    GestureDetector(
-                      onTap: () => setState(() => _type = t),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        decoration: BoxDecoration(
-                          color: _type == t ? c.brandSoft : c.surface,
-                          border: Border.all(color: _type == t ? c.brand : c.border, width: _type == t ? 2 : 1),
-                          borderRadius: BorderRadius.circular(13)),
-                        child: Text('${t.emoji} ${t.label}',
-                          style: PgText.inter(13, FontWeight.w600, color: _type == t ? c.brand : c.text)),
-                      ),
-                    ),
+    // Rebuilds this subtree whenever a tracked controller changes, so
+    // PopScope's canPop (baked in at build time) reflects the current dirty
+    // state — plain text edits otherwise never trigger a rebuild here, since
+    // PgTextField has no onChanged wired to setState.
+    return ListenableBuilder(
+      listenable: Listenable.merge([_rate, _exp, _bio]),
+      builder: (context, _) => PgBackScope(
+        // Only text fields here — no photos, so a listing's costliest field to
+        // retype (the bio) stands in for the "expensive" case.
+        confirmWhen: () =>
+            _rate.text.trim().isNotEmpty ||
+            _exp.text.trim().isNotEmpty ||
+            _bio.text.trim().isNotEmpty,
+        confirmMessage: "Your service listing isn't saved yet. Leaving now discards it.",
+        // Reached fromOnboarding via location_screen's context.go(...), which
+        // replaces the whole stack — canPop() is false, so with nothing else
+        // declared this fell through to SystemNavigator.pop() and quit the
+        // app. A real pop still wins whenever one exists (e.g. pushed from
+        // Services' "Set up your services"), so this only ever fires for the
+        // cold, nothing-to-pop-to case.
+        upToIfEmpty: Routes.location,
+        child: Scaffold(
+          backgroundColor: c.surface,
+          body: SafeArea(
+            child: Column(children: [
+              Builder(builder: (ctx) =>
+                PgAppBar(title: 'Offer your services', onBack: () => PgBackScope.pop(ctx))),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
+                  children: [
+                    Text('Set up your listing so pet parents can find and book you.',
+                        style: PgText.inter(14, FontWeight.w400, color: c.muted, height: 1.5)),
+                    const SizedBox(height: 16),
+                    Text('Service type', style: PgText.label(context)),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 9, runSpacing: 9, children: [
+                      for (final t in ServiceType.values)
+                        GestureDetector(
+                          onTap: () => setState(() => _type = t),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              color: _type == t ? c.brandSoft : c.surface,
+                              border: Border.all(color: _type == t ? c.brand : c.border, width: _type == t ? 2 : 1),
+                              borderRadius: BorderRadius.circular(13)),
+                            child: Text('${t.emoji} ${t.label}',
+                              style: PgText.inter(13, FontWeight.w600, color: _type == t ? c.brand : c.text)),
+                          ),
+                        ),
+                    ]),
+                    const SizedBox(height: 16),
+                    PgTextField(label: 'Rate (₹ per ${_type.unit})', controller: _rate,
+                        keyboardType: TextInputType.number, hint: '250'),
+                    const SizedBox(height: 14),
+                    PgTextField(label: 'Experience (years)', controller: _exp,
+                        keyboardType: TextInputType.number, hint: '4'),
+                    const SizedBox(height: 14),
+                    PgTextField(label: 'About you', controller: _bio, hint: 'Tell parents about yourself'),
+                    const SizedBox(height: 18),
+                    // Optional — an unverified pro can still list, they just don't
+                    // get the badge. Kept below the listing fields so it never
+                    // blocks someone from going live.
+                    const VerificationCard(kind: VerificationKind.pro),
+                    const SizedBox(height: 14),
+                    const EarningsCard(),
+                    if (_error != null)
+                      Padding(padding: const EdgeInsets.only(top: 12),
+                        child: Text(_error!, style: PgText.inter(13, FontWeight.w600, color: c.heart))),
+                  ],
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
+                padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  PgPrimaryButton(label: _saving ? 'Saving…' : 'Save listing',
+                    onPressed: _saving ? () {} : _save),
+                  if (widget.fromOnboarding) ...[
+                    const SizedBox(height: 6),
+                    TextButton(
+                      onPressed: _saving ? null : () => context.go(Routes.home),
+                      child: Text('Set up later',
+                        style: PgText.inter(13.5, FontWeight.w600, color: context.pg.muted))),
+                  ],
                 ]),
-                const SizedBox(height: 16),
-                PgTextField(label: 'Rate (₹ per ${_type.unit})', controller: _rate,
-                    keyboardType: TextInputType.number, hint: '250'),
-                const SizedBox(height: 14),
-                PgTextField(label: 'Experience (years)', controller: _exp,
-                    keyboardType: TextInputType.number, hint: '4'),
-                const SizedBox(height: 14),
-                PgTextField(label: 'About you', controller: _bio, hint: 'Tell parents about yourself'),
-                const SizedBox(height: 18),
-                // Optional — an unverified pro can still list, they just don't
-                // get the badge. Kept below the listing fields so it never
-                // blocks someone from going live.
-                const VerificationCard(kind: VerificationKind.pro),
-                const SizedBox(height: 14),
-                const EarningsCard(),
-                if (_error != null)
-                  Padding(padding: const EdgeInsets.only(top: 12),
-                    child: Text(_error!, style: PgText.inter(13, FontWeight.w600, color: c.heart))),
-              ],
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              PgPrimaryButton(label: _saving ? 'Saving…' : 'Save listing',
-                onPressed: _saving ? () {} : _save),
-              if (widget.fromOnboarding) ...[
-                const SizedBox(height: 6),
-                TextButton(
-                  onPressed: _saving ? null : () => context.go(Routes.home),
-                  child: Text('Set up later',
-                    style: PgText.inter(13.5, FontWeight.w600, color: context.pg.muted))),
-              ],
+              ),
             ]),
           ),
-        ]),
+        ),
       ),
     );
   }

@@ -1,9 +1,7 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pet_aggregator_app/core/router/routes.dart';
 import 'package:pet_aggregator_app/data/repositories/providers.dart';
 import 'package:pet_aggregator_app/features/auth/onboarding_arg.dart';
-import 'package:pet_aggregator_app/features/pets/create_pet_screen.dart';
 import '../support/fakes.dart';
 import '../support/pump.dart';
 
@@ -12,14 +10,15 @@ void main() {
     final auth = FakeAuthRepository();
     await auth.signUp(email: 'me@x.com', password: 'secret1');
     final pets = InMemoryPetRepository();
-    await pumpPg(tester, ProviderScope(
-      overrides: [
-        authRepositoryProvider.overrideWithValue(auth),
-        petRepositoryProvider.overrideWithValue(pets),
-        storageRepositoryProvider.overrideWithValue(InMemoryStorageRepository()),
-      ],
-      child: const CreatePetScreen(fromOnboarding: true),
-    ));
+    // pumpPgApp (a real GoRouter), not the bare pumpPg: CreatePetScreen is now
+    // wrapped in PgBackScope, whose canPop check requires a GoRouter ancestor
+    // even when nothing here exercises back navigation itself.
+    await pumpPgApp(tester, overrides: [
+      authRepositoryProvider.overrideWithValue(auth),
+      petRepositoryProvider.overrideWithValue(pets),
+      storageRepositoryProvider.overrideWithValue(InMemoryStorageRepository()),
+    ], initialLocation: Routes.createPet, extra: const OnboardingArg(fromOnboarding: true));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Finish & explore Pawgo'));
     await tester.pumpAndSettle();
     expect(find.text("Please enter your pet's name."), findsOneWidget);
@@ -29,16 +28,16 @@ void main() {
   testWidgets('onboarding shows Skip for now; non-onboarding does not', (tester) async {
     final auth = FakeAuthRepository();
     await auth.signUp(email: 'me@x.com', password: 'secret1');
-    await pumpPg(tester, ProviderScope(
-      overrides: [authRepositoryProvider.overrideWithValue(auth)],
-      child: const CreatePetScreen(fromOnboarding: true),
-    ));
+    await pumpPgApp(tester, overrides: [
+      authRepositoryProvider.overrideWithValue(auth),
+    ], initialLocation: Routes.createPet, extra: const OnboardingArg(fromOnboarding: true));
+    await tester.pumpAndSettle();
     expect(find.text('Skip for now'), findsOneWidget);
 
-    await pumpPg(tester, ProviderScope(
-      overrides: [authRepositoryProvider.overrideWithValue(auth)],
-      child: const CreatePetScreen(fromOnboarding: false),
-    ));
+    await pumpPgApp(tester, overrides: [
+      authRepositoryProvider.overrideWithValue(auth),
+    ], initialLocation: Routes.createPet, extra: const OnboardingArg(fromOnboarding: false));
+    await tester.pumpAndSettle();
     expect(find.text('Skip for now'), findsNothing);
   });
 

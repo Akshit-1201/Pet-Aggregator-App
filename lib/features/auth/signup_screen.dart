@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -69,47 +70,53 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     final c = context.pg;
-    return Scaffold(
-      backgroundColor: c.surface,
-      body: SafeArea(
-        child: Column(children: [
-          PgAppBar(title: 'Create account', onBack: () => context.go(Routes.welcome)),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
-              children: [
-                Text('Just a few details to get you and your pet started.',
-                    style: PgText.inter(14, FontWeight.w400, color: c.muted, height: 1.5)),
-                const SizedBox(height: 13),
-                PgTextField(label: 'Full name', controller: _name, hint: 'Radhika Nair'),
-                const SizedBox(height: 13),
-                PgTextField(label: 'Email', controller: _email,
-                    keyboardType: TextInputType.emailAddress, hint: 'you@example.com'),
-                const SizedBox(height: 13),
-                PgTextField(label: 'Password', controller: _password, obscure: true,
-                    hint: 'At least 6 characters'),
-                const SizedBox(height: 16),
-                Text("I'M JOINING AS", style: PgText.inter(12.5, FontWeight.w700, color: c.muted)),
-                const SizedBox(height: 10),
-                for (final r in Role.values) ...[
-                  PgChoiceCard(
-                    emoji: _emojis[r]!, title: r.label, subtitle: _subtitles[r]!,
-                    selected: _role == r, onTap: () => setState(() => _role = r)),
+    // A funnel step reached only via go(), never pushed — upTo forces Welcome
+    // regardless of whatever else happens to be on the stack.
+    return PgBackScope(
+      upTo: Routes.welcome,
+      child: Scaffold(
+        backgroundColor: c.surface,
+        body: SafeArea(
+          child: Column(children: [
+            Builder(builder: (ctx) =>
+              PgAppBar(title: 'Create account', onBack: () => PgBackScope.pop(ctx))),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
+                children: [
+                  Text('Just a few details to get you and your pet started.',
+                      style: PgText.inter(14, FontWeight.w400, color: c.muted, height: 1.5)),
+                  const SizedBox(height: 13),
+                  PgTextField(label: 'Full name', controller: _name, hint: 'Radhika Nair'),
+                  const SizedBox(height: 13),
+                  PgTextField(label: 'Email', controller: _email,
+                      keyboardType: TextInputType.emailAddress, hint: 'you@example.com'),
+                  const SizedBox(height: 13),
+                  PgTextField(label: 'Password', controller: _password, obscure: true,
+                      hint: 'At least 6 characters'),
+                  const SizedBox(height: 16),
+                  Text("I'M JOINING AS", style: PgText.inter(12.5, FontWeight.w700, color: c.muted)),
                   const SizedBox(height: 10),
+                  for (final r in Role.values) ...[
+                    PgChoiceCard(
+                      emoji: _emojis[r]!, title: r.label, subtitle: _subtitles[r]!,
+                      selected: _role == r, onTap: () => setState(() => _role = r)),
+                    const SizedBox(height: 10),
+                  ],
+                  if (_error != null)
+                    Text(_error!, style: PgText.inter(13, FontWeight.w600, color: c.heart)),
                 ],
-                if (_error != null)
-                  Text(_error!, style: PgText.inter(13, FontWeight.w600, color: c.heart)),
-              ],
+              ),
             ),
-          ),
-          Container(
-            decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
-            child: PgPrimaryButton(
-              label: _loading ? 'Creating…' : 'Continue',
-              onPressed: _loading ? () {} : _submit),
-          ),
-        ]),
+            Container(
+              decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
+              padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
+              child: PgPrimaryButton(
+                label: _loading ? 'Creating…' : 'Continue',
+                onPressed: _loading ? () {} : _submit),
+            ),
+          ]),
+        ),
       ),
     );
   }

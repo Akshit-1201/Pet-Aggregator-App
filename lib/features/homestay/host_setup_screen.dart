@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -122,97 +123,121 @@ class _HostSetupScreenState extends ConsumerState<HostSetupScreen> {
       }
     });
 
-    return Scaffold(
-      backgroundColor: c.surface,
-      body: SafeArea(
-        child: Column(children: [
-          PgAppBar(
-            title: 'List your home',
-            onBack: () => widget.fromOnboarding
-                ? _exit()
-                : (context.canPop() ? context.pop() : context.go(Routes.homestay)),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
-              children: [
-                Text('Set up your home so pet parents can book boarding.',
-                    style: PgText.inter(14, FontWeight.w400, color: c.muted, height: 1.5)),
-                const SizedBox(height: 16),
-                PgTextField(label: 'Home name', controller: _homeName, hint: "Meera's Home"),
-                const SizedBox(height: 16),
-                Row(children: [
-                  Expanded(child: Text('Photos of your home', style: PgText.label(context))),
-                  Text('${_photos.length}/${Homestay.maxPhotos}',
-                      style: PgText.inter(12.5, FontWeight.w600,
-                          color: _photos.length < Homestay.minPhotos ? c.heart : c.brand)),
+    // Rebuilds this subtree whenever a tracked controller changes, so
+    // PopScope's canPop (baked in at build time) reflects the current dirty
+    // state — plain text edits otherwise never trigger a rebuild here, since
+    // PgTextField has no onChanged wired to setState. _photos/_amenities
+    // don't need this: every mutation to either already goes through
+    // setState.
+    return ListenableBuilder(
+      listenable: Listenable.merge([_homeName, _rate, _about]),
+      builder: (context, _) => PgBackScope(
+        // Only where leaving destroys real work. Photos are the expensive case:
+        // three to five uploads gone on a stray back press.
+        confirmWhen: () =>
+            _photos.isNotEmpty ||
+            _homeName.text.trim().isNotEmpty ||
+            _rate.text.trim().isNotEmpty ||
+            _about.text.trim().isNotEmpty ||
+            _amenities.isNotEmpty,
+        confirmMessage: "Your homestay listing isn't saved yet. Leaving now discards it.",
+        // Reached fromOnboarding via location_screen's context.go(...), which
+        // replaces the whole stack — canPop() is false, so with nothing else
+        // declared this fell through to SystemNavigator.pop() and quit the
+        // app. A real pop still wins whenever one exists, so this only ever
+        // fires for the cold, nothing-to-pop-to case.
+        upToIfEmpty: Routes.location,
+        child: Scaffold(
+          backgroundColor: c.surface,
+          body: SafeArea(
+            child: Column(children: [
+              Builder(builder: (ctx) => PgAppBar(
+                title: 'List your home',
+                onBack: () => PgBackScope.pop(ctx),
+              )),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
+                  children: [
+                    Text('Set up your home so pet parents can book boarding.',
+                        style: PgText.inter(14, FontWeight.w400, color: c.muted, height: 1.5)),
+                    const SizedBox(height: 16),
+                    PgTextField(label: 'Home name', controller: _homeName, hint: "Meera's Home"),
+                    const SizedBox(height: 16),
+                    Row(children: [
+                      Expanded(child: Text('Photos of your home', style: PgText.label(context))),
+                      Text('${_photos.length}/${Homestay.maxPhotos}',
+                          style: PgText.inter(12.5, FontWeight.w600,
+                              color: _photos.length < Homestay.minPhotos ? c.heart : c.brand)),
+                    ]),
+                    const SizedBox(height: 4),
+                    Text('Add ${Homestay.minPhotos}–${Homestay.maxPhotos} photos so parents can see the place.',
+                        style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
+                    const SizedBox(height: 10),
+                    _photoStrip(c),
+                    const SizedBox(height: 16),
+                    Text('Home type', style: PgText.label(context)),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 9, runSpacing: 9, children: [
+                      for (final t in HomeType.values)
+                        _SelectChip(
+                          label: '${t.emoji} ${t.label}',
+                          selected: _homeType == t,
+                          onTap: () => setState(() => _homeType = t),
+                        ),
+                    ]),
+                    const SizedBox(height: 16),
+                    PgTextField(label: 'Rate (₹ per night)', controller: _rate,
+                        keyboardType: TextInputType.number, hint: '900'),
+                    const SizedBox(height: 16),
+                    PgTextField(label: 'About this home', controller: _about,
+                        hint: 'Tell parents about your home'),
+                    const SizedBox(height: 16),
+                    Text('Amenities', style: PgText.label(context)),
+                    const SizedBox(height: 8),
+                    Wrap(spacing: 9, runSpacing: 9, children: [
+                      for (final a in Amenity.values)
+                        _SelectChip(
+                          label: '${a.emoji} ${a.label}',
+                          selected: _amenities.contains(a),
+                          onTap: () => setState(() =>
+                              _amenities.contains(a) ? _amenities.remove(a) : _amenities.add(a)),
+                        ),
+                    ]),
+                    const SizedBox(height: 18),
+                    // Optional — an unverified host can still list, they just don't
+                    // get the "Pawgo Verified host" badge.
+                    const VerificationCard(kind: VerificationKind.homestay),
+                    const SizedBox(height: 14),
+                    const EarningsCard(),
+                  ],
+                ),
+              ),
+              Container(
+                decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
+                padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  // Beside the button, not at the end of the scrolling form — otherwise
+                  // the reason a save was refused is off-screen when you tap Save.
+                  if (_error != null) ...[
+                    Text(_error!, textAlign: TextAlign.center,
+                        style: PgText.inter(13, FontWeight.w600, color: c.heart)),
+                    const SizedBox(height: 10),
+                  ],
+                  PgPrimaryButton(label: _saving ? 'Saving…' : 'List my home',
+                    onPressed: _saving ? () {} : _save),
+                  if (widget.fromOnboarding) ...[
+                    const SizedBox(height: 6),
+                    TextButton(
+                      onPressed: _saving ? null : () => context.go(Routes.home),
+                      child: Text('Set up later',
+                        style: PgText.inter(13.5, FontWeight.w600, color: context.pg.muted))),
+                  ],
                 ]),
-                const SizedBox(height: 4),
-                Text('Add ${Homestay.minPhotos}–${Homestay.maxPhotos} photos so parents can see the place.',
-                    style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
-                const SizedBox(height: 10),
-                _photoStrip(c),
-                const SizedBox(height: 16),
-                Text('Home type', style: PgText.label(context)),
-                const SizedBox(height: 8),
-                Wrap(spacing: 9, runSpacing: 9, children: [
-                  for (final t in HomeType.values)
-                    _SelectChip(
-                      label: '${t.emoji} ${t.label}',
-                      selected: _homeType == t,
-                      onTap: () => setState(() => _homeType = t),
-                    ),
-                ]),
-                const SizedBox(height: 16),
-                PgTextField(label: 'Rate (₹ per night)', controller: _rate,
-                    keyboardType: TextInputType.number, hint: '900'),
-                const SizedBox(height: 16),
-                PgTextField(label: 'About this home', controller: _about,
-                    hint: 'Tell parents about your home'),
-                const SizedBox(height: 16),
-                Text('Amenities', style: PgText.label(context)),
-                const SizedBox(height: 8),
-                Wrap(spacing: 9, runSpacing: 9, children: [
-                  for (final a in Amenity.values)
-                    _SelectChip(
-                      label: '${a.emoji} ${a.label}',
-                      selected: _amenities.contains(a),
-                      onTap: () => setState(() =>
-                          _amenities.contains(a) ? _amenities.remove(a) : _amenities.add(a)),
-                    ),
-                ]),
-                const SizedBox(height: 18),
-                // Optional — an unverified host can still list, they just don't
-                // get the "Pawgo Verified host" badge.
-                const VerificationCard(kind: VerificationKind.homestay),
-                const SizedBox(height: 14),
-                const EarningsCard(),
-              ],
-            ),
-          ),
-          Container(
-            decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
-            padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              // Beside the button, not at the end of the scrolling form — otherwise
-              // the reason a save was refused is off-screen when you tap Save.
-              if (_error != null) ...[
-                Text(_error!, textAlign: TextAlign.center,
-                    style: PgText.inter(13, FontWeight.w600, color: c.heart)),
-                const SizedBox(height: 10),
-              ],
-              PgPrimaryButton(label: _saving ? 'Saving…' : 'List my home',
-                onPressed: _saving ? () {} : _save),
-              if (widget.fromOnboarding) ...[
-                const SizedBox(height: 6),
-                TextButton(
-                  onPressed: _saving ? null : () => context.go(Routes.home),
-                  child: Text('Set up later',
-                    style: PgText.inter(13.5, FontWeight.w600, color: context.pg.muted))),
-              ],
+              ),
             ]),
           ),
-        ]),
+        ),
       ),
     );
   }

@@ -70,7 +70,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                     style: PgText.inter(12.5, FontWeight.w500, color: c.muted)),
               ])),
               GestureDetector(
-                onTap: () => context.go(Routes.nearby),
+                onTap: () => context.push(Routes.nearby),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),

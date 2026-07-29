@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -57,69 +58,94 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     final c = context.pg;
-    return Scaffold(
-      backgroundColor: c.surface,
-      body: PageView.builder(
-        controller: _controller,
-        itemCount: _pages.length,
-        onPageChanged: (i) => setState(() => _index = i),
-        itemBuilder: (_, i) {
-          final p = _pages[i];
-          final isLast = i == _pages.length - 1;
-          return Column(children: [
-            SizedBox(
-              height: 460,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                    colors: p.gradient),
-                ),
-                alignment: Alignment.center,
-                child: Transform.rotate(
-                  angle: (i.isEven ? -4 : 4) * 3.1416 / 180,
-                  child: Container(
-                    width: 236, height: 300, padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: c.surface,
-                      borderRadius: BorderRadius.circular(30),
-                      boxShadow: c.shadow),
-                    child: const PgImageSlot(radius: 20, emoji: '🐶'),
+    return PgBackScope(
+      confirmExit: true,
+      // Consumed here rather than left to confirmExit: back on any page but
+      // the first steps to the previous page instead of touching the exit
+      // counter at all. Only once back reaches page 0 does confirmExit's
+      // "press again to exit" take over.
+      //
+      // This is a deliberate exception to PgBackScope.blockWhen's "must be
+      // pure" rule: it animates the page controller as a side effect. That's
+      // safe only because confirmExit: true is set above — PgBackScope's
+      // _nativePop checks confirmExit before blockWhen and short-circuits
+      // there, so this never fires merely from an unrelated rebuild (e.g.
+      // tapping Next), only from an actual back attempt handled in
+      // _resolve. Do not copy this pattern onto a screen without
+      // confirmExit or upTo set.
+      blockWhen: () {
+        if (_index > 0) {
+          _controller.previousPage(
+              duration: const Duration(milliseconds: 250), curve: Curves.easeOut);
+          return true;
+        }
+        return false;
+      },
+      blockMessage: '', // the page moved instead; nothing to say
+      child: Scaffold(
+        backgroundColor: c.surface,
+        body: PageView.builder(
+          controller: _controller,
+          itemCount: _pages.length,
+          onPageChanged: (i) => setState(() => _index = i),
+          itemBuilder: (_, i) {
+            final p = _pages[i];
+            final isLast = i == _pages.length - 1;
+            return Column(children: [
+              SizedBox(
+                height: 460,
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter, end: Alignment.bottomCenter,
+                      colors: p.gradient),
+                  ),
+                  alignment: Alignment.center,
+                  child: Transform.rotate(
+                    angle: (i.isEven ? -4 : 4) * 3.1416 / 180,
+                    child: Container(
+                      width: 236, height: 300, padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: c.surface,
+                        borderRadius: BorderRadius.circular(30),
+                        boxShadow: c.shadow),
+                      child: const PgImageSlot(radius: 20, emoji: '🐶'),
+                    ),
                   ),
                 ),
               ),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(30, 34, 30, 30),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(p.title, style: PgText.poppins(27, FontWeight.w800, color: c.text, ls: -0.5)),
-                  const SizedBox(height: 14),
-                  Text(p.body, style: PgText.inter(14.5, FontWeight.w400, color: c.muted, height: 1.55)),
-                  const Spacer(),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 22),
-                    child: PgPageDots(count: _pages.length, index: i),
-                  ),
-                  if (isLast)
-                    PgPrimaryButton(label: 'Get started', onPressed: _toWelcome)
-                  else
-                    Row(children: [
-                      GestureDetector(
-                        onTap: _toWelcome,
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-                          child: Text('Skip', style: PgText.inter(14, FontWeight.w600, color: c.muted)),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(30, 34, 30, 30),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(p.title, style: PgText.poppins(27, FontWeight.w800, color: c.text, ls: -0.5)),
+                    const SizedBox(height: 14),
+                    Text(p.body, style: PgText.inter(14.5, FontWeight.w400, color: c.muted, height: 1.55)),
+                    const Spacer(),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 22),
+                      child: PgPageDots(count: _pages.length, index: i),
+                    ),
+                    if (isLast)
+                      PgPrimaryButton(label: 'Get started', onPressed: _toWelcome)
+                    else
+                      Row(children: [
+                        GestureDetector(
+                          onTap: _toWelcome,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+                            child: Text('Skip', style: PgText.inter(14, FontWeight.w600, color: c.muted)),
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(child: PgPrimaryButton(label: 'Next', onPressed: _next)),
-                    ]),
-                ]),
+                        const SizedBox(width: 14),
+                        Expanded(child: PgPrimaryButton(label: 'Next', onPressed: _next)),
+                      ]),
+                  ]),
+                ),
               ),
-            ),
-          ]);
-        },
+            ]);
+          },
+        ),
       ),
     );
   }

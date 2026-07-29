@@ -50,7 +50,7 @@ class _ServicesListScreenState extends ConsumerState<ServicesListScreen> {
               children: [
                 if (isProWithoutListing)
                   GestureDetector(
-                    onTap: () => context.go(Routes.proSetup),
+                    onTap: () => context.push(Routes.proSetup),
                     child: Container(
                       margin: const EdgeInsets.only(bottom: 18),
                       padding: const EdgeInsets.all(15),

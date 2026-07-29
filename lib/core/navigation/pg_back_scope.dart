@@ -1,0 +1,216 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:go_router/go_router.dart';
+import '../widgets/pg_snackbar.dart';
+import 'exit_confirm.dart';
+
+typedef BackPredicate = bool Function();
+
+/// Declares what back does on one screen — for the hardware/gesture back AND
+/// the on-screen chevron, which route through the same resolver here.
+///
+/// Resolution order is **block → confirm → onBeforeLeave → confirmExit →
+/// upTo → pop → upToIfEmpty → exit**. Omit every option and this is an
+/// ordinary pop, so wrapping a screen costs nothing.
+///
+/// Wrap the widget your screen's `build` returns, not something above the
+/// `State` — a `setState` must rebuild this so the predicates re-evaluate.
+class PgBackScope extends StatelessWidget {
+  final Widget child;
+
+  /// Forced destination — wins even when a poppable stack exists. Use this
+  /// only where a real pop would be wrong (e.g. it would re-enter a finished
+  /// checkout): screens reached exclusively via `go`. Always a `Routes.*`
+  /// constant: go_router throws on an unknown path, so a constant turns a
+  /// typo into a compile error.
+  final String? upTo;
+
+  /// Where to go when there is nothing to pop — a cold-start deep link, or
+  /// arrival via `go`. Unlike [upTo], a normal pop wins when a stack exists,
+  /// so a screen pushed from a live parent returns to it with its state
+  /// intact. Use this for screens reached by `push` from a live parent.
+  final String? upToIfEmpty;
+
+  /// For screens with nowhere to go up to. Shows "Press back again to exit"
+  /// and exits only on a second press inside [PgExitConfirm.window].
+  final bool confirmExit;
+
+  /// Ask before leaving. Only where leaving destroys real work — prompting on
+  /// a two-field form trains people to dismiss the dialog unread. Must be
+  /// pure, same as [blockWhen]: also re-evaluated on every rebuild, not only
+  /// on a back attempt.
+  final BackPredicate? confirmWhen;
+  final String confirmMessage;
+
+  /// Refuse back outright, e.g. while a payment is verifying.
+  ///
+  /// Must be pure. [_nativePop] evaluates this on every rebuild of the
+  /// wrapped screen — not only on an actual back attempt — so a predicate
+  /// with a side effect fires whenever anything else on the screen triggers
+  /// a rebuild, not just when back is pressed. Onboarding's page-back
+  /// predicate is the one documented exception, and it is only safe because
+  /// `confirmExit`/`upTo` are checked *before* `blockWhen` in [_nativePop]'s
+  /// chain and short-circuit ahead of it there. A screen with a
+  /// side-effecting `blockWhen` and neither `confirmExit` nor `upTo` set
+  /// would have that side effect fire from [_nativePop] on every unrelated
+  /// rebuild — do not copy the onboarding pattern without one of those set.
+  final BackPredicate? blockWhen;
+
+  /// Shown when [blockWhen] refuses back. Leave empty to suppress the snack
+  /// entirely — for a block that already communicates itself another way
+  /// (onboarding's page-back animation).
+  final String blockMessage;
+
+  /// Runs after any confirm and immediately before navigating — for a side
+  /// effect that must happen on the way out, e.g. signing out before the
+  /// verify-email gate redirects. Guarded by `context.mounted` after the
+  /// await, same as everything else in [_resolve].
+  final Future<void> Function()? onBeforeLeave;
+
+  const PgBackScope({
+    super.key,
+    required this.child,
+    this.upTo,
+    this.upToIfEmpty,
+    this.confirmExit = false,
+    this.confirmWhen,
+    this.confirmMessage = "You haven't saved this yet. Leaving now loses it.",
+    this.blockWhen,
+    this.blockMessage = 'Please wait — this is still in progress.',
+    this.onBeforeLeave,
+  });
+
+  /// Runs the nearest scope's resolver — the same path the OS back takes.
+  /// `PgAppBar.onBack` calls this so the button and the gesture cannot drift.
+  static Future<void> pop(BuildContext context) async {
+    final data = context.getInheritedWidgetOfExactType<_PgBackScopeData>();
+    if (data != null) return data.resolve();
+    if (context.canPop()) context.pop();
+  }
+
+  /// A predicate that throws is treated as false: a broken check must never
+  /// trap someone on a screen with no way out.
+  static bool _safe(BackPredicate? p) {
+    if (p == null) return false;
+    try {
+      return p();
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Deliberately does not mention `upToIfEmpty`: it only applies when there
+  // is nothing to pop, so a poppable stack must still let the OS handle back
+  // natively (predictive-back animation intact) rather than being
+  // intercepted here.
+  //
+  // `confirmExit`/`upTo` are checked before `blockWhen`/`confirmWhen` on
+  // purpose: this getter reruns on every rebuild of the screen (any parent
+  // `setState` reconstructs this widget), not only on an actual back press.
+  // `blockWhen`/`confirmWhen` must be pure (see their doc comments) — this
+  // ordering is what makes onboarding's documented side-effecting exception
+  // safe, not a general guarantee. A screen with a side-effecting
+  // `blockWhen` and neither `confirmExit` nor `upTo` set would still have
+  // that side effect fire from here, on every rebuild, not just on back.
+  //
+  // `onBeforeLeave` also disqualifies a native pop: it is a side effect that
+  // must run through `_resolve` on the way out (e.g. a sign-out before a
+  // forced redirect), and a native pop would skip `_resolve` entirely,
+  // silently dropping it.
+  bool _nativePop(BuildContext context) =>
+      !confirmExit &&
+      upTo == null &&
+      onBeforeLeave == null &&
+      !_safe(blockWhen) &&
+      !_safe(confirmWhen) &&
+      context.canPop();
+
+  Future<void> _resolve(BuildContext context) async {
+    if (_safe(blockWhen)) {
+      if (blockMessage.isNotEmpty) showPgSnack(context, blockMessage);
+      return;
+    }
+
+    if (_safe(confirmWhen)) {
+      final leave = await showDialog<bool>(
+        context: context,
+        builder: (d) => AlertDialog(
+          title: const Text('Discard changes?'),
+          content: Text(confirmMessage),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(d).pop(false),
+              child: const Text('Keep editing'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(d).pop(true),
+              child: const Text('Discard'),
+            ),
+          ],
+        ),
+      );
+      if (leave != true || !context.mounted) return;
+    }
+
+    if (onBeforeLeave != null) {
+      try {
+        await onBeforeLeave!();
+      } catch (e) {
+        // A broken side effect must never trap someone here, same principle
+        // as _safe() above. Concretely: verify-email's onBeforeLeave signs
+        // out before forcing Welcome — if that throws (no network, a
+        // Firebase error) and this were left unguarded, _resolve would throw
+        // before reaching the upTo branch, leaving an unverified user stuck
+        // on verify-email, which is exactly the gated loop this task closes.
+        // Leaving anyway is the safe direction: a sign-out that silently
+        // failed and gets retried next launch beats a user with no exit.
+        debugPrint('PgBackScope.onBeforeLeave threw, leaving anyway: $e');
+      }
+      if (!context.mounted) return;
+    }
+
+    if (confirmExit) {
+      if (PgExitConfirm.press()) {
+        await SystemNavigator.pop();
+      } else {
+        showPgSnack(context, 'Press back again to exit');
+      }
+      return;
+    }
+
+    if (upTo != null) {
+      context.go(upTo!);
+      return;
+    }
+    if (context.canPop()) {
+      context.pop();
+      return;
+    }
+    if (upToIfEmpty != null) {
+      context.go(upToIfEmpty!);
+      return;
+    }
+    // Nothing above this screen and no destination declared: leave the app.
+    await SystemNavigator.pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: _nativePop(context),
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        await _resolve(context);
+      },
+      child: _PgBackScopeData(resolve: () => _resolve(context), child: child),
+    );
+  }
+}
+
+class _PgBackScopeData extends InheritedWidget {
+  final Future<void> Function() resolve;
+  const _PgBackScopeData({required this.resolve, required super.child});
+
+  @override
+  bool updateShouldNotify(_PgBackScopeData old) => true;
+}

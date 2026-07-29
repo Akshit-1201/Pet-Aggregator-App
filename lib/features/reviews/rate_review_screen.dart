@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/router/routes.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
+import '../../core/widgets/pg_app_bar.dart';
 import '../../core/widgets/pg_image_slot.dart';
 import '../../core/widgets/pg_text_field.dart';
 import '../../data/models/review.dart';
@@ -73,15 +74,10 @@ class _RateReviewScreenState extends ConsumerState<RateReviewScreen> {
       body: SafeArea(
         child: Column(children: [
           Container(
-            padding: const EdgeInsets.fromLTRB(14, 8, 16, 10),
             decoration: BoxDecoration(border: Border(bottom: BorderSide(color: c.border))),
-            child: Row(children: [
-              GestureDetector(
-                onTap: () => context.canPop() ? context.pop() : context.go(Routes.home),
-                child: SizedBox(width: 40, height: 40, child: Icon(Icons.chevron_left, color: c.text))),
-              Text('Rate your ${target.type == ReviewTargetType.homestay ? 'stay' : 'booking'}',
-                style: PgText.poppins(18, FontWeight.w700, color: c.text)),
-            ]),
+            child: PgAppBar(
+              title: 'Rate your ${target.type == ReviewTargetType.homestay ? 'stay' : 'booking'}',
+              onBack: () => PgBackScope.pop(context)),
           ),
           Expanded(child: ListView(
             padding: const EdgeInsets.fromLTRB(22, 24, 22, 30),

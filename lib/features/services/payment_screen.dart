@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -72,65 +73,77 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
     if (booking == null) {
       return Scaffold(appBar: AppBar(), body: const Center(child: Text('No booking')));
     }
-    return Scaffold(
-      backgroundColor: c.bg,
-      body: SafeArea(
-        child: Column(children: [
-          PgAppBar(title: 'Payment', onBack: () => context.pop()),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(22, 8, 22, 24),
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                      color: c.surface,
-                      border: Border.all(color: c.border),
-                      borderRadius: BorderRadius.circular(16)),
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    _row(c, 'Professional', booking.proName),
-                    _row(c, 'Service', booking.serviceType.label),
-                    _row(c, 'When', '${booking.dateLabel} · ${booking.timeSlot}'),
-                    _row(c, 'Pet', booking.petName),
-                    Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        child: Container(height: 1, color: c.border)),
-                    _row(c, 'Rate', '₹${booking.rate}'),
-                    _row(c, 'Service fee', '₹${booking.fee}'),
-                    _row(c, 'Total', '₹${booking.total}', bold: true),
-                  ]),
-                ),
-                const SizedBox(height: 14),
-                Text('🔒 Secured by Razorpay — UPI, cards & netbanking',
-                    style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
-              ],
+    return PgBackScope(
+      // Backing out mid-verification is how a payment succeeds with no
+      // booking written. The server owns the paid-write, but the user must
+      // not leave before it lands. Only `verifying` is refused: `opening` is
+      // the wait for createBookingOrder before Razorpay even opens — nothing
+      // has been charged yet, so blocking there only traps the user (no
+      // money to protect, and if the Razorpay callback is ever lost the
+      // completer never settles, so `_busy` would stay true forever).
+      blockWhen: () => _phase == _PayPhase.verifying,
+      blockMessage: 'Payment in progress — please wait.',
+      child: Scaffold(
+        backgroundColor: c.bg,
+        body: SafeArea(
+          child: Column(children: [
+            Builder(builder: (ctx) =>
+              PgAppBar(title: 'Payment', onBack: () => PgBackScope.pop(ctx))),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(22, 8, 22, 24),
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                        color: c.surface,
+                        border: Border.all(color: c.border),
+                        borderRadius: BorderRadius.circular(16)),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      _row(c, 'Professional', booking.proName),
+                      _row(c, 'Service', booking.serviceType.label),
+                      _row(c, 'When', '${booking.dateLabel} · ${booking.timeSlot}'),
+                      _row(c, 'Pet', booking.petName),
+                      Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: Container(height: 1, color: c.border)),
+                      _row(c, 'Rate', '₹${booking.rate}'),
+                      _row(c, 'Service fee', '₹${booking.fee}'),
+                      _row(c, 'Total', '₹${booking.total}', bold: true),
+                    ]),
+                  ),
+                  const SizedBox(height: 14),
+                  Text('🔒 Secured by Razorpay — UPI, cards & netbanking',
+                      style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
+                ],
+              ),
             ),
-          ),
-          Container(
-            decoration: BoxDecoration(
-                color: c.surface, border: Border(top: BorderSide(color: c.border))),
-            padding: const EdgeInsets.fromLTRB(22, 13, 22, 18),
-            child: Row(children: [
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Total', style: PgText.inter(12, FontWeight.w400, color: c.faint)),
-                Text('₹${booking.total}', style: PgText.poppins(20, FontWeight.w800, color: c.text)),
+            Container(
+              decoration: BoxDecoration(
+                  color: c.surface, border: Border(top: BorderSide(color: c.border))),
+              padding: const EdgeInsets.fromLTRB(22, 13, 22, 18),
+              child: Row(children: [
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Total', style: PgText.inter(12, FontWeight.w400, color: c.faint)),
+                  Text('₹${booking.total}', style: PgText.poppins(20, FontWeight.w800, color: c.text)),
+                ]),
+                const SizedBox(width: 14),
+                Expanded(
+                    child: GestureDetector(
+                        onTap: _busy ? null : () => _pay(booking),
+                        child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 17),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                                gradient: LinearGradient(colors: [c.brand, c.brand2]),
+                                borderRadius: BorderRadius.circular(16)),
+                            child: Text(_label(booking.total),
+                                style: PgText.poppins(15.5, FontWeight.w700,
+                                    color: Colors.white))))),
               ]),
-              const SizedBox(width: 14),
-              Expanded(
-                  child: GestureDetector(
-                      onTap: _busy ? null : () => _pay(booking),
-                      child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 17),
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                              gradient: LinearGradient(colors: [c.brand, c.brand2]),
-                              borderRadius: BorderRadius.circular(16)),
-                          child: Text(_label(booking.total),
-                              style: PgText.poppins(15.5, FontWeight.w700,
-                                  color: Colors.white))))),
-            ]),
-          ),
-        ]),
+            ),
+          ]),
+        ),
       ),
     );
   }
