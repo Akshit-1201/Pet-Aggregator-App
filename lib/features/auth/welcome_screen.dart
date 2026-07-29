@@ -52,10 +52,13 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     final c = context.pg;
-    // The bottom of the auth funnel — no stack, no forced destination. Wrapped
-    // explicitly (rather than left bare) so back exiting the app is a
-    // declared decision, not an accident of nothing intercepting it.
+    // The bottom of the auth funnel — no stack, no forced destination.
+    // confirmExit matches onboarding page 1, Location and Home, which all
+    // guard the same "nowhere up" situation with a second press before
+    // exiting, rather than letting a stray press on the login screen kill
+    // the app outright.
     return PgBackScope(
+      confirmExit: true,
       child: Scaffold(
         body: Container(
           decoration: const BoxDecoration(

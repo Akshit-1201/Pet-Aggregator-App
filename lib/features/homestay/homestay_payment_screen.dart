@@ -72,8 +72,12 @@ class _HomestayPaymentScreenState extends ConsumerState<HomestayPaymentScreen> {
     return PgBackScope(
       // Backing out mid-verification is how a payment succeeds with no
       // booking written. The server owns the paid-write, but the user must
-      // not leave before it lands.
-      blockWhen: () => _busy,
+      // not leave before it lands. Only `verifying` is refused: `opening` is
+      // the wait for createBookingOrder before Razorpay even opens — nothing
+      // has been charged yet, so blocking there only traps the user (no
+      // money to protect, and if the Razorpay callback is ever lost the
+      // completer never settles, so `_busy` would stay true forever).
+      blockWhen: () => _phase == _PayPhase.verifying,
       blockMessage: 'Payment in progress — please wait.',
       child: Scaffold(
         backgroundColor: c.bg,

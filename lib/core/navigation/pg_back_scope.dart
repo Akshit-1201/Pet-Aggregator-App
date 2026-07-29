@@ -9,9 +9,9 @@ typedef BackPredicate = bool Function();
 /// Declares what back does on one screen — for the hardware/gesture back AND
 /// the on-screen chevron, which route through the same resolver here.
 ///
-/// Resolution order is **block → confirm → confirmExit → upTo → pop →
-/// upToIfEmpty → exit**. Omit every option and this is an ordinary pop, so
-/// wrapping a screen costs nothing.
+/// Resolution order is **block → confirm → onBeforeLeave → confirmExit →
+/// upTo → pop → upToIfEmpty → exit**. Omit every option and this is an
+/// ordinary pop, so wrapping a screen costs nothing.
 ///
 /// Wrap the widget your screen's `build` returns, not something above the
 /// `State` — a `setState` must rebuild this so the predicates re-evaluate.
@@ -40,7 +40,6 @@ class PgBackScope extends StatelessWidget {
   /// pure, same as [blockWhen]: also re-evaluated on every rebuild, not only
   /// on a back attempt.
   final BackPredicate? confirmWhen;
-  final String confirmTitle;
   final String confirmMessage;
 
   /// Refuse back outright, e.g. while a payment is verifying.
@@ -75,7 +74,6 @@ class PgBackScope extends StatelessWidget {
     this.upToIfEmpty,
     this.confirmExit = false,
     this.confirmWhen,
-    this.confirmTitle = 'Discard changes?',
     this.confirmMessage = "You haven't saved this yet. Leaving now loses it.",
     this.blockWhen,
     this.blockMessage = 'Please wait — this is still in progress.',
@@ -114,9 +112,15 @@ class PgBackScope extends StatelessWidget {
   // safe, not a general guarantee. A screen with a side-effecting
   // `blockWhen` and neither `confirmExit` nor `upTo` set would still have
   // that side effect fire from here, on every rebuild, not just on back.
+  //
+  // `onBeforeLeave` also disqualifies a native pop: it is a side effect that
+  // must run through `_resolve` on the way out (e.g. a sign-out before a
+  // forced redirect), and a native pop would skip `_resolve` entirely,
+  // silently dropping it.
   bool _nativePop(BuildContext context) =>
       !confirmExit &&
       upTo == null &&
+      onBeforeLeave == null &&
       !_safe(blockWhen) &&
       !_safe(confirmWhen) &&
       context.canPop();
@@ -131,7 +135,7 @@ class PgBackScope extends StatelessWidget {
       final leave = await showDialog<bool>(
         context: context,
         builder: (d) => AlertDialog(
-          title: Text(confirmTitle),
+          title: const Text('Discard changes?'),
           content: Text(confirmMessage),
           actions: [
             TextButton(
