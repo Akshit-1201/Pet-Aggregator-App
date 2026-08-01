@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_network_image.dart';
 import '../../data/models/post.dart';
 import '../../data/repositories/providers.dart';
+import '../home/home_shell.dart';
 
 class CommunityFeedScreen extends ConsumerStatefulWidget {
   const CommunityFeedScreen({super.key});
@@ -33,10 +35,23 @@ class _CommunityFeedScreenState extends ConsumerState<CommunityFeedScreen> {
               padding: const EdgeInsets.fromLTRB(22, 16, 22, 20),
               decoration: BoxDecoration(color: c.peach,
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(26))),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Community', style: PgText.poppins(24, FontWeight.w800, color: c.text, ls: -0.4)),
-                const SizedBox(height: 3),
-                Text('Mumbai pet parents', style: PgText.inter(12.5, FontWeight.w500, color: c.text)),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                // A tab root has no PgBackScope — HomeShell owns its back.
+                // goBranch(homeBranch) is the same switch hardware back takes.
+                GestureDetector(
+                  onTap: () => StatefulNavigationShell.maybeOf(context)?.goBranch(HomeShell.homeBranch),
+                  child: Container(
+                    width: 42, height: 42, alignment: Alignment.center,
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
+                      borderRadius: BorderRadius.circular(PgRadius.iconBtn)),
+                    child: Icon(Icons.chevron_left, color: c.text)),
+                ),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('Community', style: PgText.poppins(24, FontWeight.w800, color: c.text, ls: -0.4)),
+                  const SizedBox(height: 3),
+                  Text('Mumbai pet parents', style: PgText.inter(12.5, FontWeight.w500, color: c.text)),
+                ])),
               ]),
             ),
             SizedBox(
