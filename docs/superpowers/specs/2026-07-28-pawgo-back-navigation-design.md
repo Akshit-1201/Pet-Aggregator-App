@@ -2,6 +2,19 @@
 
 > **Status:** approved design (2026-07-28). Gives every screen in the app a defined back behaviour, on both the hardware/gesture back and the on-screen affordance, driven by one shared widget. Fixes an app that currently exits on back from any tab and strands users on several screens.
 
+## Update (2026-08-02) — seven "no affordance" screens now have a chevron
+
+This design, as approved, deliberately left nine screens with no on-screen back affordance because bottom nav or the funnel already covers them (see "The problem this fixes" and the per-screen table below). **Slice 23 added a visible chevron to seven of those nine anyway** — the five tab roots (`home`, `discover`, `services`, `community`, `profile`), `onboarding`, and `welcome` — plus `location`, which this doc's own per-screen table already treats the same way as Home. `splash` and `verify_email` are unaffected and still have none.
+
+Why: the owner asked for a visible back button on every screen. Told that on Home, Welcome, onboarding's first slide, and Location the chevron's *only* possible destination is "leave the app" — there is nowhere sound to go up to, per the design decisions below — the owner chose a visible chevron there anyway, over an app that looks like it has no way back. That is a product call, not a bug; treat the "no affordance" language below for these seven screens as superseded by this note, not as the current state.
+
+**The invariant this doc is built on still holds.** The chevron and hardware/gesture back run through the exact same resolver on every one of these screens, not a parallel path:
+
+- `onboarding`, `welcome`, `location` — the chevron calls `PgBackScope.pop(context)` from a `Builder` scoped inside that screen's own `PgBackScope`, the identical call `PgAppBar.onBack` makes elsewhere in the app.
+- The five tab roots — `discover`/`services`/`community`/`profile` call `StatefulNavigationShell.maybeOf(context)?.goBranch(HomeShell.homeBranch)`, the same branch switch `HomeShell._onBack` performs on hardware back; `home`'s chevron calls `HomeShell.confirmExit(context)` directly, sharing one `PgExitConfirm` window with hardware back rather than running an independent timer.
+
+Pinned by `test/features/back_chevron_affordances_test.dart` (chevron vs. hardware back, same landing spot, for all seven). The rest of this document is otherwise unchanged and describes Slice 22 as designed and shipped.
+
 ## The problem this fixes
 
 Back navigation was never designed. It was added per screen, by hand, wherever someone noticed it missing. Audited against all **38 screens**, four distinct failures:
@@ -11,7 +24,7 @@ Back navigation was never designed. It was added per screen, by hand, wherever s
 - No form warns before discarding work.
 - Back during a Razorpay payment is unguarded.
 
-**2. Fifteen screens have no on-screen back affordance.** Nine of those are correct (splash, onboarding, welcome, verify-email, and the five tab roots, which bottom nav owns). Six are not: `signup`, `location`, `pro_setup` genuinely need one, and `post_live`, `booking_confirmed`, `host_accepted` are terminal screens where the *absence* of a defined "up" is the bug.
+**2. Fifteen screens have no on-screen back affordance.** Nine of those are correct as of this design (splash, onboarding, welcome, verify-email, and the five tab roots, which bottom nav owns) — though Slice 23 later gave onboarding, welcome and the five tab roots a chevron anyway; see the 2026-08-02 update above. Six are not: `signup`, `location`, `pro_setup` genuinely need one, and `post_live`, `booking_confirmed`, `host_accepted` are terminal screens where the *absence* of a defined "up" is the bug.
 
 **3. `verify_email` is a trap.** The user is signed in but unverified, and every meaningful route is gated behind verification. A plain pop bounces them straight back to the same screen with no way out but killing the app.
 
@@ -58,7 +71,7 @@ Back navigation was never designed. It was added per screen, by hand, wherever s
 
 Non-Home tab → switch to the Home branch. On Home → "Press back again to exit" toast; a second press within **2 seconds** calls `SystemNavigator.pop()`. The timer resets after the window, so a press, a pause, and another press shows the toast again rather than exiting.
 
-Handled once in the shell scaffold. Individual tab screens declare nothing.
+Branch-switch and exit-confirm logic is handled once in the shell scaffold (`HomeShell`); no per-screen `PgBackScope`. As of Slice 23 (2026-08-02 update above), each tab-root screen also renders its own visible chevron that calls straight into that same shared logic — `HomeShell.confirmExit` on Home, `StatefulNavigationShell.maybeOf(context)?.goBranch(HomeShell.homeBranch)` on Discover/Services/Community/Profile — so the button can never diverge from hardware back.
 
 ### Auth funnel (6)
 
@@ -69,13 +82,15 @@ Handled once in the shell scaffold. Individual tab screens declare nothing.
 | `welcome` | Exits — this is the auth root, there is nowhere up |
 | `signup` | → Welcome |
 | `verify_email` | **Signs out**, then → Welcome |
-| `location` | No back affordance; hardware back → double-tap to exit |
+| `location` | No back affordance as designed; hardware back → double-tap to exit* |
+
+\* As of Slice 23 (2026-08-02 update above), `onboarding`, `welcome` and `location` all gained a visible chevron too. The behaviour each row describes is unchanged — the chevron calls the identical `PgBackScope.pop(context)` resolver hardware/gesture back already runs.
 
 Two of these need explaining.
 
 **`verify_email` signs out.** A plain pop returns to a gated route, the redirect bounces the user back here, and they are stuck in a loop with no exit but killing the app.
 
-**`location` has nowhere to go up to.** It is reached from `verify_email` (`verify_email_screen.dart:66`), not from signup — so by the time a user sees it the account already exists *and* is verified. Popping to signup is a dead end, and popping to verify-email loops, because the router redirects verified users off that screen. It is a required funnel step with nothing above it, so it gets the same treatment as Home: no back button, and hardware back offers a confirmed exit rather than stranding or silently doing nothing. Relaunching returns the user here with nothing lost.
+**`location` has nowhere to go up to.** It is reached from `verify_email` (`verify_email_screen.dart:66`), not from signup — so by the time a user sees it the account already exists *and* is verified. Popping to signup is a dead end, and popping to verify-email loops, because the router redirects verified users off that screen. It is a required funnel step with nothing above it, so it gets the same treatment as Home: hardware back offers a confirmed exit rather than stranding or silently doing nothing, not a normal pop. Relaunching returns the user here with nothing lost. (Slice 23 gave it a visible chevron too — 2026-08-02 update above — but the chevron runs the identical confirmed-exit resolver, so this is still true: there is nowhere sound for the button to go either.)
 
 `create_pet` is the step after `location` and backs to it normally (plus its dirty-check — see below), since `create_pet_screen.dart:140` already treats `location` as its predecessor.
 
@@ -187,7 +202,7 @@ The 15 `context.go(Routes.home)` calls are untouched — every one is a flow com
 - `blockWhen` true → back refused, toast shown, still on screen
 - Blocked **and** dirty → block wins, no dialog
 
-**Parity** — tapping `PgAppBar`'s chevron and firing hardware back from the same screen land in the same place. This is the invariant the design rests on.
+**Parity** — tapping `PgAppBar`'s chevron and firing hardware back from the same screen land in the same place. This is the invariant the design rests on. Slice 23 (2026-08-02 update above) extended this same invariant to seven screens with a bare chevron outside `PgAppBar` — onboarding, welcome, location and the five tab roots — each calling the identical resolver hardware back uses rather than a `PgAppBar`.
 
 **Shell**
 
