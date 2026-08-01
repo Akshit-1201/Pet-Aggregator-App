@@ -29,6 +29,7 @@ class HomeScreen extends ConsumerWidget {
         bottom: false,
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(
+            key: const Key('home-header'),
             width: double.infinity,
             padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
             decoration: BoxDecoration(color: c.surface, border: Border(bottom: BorderSide(color: c.border))),
@@ -41,7 +42,7 @@ class HomeScreen extends ConsumerWidget {
                 onTap: () => HomeShell.confirmExit(context),
                 child: Container(
                   width: 42, height: 42, alignment: Alignment.center,
-                  margin: const EdgeInsets.only(right: 10),
+                  margin: const EdgeInsets.only(right: 8),
                   decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
                     borderRadius: BorderRadius.circular(PgRadius.iconBtn)),
                   child: Icon(Icons.chevron_left, color: c.text)),
@@ -55,15 +56,17 @@ class HomeScreen extends ConsumerWidget {
                       style: PgText.inter(12.5, FontWeight.w600, color: c.muted))),
                 ]),
                 const SizedBox(height: 5),
-                Text('Hey $greetName 👋', style: PgText.poppins(24, FontWeight.w800, color: c.text, ls: -0.5)),
+                Text('Hey $greetName 👋', maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: PgText.poppins(24, FontWeight.w800, color: c.text, ls: -0.5)),
                 const SizedBox(height: 2),
-                Text('Pets near you today', style: PgText.inter(13.5, FontWeight.w400, color: c.muted)),
+                Text('Pets near you today', maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: PgText.inter(13.5, FontWeight.w400, color: c.muted)),
               ])),
               GestureDetector(
                 onTap: () => context.push(Routes.notifications),
                 child: Container(
                   width: 42, height: 42, alignment: Alignment.center,
-                  margin: const EdgeInsets.only(right: 10),
+                  margin: const EdgeInsets.only(right: 8),
                   decoration: BoxDecoration(color: c.surface2, borderRadius: BorderRadius.circular(13)),
                   child: Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
                     Icon(Icons.notifications_none_rounded, size: 20, color: c.text),
@@ -78,7 +81,7 @@ class HomeScreen extends ConsumerWidget {
                 onTap: () => context.push(Routes.chatList),
                 child: Container(
                   width: 42, height: 42, alignment: Alignment.center,
-                  margin: const EdgeInsets.only(right: 10),
+                  margin: const EdgeInsets.only(right: 8),
                   decoration: BoxDecoration(color: c.surface2, borderRadius: BorderRadius.circular(13)),
                   child: Icon(Icons.chat_bubble_outline_rounded, size: 20, color: c.text)),
               ),
