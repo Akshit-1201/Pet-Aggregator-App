@@ -186,6 +186,18 @@ void main() {
       expect(find.text('Press back again to exit'), findsOneWidget);
       expect(find.text('Welcome back 👋'), findsOneWidget);
 
+      // Drain phase 1's SnackBar before pumping phase 2. ScaffoldMessenger
+      // lives above the Router inside MaterialApp, so it survives the next
+      // pumpWidget and would silently re-attach its still-queued toast to
+      // the freshly mounted Scaffold — making phase 2's findsOneWidget
+      // below match phase 1's leftover toast instead of a new one. The
+      // 4-second pump fires the SnackBar's internal auto-dismiss Timer;
+      // pumpAndSettle then finishes the reverse (fade-out) animation the
+      // Timer callback starts, which a single pump doesn't complete.
+      await t.pump(const Duration(seconds: 4));
+      await t.pumpAndSettle();
+      expect(find.text('Press back again to exit'), findsNothing);
+
       // Reset the shared window before the second path — otherwise this tap
       // reads as the *second* press of the pair and would wrongly exit.
       PgExitConfirm.reset();
@@ -224,6 +236,12 @@ void main() {
       await t.pumpAndSettle();
       expect(find.text('Press back again to exit'), findsOneWidget);
       expect(find.text('Choose your area'), findsOneWidget);
+
+      // Drain phase 1's SnackBar before pumping phase 2 — see the identical
+      // comment in the welcome-chevron test above for why this is required.
+      await t.pump(const Duration(seconds: 4));
+      await t.pumpAndSettle();
+      expect(find.text('Press back again to exit'), findsNothing);
 
       PgExitConfirm.reset();
 
