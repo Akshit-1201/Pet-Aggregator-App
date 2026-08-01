@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../data/models/post.dart';
 
@@ -32,6 +33,22 @@ class PostLiveScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(30, 30, 30, 24),
             child: Column(
               children: [
+                // Terminal screen: upTo: Routes.community is the declared
+                // destination. Builder gives the chevron a context INSIDE
+                // PgBackScope's subtree — the outer `context` above is an
+                // ancestor of it and would silently degrade to a plain pop.
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Builder(builder: (ctx) => GestureDetector(
+                    onTap: () => PgBackScope.pop(ctx),
+                    child: Container(
+                      width: 42, height: 42, alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: c.surface, border: Border.all(color: c.border),
+                        borderRadius: BorderRadius.circular(PgRadius.iconBtn)),
+                      child: Icon(Icons.chevron_left, color: c.text)),
+                  )),
+                ),
                 const Spacer(),
                 Container(
                   width: 108,
