@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_buttons.dart';
 import '../../core/widgets/pg_text_field.dart';
@@ -60,7 +61,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     return PgBackScope(
       confirmExit: true,
       child: Scaffold(
-        body: Container(
+        body: Stack(children: [
+          Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
               colors: [Color(0xFFF8B45E), Color(0xFFF0871E)]),
@@ -105,6 +107,29 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
             ),
           ]),
         ),
+          // This is the auth root — there is nowhere up. Builder gives the
+          // chevron a context INSIDE PgBackScope's subtree; the outer
+          // `context` above is this widget's own, an ancestor of the
+          // PgBackScope this build() returns, so PgBackScope.pop(context)
+          // would silently degrade to a plain pop instead of confirmExit.
+          Positioned(
+            top: 0, left: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Builder(builder: (ctx) => GestureDetector(
+                  onTap: () => PgBackScope.pop(ctx),
+                  child: Container(
+                    width: 42, height: 42, alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: c.surface, border: Border.all(color: c.border),
+                      borderRadius: BorderRadius.circular(PgRadius.iconBtn)),
+                    child: Icon(Icons.chevron_left, color: c.text)),
+                )),
+              ),
+            ),
+          ),
+        ]),
       ),
     );
   }

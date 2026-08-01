@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_buttons.dart';
 import '../../core/widgets/pg_page_dots.dart';
@@ -84,11 +85,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       blockMessage: '', // the page moved instead; nothing to say
       child: Scaffold(
         backgroundColor: c.surface,
-        body: PageView.builder(
-          controller: _controller,
-          itemCount: _pages.length,
-          onPageChanged: (i) => setState(() => _index = i),
-          itemBuilder: (_, i) {
+        body: Stack(children: [
+          PageView.builder(
+            controller: _controller,
+            itemCount: _pages.length,
+            onPageChanged: (i) => setState(() => _index = i),
+            itemBuilder: (_, i) {
             final p = _pages[i];
             final isLast = i == _pages.length - 1;
             return Column(children: [
@@ -144,8 +146,34 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
               ),
             ]);
-          },
-        ),
+            },
+          ),
+          // Fixed across every page rather than rebuilt per-item: back does
+          // the same thing (PgBackScope's resolver — previous page, or
+          // confirmed exit on page 1) regardless of which page is showing.
+          Positioned(
+            top: 0, left: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                // Builder gives the chevron a context INSIDE PgBackScope's
+                // subtree. The outer `context` above is this widget's own —
+                // an ancestor of the PgBackScope this build() returns — so
+                // PgBackScope.pop(context) would silently degrade to a plain
+                // pop instead of running the block/confirmExit resolver.
+                child: Builder(builder: (ctx) => GestureDetector(
+                  onTap: () => PgBackScope.pop(ctx),
+                  child: Container(
+                    width: 42, height: 42, alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: c.surface, border: Border.all(color: c.border),
+                      borderRadius: BorderRadius.circular(PgRadius.iconBtn)),
+                    child: Icon(Icons.chevron_left, color: c.text)),
+                )),
+              ),
+            ),
+          ),
+        ]),
       ),
     );
   }

@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_swipe_card.dart';
 import '../../data/models/pet_profile.dart';
 import '../../data/models/swipe.dart';
 import '../../data/repositories/providers.dart';
+import '../home/home_shell.dart';
 
 class DiscoverScreen extends ConsumerStatefulWidget {
   const DiscoverScreen({super.key});
@@ -64,6 +66,17 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(22, 14, 22, 8),
             child: Row(children: [
+              // A tab root has no PgBackScope — HomeShell owns its back.
+              // goBranch(homeBranch) is the same switch hardware back takes.
+              GestureDetector(
+                onTap: () => StatefulNavigationShell.maybeOf(context)?.goBranch(HomeShell.homeBranch),
+                child: Container(
+                  width: 42, height: 42, alignment: Alignment.center,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
+                    borderRadius: BorderRadius.circular(PgRadius.iconBtn)),
+                  child: Icon(Icons.chevron_left, color: c.text)),
+              ),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text('Discover', style: PgText.poppins(23, FontWeight.w800, color: c.text, ls: -0.4)),
                 Text('Pets near ${profile?.area.isNotEmpty == true ? profile!.area : 'you'}',

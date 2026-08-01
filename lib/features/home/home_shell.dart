@@ -15,18 +15,26 @@ class HomeShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
   const HomeShell({super.key, required this.navigationShell});
 
-  static const _homeBranch = 0;
+  /// Index of the Home branch — where every non-Home tab's back (hardware
+  /// and its on-screen chevron alike) returns to.
+  static const homeBranch = 0;
 
-  Future<void> _onBack(BuildContext context) async {
-    if (navigationShell.currentIndex != _homeBranch) {
-      navigationShell.goBranch(_homeBranch);
-      return;
-    }
+  /// The "press back again to exit" path, shared by hardware back on the
+  /// Home tab and Home's own on-screen chevron so the two can never diverge.
+  static Future<void> confirmExit(BuildContext context) async {
     if (PgExitConfirm.press()) {
       await SystemNavigator.pop();
     } else {
       showPgSnack(context, 'Press back again to exit');
     }
+  }
+
+  Future<void> _onBack(BuildContext context) async {
+    if (navigationShell.currentIndex != homeBranch) {
+      navigationShell.goBranch(homeBranch);
+      return;
+    }
+    await confirmExit(context);
   }
 
   @override

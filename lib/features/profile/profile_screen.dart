@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
 import '../../data/models/booking.dart';
 import '../../data/models/pet_profile.dart';
 import '../../data/repositories/providers.dart';
+import '../home/home_shell.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -101,9 +103,24 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final roleArea = profile == null ? '' : '${profile.role.label} · ${profile.area}';
 
     return Container(color: c.bg, child: SafeArea(bottom: false, child: ListView(padding: EdgeInsets.zero, children: [
-      Container(height: 130, decoration: const BoxDecoration(
-        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
-          colors: [Color(0xFFF59E2E), Color(0xFFF0871E)]))),
+      Stack(children: [
+        Container(height: 130, decoration: const BoxDecoration(
+          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
+            colors: [Color(0xFFF59E2E), Color(0xFFF0871E)]))),
+        // A tab root has no PgBackScope — HomeShell owns its back.
+        // goBranch(homeBranch) is the same switch hardware back takes.
+        Positioned(
+          top: 14, left: 14,
+          child: GestureDetector(
+            onTap: () => StatefulNavigationShell.maybeOf(context)?.goBranch(HomeShell.homeBranch),
+            child: Container(
+              width: 42, height: 42, alignment: Alignment.center,
+              decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
+                borderRadius: BorderRadius.circular(PgRadius.iconBtn)),
+              child: Icon(Icons.chevron_left, color: c.text)),
+          ),
+        ),
+      ]),
       Transform.translate(offset: const Offset(0, -40), child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 22),
         child: Column(children: [

@@ -5,6 +5,7 @@ import '../../core/maps/area_geo.dart';
 import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_buttons.dart';
 import '../../data/models/role.dart';
@@ -68,6 +69,24 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(30, 24, 30, 24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              // Reached only from verify-email with nowhere up (see the
+              // PgBackScope note below) — Builder gives the chevron a context
+              // INSIDE that scope's subtree, since the outer `context` above
+              // is an ancestor of it and would silently degrade to a plain
+              // pop instead of running the confirmExit resolver.
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Builder(builder: (ctx) => GestureDetector(
+                  onTap: () => PgBackScope.pop(ctx),
+                  child: Container(
+                    width: 42, height: 42, alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: c.surface, border: Border.all(color: c.border),
+                      borderRadius: BorderRadius.circular(PgRadius.iconBtn)),
+                    child: Icon(Icons.chevron_left, color: c.text)),
+                )),
+              ),
+              const SizedBox(height: 10),
               Center(child: Container(
                 width: 96, height: 96, alignment: Alignment.center,
                 decoration: BoxDecoration(color: c.brandSoft, shape: BoxShape.circle),

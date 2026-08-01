@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_image_slot.dart';
 import '../../data/models/pro.dart';
 import '../../data/models/role.dart';
 import '../../data/repositories/providers.dart';
+import '../home/home_shell.dart';
 
 class ServicesListScreen extends ConsumerStatefulWidget {
   const ServicesListScreen({super.key});
@@ -37,11 +39,24 @@ class _ServicesListScreenState extends ConsumerState<ServicesListScreen> {
             padding: const EdgeInsets.fromLTRB(22, 16, 22, 22),
             decoration: BoxDecoration(color: c.peach,
               borderRadius: const BorderRadius.vertical(bottom: Radius.circular(26))),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Services near you', style: PgText.poppins(24, FontWeight.w800, color: c.text, ls: -0.4)),
-              const SizedBox(height: 3),
-              Text('Verified walkers, sitters & groomers',
-                style: PgText.inter(13, FontWeight.w500, color: c.text)),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // A tab root has no PgBackScope — HomeShell owns its back.
+              // goBranch(homeBranch) is the same switch hardware back takes.
+              GestureDetector(
+                onTap: () => StatefulNavigationShell.maybeOf(context)?.goBranch(HomeShell.homeBranch),
+                child: Container(
+                  width: 42, height: 42, alignment: Alignment.center,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
+                    borderRadius: BorderRadius.circular(PgRadius.iconBtn)),
+                  child: Icon(Icons.chevron_left, color: c.text)),
+              ),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('Services near you', style: PgText.poppins(24, FontWeight.w800, color: c.text, ls: -0.4)),
+                const SizedBox(height: 3),
+                Text('Verified walkers, sitters & groomers',
+                  style: PgText.inter(13, FontWeight.w500, color: c.text)),
+              ])),
             ]),
           ),
           Expanded(

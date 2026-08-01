@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_chip.dart';
 import '../../core/widgets/pg_image_slot.dart';
 import '../../data/models/post.dart';
 import '../../data/repositories/providers.dart';
+import 'home_shell.dart';
 import 'widgets/pet_row.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -31,6 +33,19 @@ class HomeScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
             decoration: BoxDecoration(color: c.surface, border: Border(bottom: BorderSide(color: c.border))),
             child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // Home is a tab root — there is nowhere up. This runs the exact
+              // confirmed-exit path hardware back takes (HomeShell._onBack via
+              // the shared HomeShell.confirmExit), not a duplicate timer, so
+              // the chevron and the gesture can never disagree.
+              GestureDetector(
+                onTap: () => HomeShell.confirmExit(context),
+                child: Container(
+                  width: 42, height: 42, alignment: Alignment.center,
+                  margin: const EdgeInsets.only(right: 10),
+                  decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
+                    borderRadius: BorderRadius.circular(PgRadius.iconBtn)),
+                  child: Icon(Icons.chevron_left, color: c.text)),
+              ),
               Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
                   Icon(Icons.location_on, size: 14, color: c.brand),
