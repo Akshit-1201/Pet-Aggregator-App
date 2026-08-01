@@ -31,61 +31,65 @@ class HomeScreen extends ConsumerWidget {
           Container(
             key: const Key('home-header'),
             width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(22, 14, 22, 14),
+            padding: const EdgeInsets.fromLTRB(22, 12, 22, 14),
             decoration: BoxDecoration(color: c.surface, border: Border(bottom: BorderSide(color: c.border))),
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Home is a tab root — there is nowhere up. This runs the exact
-              // confirmed-exit path hardware back takes (HomeShell._onBack via
-              // the shared HomeShell.confirmExit), not a duplicate timer, so
-              // the chevron and the gesture can never disagree.
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              // Home is a tab root — there is nowhere up, so the chevron only
+              // offers a confirmed exit (HomeShell.confirmExit, the same path
+              // hardware back takes via HomeShell._onBack — never a duplicate
+              // timer). It's the least essential control on this header, so it
+              // gets its own line instead of competing with the greeting for
+              // width on a single crowded row (see commit 6eba058).
               GestureDetector(
                 onTap: () => HomeShell.confirmExit(context),
                 child: Container(
                   width: 42, height: 42, alignment: Alignment.center,
-                  margin: const EdgeInsets.only(right: 8),
                   decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
                     borderRadius: BorderRadius.circular(PgRadius.iconBtn)),
                   child: Icon(Icons.chevron_left, color: c.text)),
               ),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Row(children: [
-                  Icon(Icons.location_on, size: 14, color: c.brand),
-                  const SizedBox(width: 4),
-                  Flexible(child: Text(profile?.area.isNotEmpty == true ? '${profile!.area}, Mumbai' : 'Mumbai',
-                      overflow: TextOverflow.ellipsis,
-                      style: PgText.inter(12.5, FontWeight.w600, color: c.muted))),
-                ]),
-                const SizedBox(height: 5),
-                Text('Hey $greetName 👋', maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: PgText.poppins(24, FontWeight.w800, color: c.text, ls: -0.5)),
-                const SizedBox(height: 2),
-                Text('Pets near you today', maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: PgText.inter(13.5, FontWeight.w400, color: c.muted)),
-              ])),
-              GestureDetector(
-                onTap: () => context.push(Routes.notifications),
-                child: Container(
-                  width: 42, height: 42, alignment: Alignment.center,
-                  margin: const EdgeInsets.only(right: 8),
-                  decoration: BoxDecoration(color: c.surface2, borderRadius: BorderRadius.circular(13)),
-                  child: Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
-                    Icon(Icons.notifications_none_rounded, size: 20, color: c.text),
-                    if (ref.watch(hasUnreadNotificationsProvider))
-                      Positioned(top: -2, right: -2, child: Container(
-                        key: const ValueKey('notif-dot'), width: 9, height: 9,
-                        decoration: BoxDecoration(color: c.brand, shape: BoxShape.circle,
-                          border: Border.all(color: c.surface2, width: 1.5)))),
-                  ])),
-              ),
-              GestureDetector(
-                onTap: () => context.push(Routes.chatList),
-                child: Container(
-                  width: 42, height: 42, alignment: Alignment.center,
-                  margin: const EdgeInsets.only(right: 8),
-                  decoration: BoxDecoration(color: c.surface2, borderRadius: BorderRadius.circular(13)),
-                  child: Icon(Icons.chat_bubble_outline_rounded, size: 20, color: c.text)),
-              ),
-              PgImageSlot(size: 46, circle: true, imageUrl: profile?.photoUrl),
+              const SizedBox(height: 10),
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Icon(Icons.location_on, size: 14, color: c.brand),
+                    const SizedBox(width: 4),
+                    Flexible(child: Text(profile?.area.isNotEmpty == true ? '${profile!.area}, Mumbai' : 'Mumbai',
+                        overflow: TextOverflow.ellipsis,
+                        style: PgText.inter(12.5, FontWeight.w600, color: c.muted))),
+                  ]),
+                  const SizedBox(height: 5),
+                  Text('Hey $greetName 👋', maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: PgText.poppins(24, FontWeight.w800, color: c.text, ls: -0.5)),
+                  const SizedBox(height: 2),
+                  Text('Pets near you today', maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: PgText.inter(13.5, FontWeight.w400, color: c.muted)),
+                ])),
+                GestureDetector(
+                  onTap: () => context.push(Routes.notifications),
+                  child: Container(
+                    width: 42, height: 42, alignment: Alignment.center,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(color: c.surface2, borderRadius: BorderRadius.circular(13)),
+                    child: Stack(clipBehavior: Clip.none, alignment: Alignment.center, children: [
+                      Icon(Icons.notifications_none_rounded, size: 20, color: c.text),
+                      if (ref.watch(hasUnreadNotificationsProvider))
+                        Positioned(top: -2, right: -2, child: Container(
+                          key: const ValueKey('notif-dot'), width: 9, height: 9,
+                          decoration: BoxDecoration(color: c.brand, shape: BoxShape.circle,
+                            border: Border.all(color: c.surface2, width: 1.5)))),
+                    ])),
+                ),
+                GestureDetector(
+                  onTap: () => context.push(Routes.chatList),
+                  child: Container(
+                    width: 42, height: 42, alignment: Alignment.center,
+                    margin: const EdgeInsets.only(right: 8),
+                    decoration: BoxDecoration(color: c.surface2, borderRadius: BorderRadius.circular(13)),
+                    child: Icon(Icons.chat_bubble_outline_rounded, size: 20, color: c.text)),
+                ),
+                PgImageSlot(size: 46, circle: true, imageUrl: profile?.photoUrl),
+              ]),
             ]),
           ),
           Expanded(
