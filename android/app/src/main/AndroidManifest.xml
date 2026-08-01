@@ -2,10 +2,17 @@
     <!-- Android 13+ requires this at runtime; without it every push is dropped
          silently, with no error anywhere. PushService asks for it on sign-in. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- enableOnBackInvokedCallback opts into Android 13+ predictive back.
+         Without it the OS uses the legacy path: AOSP still forwards the gesture
+         to Flutter, but OEM shells (One UI in particular) are not guaranteed to,
+         so a back SWIPE could bypass every PgBackScope and close the app while
+         the back BUTTON worked fine. That divergence is exactly what this app's
+         back handling exists to prevent. -->
     <application
         android:label="Pawgo"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
