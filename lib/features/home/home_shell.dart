@@ -37,6 +37,38 @@ class HomeShell extends StatelessWidget {
     await confirmExit(context);
   }
 
+  /// Tells the engine the framework handles back, no matter what the branch
+  /// Navigators below say.
+  ///
+  /// Android only routes back into Dart when the framework has claimed it via
+  /// `SystemNavigator.setFrameworkHandlesBack(true)`. `WidgetsApp` derives that
+  /// flag from the last [NavigationNotification] to reach it — and a
+  /// [PopScope] only influences the notification of the Navigator that owns
+  /// its route. Ours registers on the *root* Navigator's shell route, while
+  /// `navigationShell` mounts a separate Navigator per branch. A branch sitting
+  /// at its root dispatches `canHandlePop: false`, and the root Navigator
+  /// forwards a child's notification unchanged whenever its own `canPop()` is
+  /// false (`_NavigatorState.build`); it never consults its route's
+  /// `popDisposition`, which is the only thing [PopScope] affects. So the
+  /// false reached the engine, Android finished the Activity itself, and
+  /// [_onBack] never ran — back quit Pawgo from any non-Home tab.
+  ///
+  /// Correcting it here is sound because [_onBack] is unconditional: every
+  /// back while this shell is mounted either switches branch or runs the
+  /// exit confirmation, so `true` is never a lie. Re-dispatching from
+  /// [context] — an ancestor of this listener — is the same technique
+  /// `_NavigatorState` uses to widen a nested Navigator's claim, and cannot
+  /// re-enter this listener.
+  ///
+  /// Guarded by a widget test asserting the flag the engine receives; the
+  /// suite's other back tests call `binding.handlePopRoute()`, which bypasses
+  /// this gate entirely and so passed all the way through the bug.
+  bool _claimBack(BuildContext context, NavigationNotification n) {
+    if (n.canHandlePop) return false; // already claimed — let it through
+    const NavigationNotification(canHandlePop: true).dispatch(context);
+    return true;
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
@@ -47,12 +79,15 @@ class HomeShell extends StatelessWidget {
         if (didPop) return;
         await _onBack(context);
       },
-      child: Scaffold(
-        body: navigationShell,
-        bottomNavigationBar: PgBottomNav(
-          currentIndex: navigationShell.currentIndex,
-          onTap: (i) => navigationShell.goBranch(i,
-              initialLocation: i == navigationShell.currentIndex),
+      child: NotificationListener<NavigationNotification>(
+        onNotification: (n) => _claimBack(context, n),
+        child: Scaffold(
+          body: navigationShell,
+          bottomNavigationBar: PgBottomNav(
+            currentIndex: navigationShell.currentIndex,
+            onTap: (i) => navigationShell.goBranch(i,
+                initialLocation: i == navigationShell.currentIndex),
+          ),
         ),
       ),
     );
