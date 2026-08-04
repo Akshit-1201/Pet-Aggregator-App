@@ -47,3 +47,37 @@ backup/
 
 # Subagent-driven-development scratch (ledgers, briefs, review packages)
 .superpowers/
+
+# Internal project status notes. Deliberately NOT published: it enumerates open
+# defects, which hardening is installed but inert, and the super-admin account —
+# a reconnaissance map for anyone probing the live backend. Keep it local.
+left.md
+
+# Signing material — belt and braces. android/.gitignore already covers these
+# for the Android module, but the keystore is UNRECOVERABLE if lost and a
+# disaster if leaked, so any copy that lands anywhere in the tree stays out.
+*.jks
+*.keystore
+key.properties
+
+# Build artefacts outside /build/. `flutter build` writes into /build/, but a
+# copy of the APK/AAB pasted somewhere convenient to send to a tester would
+# otherwise be picked up by `git add .`.
+*.apk
+*.aab
+*.aar
+*.apks
+
+# Secrets. Only admin/.gitignore covered these; a .env anywhere else was fair
+# game for a commit.
+.env
+.env.*
+!.env.example
+
+# Node — each JS subproject ignores its own, this catches any new one.
+node_modules/
+
+# Windows shell junk (.DS_Store above is the macOS equivalent)
+Thumbs.db
+ehthumbs.db
+desktop.ini
