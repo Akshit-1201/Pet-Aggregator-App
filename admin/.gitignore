@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# The template itself carries no secrets and is the only record of which
+# vars the panel needs. .env* above would otherwise hide it from the repo.
+!.env.local.example
