@@ -114,7 +114,10 @@ flutter:
 #   dart run flutter_launcher_icons
 flutter_launcher_icons:
   android: true
-  ios: false
+  ios: true
+  # The App Store rejects icons with an alpha channel outright; the source art
+  # has one for the Android adaptive layers, so it is flattened for iOS only.
+  remove_alpha_ios: true
   image_path: "assets/icon/pawgo_icon.png"
   min_sdk_android: 24
   # Adaptive icon (Android 8+): the launcher masks these two layers itself, and

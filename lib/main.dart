@@ -22,7 +22,8 @@ import 'data/repositories/local/shared_preferences_repository.dart';
 /// first run. That token has to be registered in Firebase Console → App Check →
 /// Manage debug tokens, once per machine/emulator, or the build is rejected the
 /// moment enforcement is switched on. Release builds use Play Integrity, which
-/// requires the app to be distributed through Play.
+/// requires the app to be distributed through Play; the iOS equivalent is App
+/// Attest, which needs the App Attest capability enabled on the App ID.
 Future<void> _activateAppCheck() async {
   try {
     await FirebaseAppCheck.instance.activate(
@@ -30,6 +31,13 @@ Future<void> _activateAppCheck() async {
       providerAndroid: kDebugMode
           ? const AndroidDebugProvider()
           : const AndroidPlayIntegrityProvider(),
+      // iOS: App Attest where the OS supports it, DeviceCheck on older devices.
+      // Not optional to state -- the plugin defaults to plain DeviceCheck for
+      // BOTH modes, and DeviceCheck cannot attest on the simulator, so a debug
+      // run would start failing the moment enforcement is switched on.
+      providerApple: kDebugMode
+          ? const AppleDebugProvider()
+          : const AppleAppAttestWithDeviceCheckFallbackProvider(),
     );
   } catch (e) {
     // A device without Play Services, or a misconfigured project, must not stop
