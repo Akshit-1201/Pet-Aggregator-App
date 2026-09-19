@@ -38,7 +38,8 @@ const REGION = "asia-south1";
  * The rollout, in order:
  *   1. Ship a build that activates App Check (done — see lib/main.dart).
  *   2. Register the app for Play Integrity: Firebase Console → App Check, using
- *      `com.pawgo.app` and the release SHA-256 from android/app/pawgo-release.jks.
+ *      `com.pawgopets.app` and the release SHA-256 from android/app/pawgo-release.jks.
+ *      (iOS uses App Attest and needs the capability enabled on the App ID.)
  *   3. Register a debug token for each dev machine/emulator, or local runs break.
  *   4. Turn on MONITORING (not enforcement) for Functions, Firestore, Storage.
  *   5. Watch the verified-request percentage until effectively all traffic is

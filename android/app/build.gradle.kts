@@ -22,7 +22,7 @@ if (hasReleaseKeystore) {
 }
 
 android {
-    namespace = "com.pawgo.app"
+    namespace = "com.pawgopets.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -33,7 +33,7 @@ android {
 
     defaultConfig {
         // Permanent once published — Play identifies the app by this forever.
-        applicationId = "com.pawgo.app"
+        applicationId = "com.pawgopets.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

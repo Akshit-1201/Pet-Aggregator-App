@@ -54,7 +54,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
                 boxShadow: const [BoxShadow(color: Color(0x44000000), blurRadius: 50, offset: Offset(0, 20))]),
               child: const Icon(Icons.pets, size: 58, color: Colors.white)),
             const SizedBox(height: 26),
-            Text('Pawgo', style: PgText.poppins(34, FontWeight.w800, color: Colors.white, ls: -0.5)),
+            Text('Pawgo Pets', style: PgText.poppins(34, FontWeight.w800, color: Colors.white, ls: -0.5)),
             const SizedBox(height: 3),
             Text("Your pet's whole world, nearby",
               style: PgText.inter(13.5, FontWeight.w500, color: const Color(0xFFFFF5E8))),

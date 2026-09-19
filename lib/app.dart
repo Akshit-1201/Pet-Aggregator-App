@@ -11,7 +11,7 @@ class PawgoApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title: 'Pawgo',
+      title: 'Pawgo Pets',
       debugShowCheckedModeBanner: false,
       theme: PgTheme.light(),
       darkTheme: PgTheme.dark(),

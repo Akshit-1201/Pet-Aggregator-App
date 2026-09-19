@@ -36,7 +36,9 @@ flutter build apk --release           # signed release build (see the release-bu
 
 ## Release signing
 
-`applicationId` is **`com.pawgo.app`** (permanent — Play identifies the app by it forever). Release builds are signed with `android/app/pawgo-release.jks` via `android/key.properties`. **Both files are git-ignored and exist only on the owner's machine** — losing either means never being able to publish an update. A clone without `key.properties` falls back to debug signing so the project still builds; that APK is not publishable.
+The app is **Pawgo Pets**. `applicationId` / iOS bundle ID is **`com.pawgopets.app`** on both platforms (renamed from `com.pawgo.app` before first publication — it is permanent from the moment a build reaches Play or App Store Connect, because both stores identify the app by it forever). Release builds are signed with `android/app/pawgo-release.jks` via `android/key.properties`. **Both files are git-ignored and exist only on the owner's machine** — losing either means never being able to publish an update. A clone without `key.properties` falls back to debug signing so the project still builds; that APK is not publishable. The keystore itself is unaffected by the rename — keystores are not bound to a package name.
+
+The rename invalidates three things registered against the old ID, all owner-side: the Firebase Android + iOS apps (re-register, then re-download `google-services.json` / `GoogleService-Info.plist`), the "Pawgo Android Maps" key restriction, and the App Check Play Integrity registration.
 
 ## ⚠️ Windows build gotcha (do not remove the fix)
 

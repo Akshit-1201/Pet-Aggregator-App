@@ -73,7 +73,7 @@ class RazorpayPaymentService implements PaymentService {
         'order_id': order['orderId'],
         'amount': order['amountPaise'],
         'currency': 'INR',
-        'name': 'Pawgo',
+        'name': 'Pawgo Pets',
         'description': description,
         'theme': {'color': '#F59E2E'},
       });

@@ -9,7 +9,7 @@ void main() {
     await pumpPgApp(tester,
         overrides: [authRepositoryProvider.overrideWithValue(FakeAuthRepository())],
         initialLocation: Routes.splash);
-    expect(find.text('Pawgo'), findsOneWidget);
+    expect(find.text('Pawgo Pets'), findsOneWidget);
     await tester.pump(const Duration(milliseconds: 1600)); // brand delay + auth
     await tester.pumpAndSettle();
     expect(find.text('Find playmates just around the corner'), findsOneWidget);
