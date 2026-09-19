@@ -30,12 +30,13 @@ workflows:
     # key, which is enough to sign and publish a build as us.
 
     environment:
-      # If the four variables above live in a variable GROUP rather than
-      # directly on the app, uncomment this and name it. Codemagic does not
-      # error on an unknown reference — every one expands to an empty string and
-      # the build fails further down in fetch-signing-files instead.
-      # groups:
-      #   - app-store-connect
+      # Codemagic requires every application variable to belong to a group, and
+      # a group is only visible to the workflow that imports it here. Without
+      # this, each reference below expands to an empty string rather than
+      # erroring, and the build dies in fetch-signing-files with
+      # `argument --issuer-id: Provided value "" is not valid`.
+      groups:
+        - appstore
       vars:
         BUNDLE_ID: com.pawgopets.app
       flutter: 3.47.1
