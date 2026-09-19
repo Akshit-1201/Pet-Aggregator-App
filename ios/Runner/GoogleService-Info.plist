@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>280616341211-9o3gfnd1kjrb2g94jf48smnj05n8f837.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.280616341211-9o3gfnd1kjrb2g94jf48smnj05n8f837</string>
+	<key>API_KEY</key>
+	<string>AIzaSyBIToEX4YsvTV6tS79Wu0-EErdG0mx3vSg</string>
+	<key>GCM_SENDER_ID</key>
+	<string>280616341211</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.pawgopets.app</string>
+	<key>PROJECT_ID</key>
+	<string>pet-aggregator-app</string>
+	<key>STORAGE_BUCKET</key>
+	<string>pet-aggregator-app.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:280616341211:ios:492010fe17ad16958a46fe</string>
+</dict>
+</plist>

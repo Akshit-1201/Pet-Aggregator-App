@@ -16,7 +16,7 @@ import UIKit
 ///   → APIs & Services → Credentials → Create credentials → API key
 ///   → Application restrictions: iOS apps → bundle ID com.pawgopets.app
 ///   → API restrictions: Maps SDK for iOS only
-private let googleMapsApiKey = "REPLACE_WITH_IOS_MAPS_API_KEY"
+private let googleMapsApiKey = "AIzaSyDv7iqaGP7zIH4-SmlIW7UcjU7vmaw3E5w"
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {

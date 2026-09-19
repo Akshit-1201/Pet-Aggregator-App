@@ -52,20 +52,20 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyA8d66Zvu9SJyxClcu6azn9gzz1_saYwHQ',
-    appId: '1:280616341211:android:188f290d4eebcc3f8a46fe',
+    appId: '1:280616341211:android:5a31a2ae4cf59c558a46fe',
     messagingSenderId: '280616341211',
     projectId: 'pet-aggregator-app',
     storageBucket: 'pet-aggregator-app.firebasestorage.app',
   );
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBIToEX4YsvTV6tS79Wu0-EErdG0mx3vSg',
-    appId: '1:280616341211:ios:c0d5b3690fb0d7e08a46fe',
+    appId: '1:280616341211:ios:492010fe17ad16958a46fe',
     messagingSenderId: '280616341211',
     projectId: 'pet-aggregator-app',
     storageBucket: 'pet-aggregator-app.firebasestorage.app',
-    iosBundleId: 'com.example.petAggregatorApp',
+    iosClientId: '280616341211-9o3gfnd1kjrb2g94jf48smnj05n8f837.apps.googleusercontent.com',
+    iosBundleId: 'com.pawgopets.app',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyBIToEX4YsvTV6tS79Wu0-EErdG0mx3vSg',
     appId: '1:280616341211:ios:c0d5b3690fb0d7e08a46fe',
