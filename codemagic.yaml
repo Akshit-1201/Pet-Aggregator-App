@@ -1,12 +1,22 @@
 # Codemagic CI — builds the iOS release and ships it to TestFlight.
 #
-# SECRETS: this file is committed, so nothing credential-bearing goes in it. The
-# App Store Connect API key (issuer ID, key ID and the .p8) is stored in
-# Codemagic under Teams -> Integrations -> Developer Portal, and is referenced
-# below by name only. The signing certificate and provisioning profile are
-# fetched from Apple at build time using that key, so neither is kept here
-# either. If a value ever needs to be added, use an encrypted environment
-# variable group — never an inline literal.
+# SECRETS: nothing credential-bearing is in this file. The App Store Connect .p8
+# and the certificate private key are read at build time from encrypted
+# Codemagic environment variables and are never echoed. The issuer and key IDs
+# are variables too rather than literals — they identify the App Store Connect
+# account, and this file is committed.
+#
+# Required variables (Codemagic -> app settings -> Environment variables).
+# Mark every one of them Secure:
+#
+#   AUTH_KEY                          contents of the App Store Connect .p8 file
+#   CERTIFICATE_KEY                   signing certificate private key
+#   APP_STORE_CONNECT_ISSUER_ID       App Store Connect issuer ID
+#   APP_STORE_CONNECT_KEY_IDENTIFIER  App Store Connect key ID
+#
+# AUTH_KEY and CERTIFICATE_KEY already exist from the workflow-editor setup. The
+# two IDs were injected by the UI and so have to be added by hand for this
+# workflow to see them.
 
 workflows:
   ios-testflight:
@@ -14,22 +24,20 @@ workflows:
     instance_type: mac_mini_m2
     max_build_duration: 60
 
-    # Must match the integration name configured in Codemagic exactly.
-    integrations:
-      app_store_connect: pawgo-pets-asc
-
     # Deliberately no `triggering:` block — builds are started by hand. An
     # automatic trigger on pull_request would run branch-supplied code on a
     # machine holding the distribution certificate and the App Store Connect
     # key, which is enough to sign and publish a build as us.
 
     environment:
-      # `app_store` is the distribution type TestFlight needs. The first run
-      # failed because it asked Apple for `development`, and a development
-      # profile cannot be created unless a test device is registered.
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.pawgopets.app
+      # If the four variables above live in a variable GROUP rather than
+      # directly on the app, uncomment this and name it. Codemagic does not
+      # error on an unknown reference — every one expands to an empty string and
+      # the build fails further down in fetch-signing-files instead.
+      # groups:
+      #   - app-store-connect
+      vars:
+        BUNDLE_ID: com.pawgopets.app
       flutter: 3.47.1
       xcode: latest
       cocoapods: default
@@ -38,9 +46,33 @@ workflows:
       - name: Install Flutter dependencies
         script: flutter pub get
 
+      - name: Initialise the keychain
+        # The declarative `ios_signing:` block does this implicitly. Fetching the
+        # signing files by hand does not, and without a keychain the certificate
+        # never reaches xcodebuild — the archive then fails to sign.
+        script: keychain initialize
+
+      - name: Fetch App Store distribution signing files
+        # IOS_APP_STORE, *not* IOS_APP_DEVELOPMENT. TestFlight requires
+        # distribution signing, and a development profile cannot even be created
+        # unless a test device is registered on the Developer Portal — which is
+        # what the earlier red builds died on.
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --platform IOS \
+            --type IOS_APP_STORE \
+            --issuer-id "$APP_STORE_CONNECT_ISSUER_ID" \
+            --key-id "$APP_STORE_CONNECT_KEY_IDENTIFIER" \
+            --private-key @env:AUTH_KEY \
+            --certificate-key @env:CERTIFICATE_KEY \
+            --create
+
+      - name: Add the fetched certificate to the keychain
+        script: keychain add-certificates
+
       - name: Apply the fetched provisioning profile to the Xcode project
-        # Rewrites Runner's signing settings to use the distribution profile
-        # fetched above, and writes /Users/builder/export_options.plist.
+        # Rewrites Runner's signing settings to use the profile fetched above,
+        # and writes /Users/builder/export_options.plist for the build.
         script: xcode-project use-profiles
 
       - name: Build the IPA
@@ -59,7 +91,9 @@ workflows:
 
     publishing:
       app_store_connect:
-        auth: integration
+        api_key: $AUTH_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         # Goes to TestFlight for internal testers. Adding `beta_groups:` would
         # push to external groups, which triggers Apple's beta review.
         submit_to_testflight: true
