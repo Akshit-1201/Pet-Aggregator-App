@@ -95,6 +95,10 @@ workflows:
         api_key: $AUTH_KEY
         key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        # Goes to TestFlight for internal testers. Adding `beta_groups:` would
-        # push to external groups, which triggers Apple's beta review.
-        submit_to_testflight: true
+        # Uploading is enough: once App Store Connect finishes processing, the
+        # build is installable by internal testers, who are exempt from beta
+        # review. `submit_to_testflight: true` is deliberately NOT set — that
+        # submits for EXTERNAL beta review, which Apple rejects until Beta App
+        # Information and Beta App Review Information are filled in, and which
+        # then costs a review round trip before anyone can install. Add it back
+        # (with `beta_groups:`) only when shipping to external testers.
