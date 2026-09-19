@@ -1,0 +1,65 @@
+# Codemagic CI — builds the iOS release and ships it to TestFlight.
+#
+# SECRETS: this file is committed, so nothing credential-bearing goes in it. The
+# App Store Connect API key (issuer ID, key ID and the .p8) is stored in
+# Codemagic under Teams -> Integrations -> Developer Portal, and is referenced
+# below by name only. The signing certificate and provisioning profile are
+# fetched from Apple at build time using that key, so neither is kept here
+# either. If a value ever needs to be added, use an encrypted environment
+# variable group — never an inline literal.
+
+workflows:
+  ios-testflight:
+    name: iOS TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 60
+
+    # Must match the integration name configured in Codemagic exactly.
+    integrations:
+      app_store_connect: pawgo-pets-asc
+
+    # Deliberately no `triggering:` block — builds are started by hand. An
+    # automatic trigger on pull_request would run branch-supplied code on a
+    # machine holding the distribution certificate and the App Store Connect
+    # key, which is enough to sign and publish a build as us.
+
+    environment:
+      # `app_store` is the distribution type TestFlight needs. The first run
+      # failed because it asked Apple for `development`, and a development
+      # profile cannot be created unless a test device is registered.
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.pawgopets.app
+      flutter: 3.47.1
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Install Flutter dependencies
+        script: flutter pub get
+
+      - name: Apply the fetched provisioning profile to the Xcode project
+        # Rewrites Runner's signing settings to use the distribution profile
+        # fetched above, and writes /Users/builder/export_options.plist.
+        script: xcode-project use-profiles
+
+      - name: Build the IPA
+        # No standalone `pod install`: this repo has no ios/Podfile, and
+        # `flutter build ipa` generates one and runs CocoaPods itself.
+        # TestFlight refuses a CFBundleVersion it has already accepted, so the
+        # build number comes from Codemagic's per-app counter.
+        script: |
+          flutter build ipa --release \
+            --build-number=$PROJECT_BUILD_NUMBER \
+            --export-options-plist=/Users/builder/export_options.plist
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        # Goes to TestFlight for internal testers. Adding `beta_groups:` would
+        # push to external groups, which triggers Apple's beta review.
+        submit_to_testflight: true
