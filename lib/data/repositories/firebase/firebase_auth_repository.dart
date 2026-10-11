@@ -189,6 +189,9 @@ class FirebaseAuthRepository implements AuthRepository {
       final res = await _functions.httpsCallable('sendVerificationEmail').call<Object?>();
       final data = res.data;
       if (data is Map && data['sent'] == true) return;
+      // Refused by the server's per-account cooldown: falling back to
+      // Firebase's email would just double the sends it is limiting.
+      if (data is Map && data['reason'] == 'rate-limited') return;
     } catch (_) {
       // Function not deployed yet, offline, etc. — fall back below.
     }

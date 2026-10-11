@@ -1,5 +1,5 @@
 import {describe, expect, it} from "vitest";
-import {verificationEmailBody} from "./auth-email";
+import {SEND_COOLDOWN_MS, SEND_MAX_PER_WINDOW, SEND_WINDOW_MS, nextSendLog, verificationEmailBody} from "./auth-email";
 import {renderEmail} from "./notify/email";
 
 describe("verification email", () => {
@@ -31,5 +31,28 @@ describe("verification email", () => {
     const {html, text} = renderEmail(verificationEmailBody("A", link));
     expect(html).toContain("Pawgo Pets");
     expect(text.startsWith("Pawgo Pets")).toBe(true);
+  });
+});
+
+describe("verification send cooldown", () => {
+  const t0 = 1_000_000_000;
+  it("allows the first send", () => {
+    expect(nextSendLog(undefined, t0)).toEqual({lastSentAt: t0, windowStart: t0, count: 1});
+  });
+  it("refuses a second send within a minute", () => {
+    const log = nextSendLog(undefined, t0)!;
+    expect(nextSendLog(log, t0 + SEND_COOLDOWN_MS - 1)).toBeNull();
+    expect(nextSendLog(log, t0 + SEND_COOLDOWN_MS)).not.toBeNull();
+  });
+  it("caps sends per day, then resets the next day", () => {
+    let log = nextSendLog(undefined, t0)!;
+    let t = t0;
+    for (let i = 1; i < SEND_MAX_PER_WINDOW; i++) {
+      t += SEND_COOLDOWN_MS;
+      log = nextSendLog(log, t)!;
+    }
+    expect(log.count).toBe(SEND_MAX_PER_WINDOW);
+    expect(nextSendLog(log, t + SEND_COOLDOWN_MS)).toBeNull();
+    expect(nextSendLog(log, t0 + SEND_WINDOW_MS)?.count).toBe(1);
   });
 });

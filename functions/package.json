@@ -7,7 +7,8 @@
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:emulator": "firebase emulators:exec --only firestore --project demo-pawgo-security \"vitest run --config vitest.emulator.config.ts\""
   },
   "dependencies": {
     "@google-cloud/vision": "^5.3.7",
@@ -17,6 +18,8 @@
     "resend": "^6.18.0"
   },
   "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase": "^12.19.0",
     "typescript": "^5.7.0",
     "vitest": "^3.2.0"
   }

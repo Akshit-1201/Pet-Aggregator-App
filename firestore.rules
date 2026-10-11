@@ -23,8 +23,33 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/users/$(blockerUid)/blocked/$(otherUid));
     }
 
+    // Photos must be files in OUR Storage bucket. Any other URL skips the
+    // moderateUploadedImage Function entirely (it only sees our bucket), and
+    // makes every viewer's phone fetch from a server the uploader controls,
+    // leaking their IP and when they looked. Empty means "no photo".
+    function isOurPhoto(u) {
+      return u is string && (u == '' || u.matches(
+          '^https://firebasestorage[.]googleapis[.]com/v0/b/pet-aggregator-app[.]firebasestorage[.]app/o/[^/]+$'));
+    }
+    // Rules can't loop, so each of the (max 5) slots is checked explicitly.
+    function isOurPhotoList(l) {
+      return l is list && l.size() <= 5
+          && (l.size() < 1 || isOurPhoto(l[0]))
+          && (l.size() < 2 || isOurPhoto(l[1]))
+          && (l.size() < 3 || isOurPhoto(l[2]))
+          && (l.size() < 4 || isOurPhoto(l[3]))
+          && (l.size() < 5 || isOurPhoto(l[4]));
+    }
+    // Absent fields are fine; present ones must point into our bucket.
+    function photosOk(d) {
+      return (!('photoUrl' in d) || isOurPhoto(d.photoUrl))
+          && (!('photoUrls' in d) || isOurPhotoList(d.photoUrls));
+    }
+
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+                            && photosOk(request.resource.data);
 
       // A block list lives under its owner's doc, so the owner-only rule above
       // already keeps it private — nobody can discover who has blocked them.
@@ -106,8 +131,13 @@ service cloud.firestore {
     match /pets/{petId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null
-                    && request.resource.data.ownerId == request.auth.uid;
-      allow update, delete: if request.auth != null
+                    && request.resource.data.ownerId == request.auth.uid
+                    && photosOk(request.resource.data);
+      allow update: if request.auth != null
+                    && resource.data.ownerId == request.auth.uid
+                    && request.resource.data.ownerId == request.auth.uid
+                    && photosOk(request.resource.data);
+      allow delete: if request.auth != null
                     && resource.data.ownerId == request.auth.uid;
     }
     match /swipes/{swipeId} {
@@ -168,10 +198,12 @@ service cloud.firestore {
     match /homestays/{uid} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.auth.uid == uid
-                    && !request.resource.data.keys().hasAny(['verified', 'rating', 'reviewCount']);
+                    && !request.resource.data.keys().hasAny(['verified', 'rating', 'reviewCount'])
+                    && photosOk(request.resource.data);
       allow update: if request.auth != null && request.auth.uid == uid
                     && !request.resource.data.diff(resource.data).affectedKeys()
-                         .hasAny(['verified', 'rating', 'reviewCount']);
+                         .hasAny(['verified', 'rating', 'reviewCount'])
+                    && photosOk(request.resource.data);
       allow delete: if false;
     }
     match /homestayBookings/{id} {
@@ -195,7 +227,8 @@ service cloud.firestore {
     }
     match /posts/{postId} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.authorId == request.auth.uid
+                    && photosOk(request.resource.data);
       allow update: if request.auth != null
                     && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replyCount']);
       allow delete: if false;

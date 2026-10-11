@@ -123,7 +123,10 @@ export const createBookingOrder = onCall(
     // (Re-)hold the time slot before any money is asked for. Covers the
     // "Pay to confirm" resume path too, where the original hold has lapsed.
     // Throws already-exists/slot-taken if someone else now has that time.
-    if (kind === "service") await holdSlot(admin.firestore(), bookingId, booking);
+    if (kind === "service") {
+      await holdSlot(admin.firestore(), bookingId, booking,
+        {emailVerified: request.auth.token.email_verified === true});
+    }
     const rzp = new Razorpay({
       key_id: razorpayKeyId.value(),
       key_secret: razorpayKeySecret.value(),
@@ -716,7 +719,8 @@ export const holdServiceSlot = onCall(
     const b = snap.data() as FirebaseFirestore.DocumentData;
     if (b.parentId !== request.auth.uid) throw new HttpsError("permission-denied", "not-your-booking");
     if (b.status !== "pending") throw new HttpsError("failed-precondition", "not-payable");
-    await holdSlot(admin.firestore(), bookingId, b);
+    await holdSlot(admin.firestore(), bookingId, b,
+      {emailVerified: request.auth.token.email_verified === true});
     return {held: true};
   });
 

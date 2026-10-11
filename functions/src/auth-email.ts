@@ -6,6 +6,23 @@ import {MAIL_FROM, isMailConfigured, sendEmail} from "./notify/email";
 
 const resendApiKey = defineSecret("RESEND_API_KEY");
 
+/** `verificationSends/{uid}` — server-only send log for the cooldown. */
+export type SendLog = {lastSentAt: number; windowStart: number; count: number};
+
+export const SEND_COOLDOWN_MS = 60 * 1000;
+export const SEND_WINDOW_MS = 24 * 60 * 60 * 1000;
+export const SEND_MAX_PER_WINDOW = 5;
+
+/** The log to store if a send is allowed now, or null to refuse it: at most
+ *  one email a minute and five a day per account. */
+export function nextSendLog(prev: SendLog | undefined, now: number): SendLog | null {
+  if (!prev) return {lastSentAt: now, windowStart: now, count: 1};
+  if (now - prev.lastSentAt < SEND_COOLDOWN_MS) return null;
+  if (now - prev.windowStart >= SEND_WINDOW_MS) return {lastSentAt: now, windowStart: now, count: 1};
+  if (prev.count >= SEND_MAX_PER_WINDOW) return null;
+  return {lastSentAt: now, windowStart: prev.windowStart, count: prev.count + 1};
+}
+
 /** Body of the branded verification email — pure, so it is unit-testable. */
 export function verificationEmailBody(name: string, link: string) {
   const first = name.trim().split(/\s+/)[0] || "there";
@@ -45,6 +62,20 @@ export const sendVerificationEmail = onCall(
     const user = await admin.auth().getUser(request.auth.uid);
     if (!user.email) throw new HttpsError("failed-precondition", "no-email");
     if (user.emailVerified) return {sent: false, reason: "already-verified"};
+
+    // The address is unverified by definition here, so it may belong to
+    // someone else entirely (sign up with a victim's address, then call this
+    // in a loop). Claim a send slot first; refused calls send nothing.
+    const db = admin.firestore();
+    const limitRef = db.collection("verificationSends").doc(request.auth.uid);
+    const allowed = await db.runTransaction(async (tx) => {
+      const prev = (await tx.get(limitRef)).data() as SendLog | undefined;
+      const next = nextSendLog(prev, Date.now());
+      if (!next) return false;
+      tx.set(limitRef, next);
+      return true;
+    });
+    if (!allowed) return {sent: false, reason: "rate-limited"};
 
     let link: string;
     try {

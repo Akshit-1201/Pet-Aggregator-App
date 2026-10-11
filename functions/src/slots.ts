@@ -130,32 +130,75 @@ export function slotOf(b: FirebaseFirestore.DocumentData):
   return {startMin: b.startMin, durationMin: b.durationMin, date: b.date};
 }
 
+/** `slotHolds/{parentId}` — the one live hold a customer may have. Server-only
+ *  (no client rule matches it). Deliberately NOT stored on the proSchedule
+ *  doc: that doc is readable by every signed-in user, and it would reveal who
+ *  booked which pro. */
+export type HolderDoc = {bookingId: string; proId: string; date: string};
+
 /**
  * Holds (or re-holds) the booking's slot. Transactional on the pro-day doc.
  * Throws `already-exists/slot-taken` if another active booking overlaps.
+ *
+ * Abuse limits (security review of the slot feature): without them any
+ * signed-in user could create a pending booking per slot and re-hold them all
+ * every 19 minutes, blocking a pro's whole calendar for free.
+ * - Only a verified account may hold ([emailVerified]); the app's verify gate
+ *   is client-side navigation only, so the server has to check.
+ * - ONE live hold per customer: holding a new slot releases that customer's
+ *   previous hold (if still just a hold), so a re-pick works but a script can
+ *   never hold more than one slot per account.
  */
 export async function holdSlot(db: FirebaseFirestore.Firestore,
-  bookingId: string, b: FirebaseFirestore.DocumentData, now = Date.now()): Promise<void> {
+  bookingId: string, b: FirebaseFirestore.DocumentData,
+  opts: {emailVerified: boolean}, now = Date.now()): Promise<void> {
   const slot = slotOf(b);
   if (!slot) return;
+  if (!opts.emailVerified) throw new HttpsError("permission-denied", "email-unverified");
   const proId = String(b.proId ?? "");
+  const parentId = String(b.parentId ?? "");
+  if (!parentId) throw new HttpsError("failed-precondition", "no-parent");
   const pro = await db.collection("pros").doc(proId).get();
   if (!pro.exists) throw new HttpsError("failed-precondition", "no-listing");
   assertBookable(parseAvailability(pro.data()?.availability), slot.date,
     slot.startMin, slot.durationMin, now);
 
   const ref = db.collection("proSchedule").doc(scheduleId(proId, slot.date));
+  const holderRef = db.collection("slotHolds").doc(parentId);
   await db.runTransaction(async (tx) => {
+    // Every read happens before any write (Firestore transaction rule).
     const snap = await tx.get(ref);
+    const holder = (await tx.get(holderRef)).data() as HolderDoc | undefined;
+    const prevRef = holder && holder.bookingId !== bookingId ?
+      db.collection("proSchedule").doc(scheduleId(holder.proId, holder.date)) : null;
+    const sameDoc = prevRef?.path === ref.path;
+    const prevSnap = prevRef && !sameDoc ? await tx.get(prevRef) : null;
+
     const slots = prune((snap.data()?.slots ?? {}) as Record<string, Entry>, now);
     const mine = slots[bookingId];
     if (mine?.status === "booked") return; // already confirmed — nothing to hold
+
+    // Release this customer's previous HOLD. A confirmed booking is never
+    // touched — it stays booked whatever they do next.
+    if (holder && prevRef) {
+      if (sameDoc) {
+        if (slots[holder.bookingId]?.status === "held") delete slots[holder.bookingId];
+      } else if (prevSnap?.exists) {
+        const prev = prune((prevSnap.data()?.slots ?? {}) as Record<string, Entry>, now);
+        if (prev[holder.bookingId]?.status === "held") {
+          delete prev[holder.bookingId];
+          tx.update(prevRef, {slots: prev, updatedAt: now});
+        }
+      }
+    }
+
     if (findConflict(slots, bookingId, slot.startMin, slot.durationMin, now)) {
       throw new HttpsError("already-exists", "slot-taken");
     }
     slots[bookingId] = {startMin: slot.startMin, durationMin: slot.durationMin,
       status: "held", heldUntil: now + HOLD_MS};
     tx.set(ref, {proId, date: slot.date, slots, updatedAt: now});
+    tx.set(holderRef, {bookingId, proId, date: slot.date, updatedAt: now});
   });
 }
 
