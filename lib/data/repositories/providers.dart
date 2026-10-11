@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/app_user.dart';
+import '../models/availability.dart';
 import '../models/booking.dart';
 import '../models/pet_profile.dart';
 import '../models/user_profile.dart';
@@ -141,7 +142,17 @@ final swipedPetIdsProvider = StreamProvider<Set<String>>((ref) {
 });
 
 final discoverDeckProvider = Provider<AsyncValue<List<PetProfile>>>((ref) {
-  final swiped = ref.watch(swipedPetIdsProvider).value ?? const <String>{};
+  final swipedAsync = ref.watch(swipedPetIdsProvider);
+  // Stay loading until the swipe history has arrived. Discover freezes the deck
+  // the first time it sees a value, so treating "not loaded yet" as "nothing
+  // swiped" froze a deck that still held pets the user had already passed —
+  // they came back on the next visit, as if the pass had been undone.
+  if (!swipedAsync.hasValue) {
+    return swipedAsync.hasError
+        ? AsyncError<List<PetProfile>>(swipedAsync.error!, swipedAsync.stackTrace!)
+        : const AsyncLoading<List<PetProfile>>();
+  }
+  final swiped = swipedAsync.value!;
   // Blocked owners are already gone — nearbyPetsProvider filters them.
   return ref.watch(nearbyPetsProvider).whenData(
       (pets) => pets.where((p) => !swiped.contains(p.id)).toList());
@@ -163,6 +174,12 @@ final currentProProvider = StreamProvider<Pro?>((ref) {
 
 final bookingRepositoryProvider =
     Provider<BookingRepository>((ref) => FirestoreBookingRepository());
+
+/// Times already taken on a pro's day — keyed by (proId, yyyy-MM-dd). Live, so
+/// a slot someone else grabs greys out on everyone's picker within a second.
+final busySlotsProvider =
+    StreamProvider.family<List<BusySlot>, (String, String)>((ref, key) =>
+        ref.watch(bookingRepositoryProvider).watchBusySlots(key.$1, key.$2));
 
 final myPetsProvider = StreamProvider<List<PetProfile>>((ref) {
   final user = ref.watch(authStateProvider).value;

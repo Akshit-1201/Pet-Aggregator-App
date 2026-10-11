@@ -123,10 +123,17 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
               Text(email, textAlign: TextAlign.center,
                   style: PgText.inter(14.5, FontWeight.w700, color: c.text)),
               const SizedBox(height: 14),
-              Text('Tap it, then come back here. This keeps Pawgo free of fake '
+              Text('Tap it, then come back here. This keeps Pawgo Pets free of fake '
                   'accounts so pet parents and pros can trust each other.',
                   textAlign: TextAlign.center,
                   style: PgText.inter(13, FontWeight.w400, color: c.muted, height: 1.55)),
+              const SizedBox(height: 10),
+              // Gmail disables links in mail it files as spam, which is one way
+              // the link ends up looking like plain text. Say where to look.
+              Text("Can't find it? Check your Spam or Promotions folder — and if "
+                  "it's in Spam, tap \"Not spam\" so the link becomes clickable.",
+                  textAlign: TextAlign.center,
+                  style: PgText.inter(12.5, FontWeight.w500, color: c.faint, height: 1.5)),
               const Spacer(),
               PgPrimaryButton(label: "I've confirmed it", onPressed: _check),
               const SizedBox(height: 12),

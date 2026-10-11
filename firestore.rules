@@ -154,6 +154,16 @@ service cloud.firestore {
                     && request.resource.data.status == 'cancelled';
       allow delete: if false;
     }
+    // One doc per pro per day: the busy intervals that drive the booking
+    // screen's slot picker. Readable by any signed-in user so taken times can
+    // be greyed out — it holds only opaque booking ids and minute ranges, no
+    // personal data. Written exclusively by Functions (holdServiceSlot,
+    // createBookingOrder, verifyBookingPayment), whose transactions are what
+    // guarantee two confirmed bookings never overlap.
+    match /proSchedule/{id} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
     // Same server-owned fields as /pros — see the note there.
     match /homestays/{uid} {
       allow read: if request.auth != null;

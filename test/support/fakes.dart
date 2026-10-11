@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:pet_aggregator_app/data/models/app_user.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
+import 'package:pet_aggregator_app/data/models/availability.dart';
 import 'package:pet_aggregator_app/data/models/booking.dart';
 import 'package:pet_aggregator_app/data/models/pro.dart';
 import 'package:pet_aggregator_app/data/models/swipe.dart';
@@ -137,6 +138,39 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> deleteAccount() async {
     deleted = true;
     _set(null); // mirrors the real repo, which signs out after the callable
+  }
+
+  /// What the next Google/Apple sheet "returns": an email + name to sign in
+  /// as, or null to simulate the person cancelling.
+  ({String email, String name})? nextSocialAccount;
+
+  /// Whether the provider re-check (account deletion) succeeds.
+  bool socialReauthResult = true;
+  int socialReauths = 0;
+
+  @override
+  List<SocialProvider> availableProviders = const [SocialProvider.google, SocialProvider.apple];
+
+  @override
+  Future<SocialSignIn?> signInWithProvider(SocialProvider provider) async {
+    if (nextError != null) {
+      final e = nextError!;
+      nextError = null;
+      throw e;
+    }
+    final acct = nextSocialAccount;
+    if (acct == null) return null;
+    // Providers verify the address themselves, and there is no password.
+    final u = AppUser(uid: 'uid_${acct.email}', email: acct.email,
+        emailVerified: true, hasPassword: false);
+    _set(u);
+    return SocialSignIn(user: u, displayName: acct.name);
+  }
+
+  @override
+  Future<bool> reauthenticateWithProvider() async {
+    socialReauths++;
+    return socialReauthResult;
   }
 }
 
@@ -522,6 +556,43 @@ class InMemoryBookingRepository implements BookingRepository {
         'status': 'cancelled', 'updatedAt': DateTime.now().millisecondsSinceEpoch});
     _controller.add(List.of(_bookings));
   }
+
+  /// Adds an already-confirmed booking (as the server would) and notifies
+  /// watchers — e.g. another customer winning a slot mid-test.
+  void seedConfirmed(Booking b) {
+    _bookings.add(b);
+    _controller.add(List.of(_bookings));
+  }
+
+  /// Ids whose slot is "held" — the in-memory stand-in for proSchedule.
+  final Set<String> held = {};
+
+  /// Every non-cancelled slot booking blocks its time (a simplification of
+  /// the server's hold expiry that is exact for tests).
+  List<BusySlot> _busy(String proId, String isoDate, {String? except}) => [
+        for (final b in _bookings)
+          if (b.proId == proId && b.date == isoDate && b.hasSlot &&
+              b.status != 'cancelled' && b.id != except &&
+              (b.status == 'confirmed' || held.contains(b.id)))
+            BusySlot(bookingId: b.id, startMin: b.startMin, durationMin: b.durationMin),
+      ];
+
+  @override
+  Stream<List<BusySlot>> watchBusySlots(String proId, String isoDate) async* {
+    yield _busy(proId, isoDate);
+    yield* _controller.stream.map((_) => _busy(proId, isoDate));
+  }
+
+  @override
+  Future<void> holdSlot(String bookingId) async {
+    final b = _bookings.firstWhere((x) => x.id == bookingId);
+    if (!b.hasSlot) return;
+    if (_busy(b.proId, b.date, except: b.id).any((x) => x.overlaps(b.startMin, b.durationMin))) {
+      throw const SlotTakenException();
+    }
+    held.add(bookingId);
+    _controller.add(List.of(_bookings));
+  }
 }
 
 List<PetProfile> fixturePets(String ownerId) => [
@@ -818,9 +889,12 @@ class FakeImagePickerService implements ImagePickerService {
       : next = null,
         shouldThrow = true;
 
+  double? lastMaxWidth;
+
   @override
-  Future<Uint8List?> pickImage() async {
+  Future<Uint8List?> pickImage({double maxWidth = 1080}) async {
     calls++;
+    lastMaxWidth = maxWidth;
     if (shouldThrow) throw Exception('picker failed');
     return next;
   }

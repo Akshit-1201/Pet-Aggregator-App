@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 /// Every network image in Pawgo goes through here.
@@ -12,6 +13,12 @@ import 'package:flutter/material.dart';
 ///
 /// The hint is in **physical pixels**, so it multiplies by the device pixel
 /// ratio — passing logical pixels would decode a blurry image on a 3x screen.
+///
+/// Images are also cached **on disk**. This used to be `Image.network`, whose
+/// cache lives only in memory: every cold start re-downloaded every avatar at
+/// its full upload size, so profile icons sat on the placeholder for seconds
+/// (client report: "photos take time to load on profile icons"). Once fetched,
+/// an image now comes back from disk instantly, across launches.
 class PgNetworkImage extends StatelessWidget {
   final String url;
 
@@ -43,22 +50,22 @@ class PgNetworkImage extends StatelessWidget {
               ? null
               : (logical * dpr).ceil();
 
-      return Image.network(
-        url,
+      return CachedNetworkImage(
+        imageUrl: url,
         // The measured value is used for layout too, so a caller that passed
         // `double.infinity` (fill the parent) still gets a real decode hint
         // instead of silently falling back to full resolution.
         width: logicalW,
         height: logicalH,
         fit: fit,
-        cacheWidth: px(logicalW),
-        cacheHeight: px(logicalH),
-        // gaplessPlayback stops the placeholder flashing when a URL changes
-        // (swiping a gallery, or a pet row rebuilding).
-        gaplessPlayback: true,
-        loadingBuilder: (ctx, child, progress) =>
-            progress == null ? child : placeholder(ctx),
-        errorBuilder: (ctx, _, _) => placeholder(ctx),
+        memCacheWidth: px(logicalW),
+        memCacheHeight: px(logicalH),
+        // Keep showing the previous image while a new URL loads, so the
+        // placeholder doesn't flash when swiping a gallery or a row rebuilds.
+        useOldImageOnUrlChange: true,
+        fadeInDuration: const Duration(milliseconds: 150),
+        placeholder: (ctx, _) => placeholder(ctx),
+        errorWidget: (ctx, _, _) => placeholder(ctx),
       );
     }
 

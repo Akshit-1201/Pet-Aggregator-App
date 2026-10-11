@@ -185,7 +185,7 @@ class _SafetyNotice extends StatelessWidget {
       constraints: const BoxConstraints(maxWidth: 300),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
       decoration: BoxDecoration(color: c.brandSoft, borderRadius: BorderRadius.circular(14)),
-      child: Text('🛡️ Pawgo hid a phone number to keep your chat safe. Share contact details only after you meet.',
+      child: Text('🛡️ Pawgo Pets hid a phone number to keep your chat safe. Share contact details only after you meet.',
         textAlign: TextAlign.center, style: PgText.inter(12, FontWeight.w500, color: c.brandDeep, height: 1.4)),
     ));
   }

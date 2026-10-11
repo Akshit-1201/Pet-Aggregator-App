@@ -50,6 +50,9 @@ class _HomestayPaymentScreenState extends ConsumerState<HomestayPaymentScreen> {
         PaymentErrorType.failed => "Payment failed — you haven't been charged. Try again.",
         PaymentErrorType.unverified =>
           "Payment couldn't be verified — note payment id ${e.paymentId} and contact support.",
+        // Service-only outcomes; a stay never has time slots.
+        PaymentErrorType.slotTaken || PaymentErrorType.slotTakenRefunded =>
+          "Payment failed — you haven't been charged. Try again.",
       }));
       return;
     }

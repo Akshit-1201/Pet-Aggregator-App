@@ -142,7 +142,8 @@ class _MyBookingsTab extends ConsumerWidget {
             _MyBookingRow(
               emoji: '🧑',
               name: b.proName,
-              detail: '${b.serviceType.label} · ${b.dateLabel}',
+              detail: '${b.serviceType.label} · ${b.dateLabel}'
+                  '${b.timeSlot.isNotEmpty ? ' · ${b.timeSlot}' : ''}',
               phase: servicePhase(b, now),
               rated: rated.contains(b.id),
               canCancel: canCancelService(b, now),

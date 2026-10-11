@@ -1,3 +1,5 @@
+import 'availability.dart';
+
 enum ServiceType {
   walker('walker', 'Dog Walker', '🦮', 'walk'),
   sitter('sitter', 'Pet Sitter', '🏠', 'visit'),
@@ -18,10 +20,15 @@ class Pro {
   final double rating;
   final bool verified;
 
+  /// Weekly bookable hours + slot length. Listings saved before time slots
+  /// existed have none and get [Availability.defaults].
+  final Availability availability;
+
   const Pro({
     required this.uid, required this.name, required this.area, required this.bio,
     required this.serviceType, required this.rate, required this.experienceYears,
     this.verified = false, this.rating = 0, this.reviewCount = 0,
+    this.availability = Availability.defaults,
   });
 
   String get unit => serviceType.unit;
@@ -41,6 +48,7 @@ class Pro {
         'serviceType': serviceType.storageKey,
         'rate': rate,
         'experienceYears': experienceYears,
+        'availability': availability.toMap(),
       };
 
   factory Pro.fromMap(String uid, Map<String, dynamic> m) => Pro(
@@ -54,5 +62,6 @@ class Pro {
         verified: (m['verified'] ?? false) as bool,
         rating: ((m['rating'] ?? 0) as num).toDouble(),
         reviewCount: (m['reviewCount'] ?? 0) as int,
+        availability: Availability.fromMap(m['availability']),
       );
 }

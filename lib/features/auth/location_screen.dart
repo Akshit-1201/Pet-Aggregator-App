@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -74,6 +75,9 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
               // INSIDE that scope's subtree, since the outer `context` above
               // is an ancestor of it and would silently degrade to a plain
               // pop instead of running the confirmExit resolver.
+              // Hidden on iOS: its only action is "exit the app", which iOS
+              // doesn't allow — it would be a button that does nothing.
+              if (defaultTargetPlatform != TargetPlatform.iOS)
               Align(
                 alignment: Alignment.centerLeft,
                 child: Builder(builder: (ctx) => GestureDetector(
@@ -96,7 +100,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
                 style: PgText.poppins(25, FontWeight.w800, color: c.text, ls: -0.4)),
               const SizedBox(height: 8),
               Text(
-                'Pawgo shows pets, pros and homestays near you. We only ever share your approximate area — never your exact address.',
+                'Pawgo Pets shows pets, pros and homestays near you. We only ever share your approximate area — never your exact address.',
                 textAlign: TextAlign.center,
                 style: PgText.inter(13.5, FontWeight.w400, color: c.muted, height: 1.5)),
               const SizedBox(height: 18),

@@ -26,6 +26,7 @@ Future<void> _pumpProfile(WidgetTester tester, FakeAuthRepository auth) async {
     bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
     homestayBookingRepositoryProvider.overrideWithValue(InMemoryHomestayBookingRepository()),
     proRepositoryProvider.overrideWithValue(InMemoryProRepository()),
+    homestayRepositoryProvider.overrideWithValue(InMemoryHomestayRepository()),
   ], initialLocation: Routes.profile);
   await tester.pumpAndSettle();
 }

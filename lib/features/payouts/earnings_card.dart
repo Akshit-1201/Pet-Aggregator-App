@@ -153,7 +153,7 @@ class _EarningsCardState extends ConsumerState<EarningsCard> {
       const SizedBox(height: 12),
       PgTextField(label: 'PAN', controller: _pan, hint: 'ABCDE1234F'),
       const SizedBox(height: 8),
-      Text('Sent straight to our payments provider — Pawgo never stores your '
+      Text('Sent straight to our payments provider — Pawgo Pets never stores your '
           'account number or PAN.',
           style: PgText.inter(12, FontWeight.w400, color: c.faint, height: 1.4)),
       if (_error != null) ...[

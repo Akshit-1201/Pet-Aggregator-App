@@ -132,7 +132,7 @@ class _VerificationCardState extends ConsumerState<VerificationCard> {
             retry
                 ? 'You can send new documents.'
                 : 'Add a photo ID (and address proof if you have one). Only the '
-                    'Pawgo team can see these — they are never shown to other users.',
+                    'Pawgo Pets team can see these — they are never shown to other users.',
             style: PgText.inter(13, FontWeight.w400, color: c.muted, height: 1.5)),
         const SizedBox(height: 12),
         // Wrap, not Row: three thumbnails plus the add tile overflow a narrow

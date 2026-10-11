@@ -39,7 +39,15 @@ class ProProfileScreen extends ConsumerWidget {
             padding: EdgeInsets.zero,
             children: [
               Container(
-                height: 120,
+                // Was a fixed 120. The card below is pulled up 40px with
+                // Transform.translate, which moves its HIT AREA too — so it
+                // owns the header's bottom 40px. On a notched iPhone the safe
+                // area (~59px) pushed the back and ⋯ buttons down into that
+                // band and the card swallowed every tap ("the buttons on top
+                // become unresponsive"). Size the header from the real inset so
+                // the buttons always end above the overlap:
+                //   inset + 14 pad + 40 button + 14 pad + 40 overlap.
+                height: MediaQuery.paddingOf(context).top + 108,
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight,
                     colors: [Color(0xFFF59E2E), Color(0xFFF0871E)])),

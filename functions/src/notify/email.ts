@@ -15,7 +15,7 @@ const esc = (s: unknown) => String(s ?? "")
  *  delivery lands in spam. Lives here, not in each caller — three copies of an
  *  address that has to change when the domain is set up is three chances to
  *  miss one. `index.ts` imports this instead of declaring its own. */
-export const MAIL_FROM = "Pawgo <receipts@pawgo.app>";
+export const MAIL_FROM = "Pawgo Pets <receipts@pawgo.app>";
 
 export type EmailRow = {label: string; amount: number};
 
@@ -25,6 +25,11 @@ export type EmailBody = {
   rows?: EmailRow[];      // line-item table, e.g. a receipt
   paragraphs?: string[];  // prose body, e.g. a refund confirmation
   footer?: string[];      // small grey print, e.g. ids
+  /** A real button. Email clients only reliably click an <a>, and a bare URL
+   *  pasted as the visible text is exactly what testers reported as "the link
+   *  is text, not a hyperlink". The raw URL is still printed underneath as a
+   *  fallback for clients that block buttons. */
+  cta?: {label: string; url: string};
 };
 
 /** Table-based HTML with inline styles on purpose: email clients have no
@@ -56,6 +61,20 @@ export function renderEmail(b: EmailBody): {html: string; text: string} {
           <div style="color:#6B7280;font-size:14px;margin-top:8px;line-height:1.6;">${esc(p)}</div>`)
     .join("");
 
+  const ctaHtml = !b.cta ? "" : `
+        <tr><td style="padding:18px 26px 4px;">
+          <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+            <td style="background:#F0871E;border-radius:12px;">
+              <a href="${esc(b.cta.url)}" target="_blank"
+                 style="display:inline-block;padding:14px 26px;color:#FFFFFF;font-size:15px;font-weight:700;text-decoration:none;">${esc(b.cta.label)}</a>
+            </td>
+          </tr></table>
+          <div style="color:#9CA3AF;font-size:12px;line-height:1.6;margin-top:14px;">
+            Button not working? Open this link instead:<br/>
+            <a href="${esc(b.cta.url)}" style="color:#F0871E;word-break:break-all;">${esc(b.cta.url)}</a>
+          </div>
+        </td></tr>`;
+
   const footHtml = (b.footer ?? []).length === 0 ? "" : `
           <div style="color:#9CA3AF;font-size:12px;line-height:1.6;margin-top:18px;">
             ${(b.footer ?? []).map(esc).join("<br/>")}
@@ -67,13 +86,13 @@ export function renderEmail(b: EmailBody): {html: string; text: string} {
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background:#FFFFFF;border-radius:18px;overflow:hidden;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
         <tr><td style="background:#F0871E;padding:22px 26px;">
-          <div style="color:#FFFFFF;font-size:20px;font-weight:800;">Pawgo</div>
+          <div style="color:#FFFFFF;font-size:20px;font-weight:800;">Pawgo Pets</div>
         </td></tr>
         <tr><td style="padding:24px 26px 8px;">
           <div style="color:#111827;font-size:17px;font-weight:700;">${esc(b.heading)}</div>
           ${b.subheading ? `<div style="color:#6B7280;font-size:13px;margin-top:3px;">${esc(b.subheading)}</div>` : ""}
           ${paraHtml}
-        </td></tr>${tableHtml}
+        </td></tr>${ctaHtml}${tableHtml}
         <tr><td style="padding:20px 26px 26px;">
           ${footHtml}
           <div style="color:#9CA3AF;font-size:12px;line-height:1.6;">
@@ -82,17 +101,18 @@ export function renderEmail(b: EmailBody): {html: string; text: string} {
         </td></tr>
       </table>
       <div style="color:#9CA3AF;font-size:11px;margin-top:14px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-        Pawgo · Mumbai
+        Pawgo Pets · Mumbai
       </div>
     </td></tr>
   </table>
 </body></html>`;
 
   const text = [
-    "Pawgo", "",
+    "Pawgo Pets", "",
     b.heading,
     ...(b.subheading ? [b.subheading] : []),
     ...(b.paragraphs ?? []),
+    ...(b.cta ? ["", `${b.cta.label}: ${b.cta.url}`] : []),
     ...((b.rows ?? []).length ? [""] : []),
     ...(b.rows ?? []).map((r) => `  ${r.label}: ${inr(r.amount)}`),
     ...((b.rows ?? []).length ? [`  Total: ${inr(total)}`] : []),

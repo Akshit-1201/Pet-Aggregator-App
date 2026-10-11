@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pet_aggregator_app/core/router/routes.dart';
 import 'package:pet_aggregator_app/data/models/homestay.dart';
@@ -21,6 +22,7 @@ Future<void> _pump(WidgetTester tester, String route, Object extra,
     petRepositoryProvider.overrideWithValue(
         withPet ? InMemoryPetRepository(fixturePets(uid)) : InMemoryPetRepository()),
     reviewRepositoryProvider.overrideWithValue(InMemoryReviewRepository()),
+    bookingRepositoryProvider.overrideWithValue(InMemoryBookingRepository()),
   ], initialLocation: route, extra: extra);
   await tester.pumpAndSettle();
 }
@@ -30,6 +32,7 @@ void main() {
     await _pump(tester, Routes.booking, _pro, withPet: false);
     expect(find.text('Add a pet'), findsOneWidget);
     expect(find.text('Continue to payment'), findsNothing);
+    expect(find.text('Pick a time to continue'), findsNothing);
     await tester.tap(find.text('Add a pet'));
     await tester.pumpAndSettle();
     expect(find.text('Add your pet'), findsOneWidget); // Create Pet
@@ -37,6 +40,11 @@ void main() {
 
   testWidgets('booking: with a pet shows the normal Continue button', (tester) async {
     await _pump(tester, Routes.booking, _pro, withPet: true);
+    expect(find.text('Pick a time to continue'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('booking-day-1')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('slot-540')));
+    await tester.pumpAndSettle();
     expect(find.text('Continue to payment'), findsOneWidget);
     expect(find.text('Add a pet'), findsNothing);
   });

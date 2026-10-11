@@ -47,6 +47,14 @@ class RazorpayPaymentService implements PaymentService {
           .httpsCallable('createBookingOrder')
           .call<Map<Object?, Object?>>({'kind': kind.name, 'bookingId': bookingId});
       order = Map<String, dynamic>.from(res.data);
+    } on FirebaseFunctionsException catch (e) {
+      _inFlight = null;
+      _onVerifying = null;
+      // createBookingOrder re-holds the time slot before charging anything.
+      if (e.code == 'already-exists') {
+        throw const PaymentException(PaymentErrorType.slotTaken, 'slot-taken');
+      }
+      throw const PaymentException(PaymentErrorType.failed, 'order-failed');
     } catch (_) {
       _inFlight = null;
       _onVerifying = null;
@@ -87,13 +95,20 @@ class RazorpayPaymentService implements PaymentService {
     _onVerifying?.call();
     final paymentId = r.paymentId ?? '';
     try {
-      await _functions.httpsCallable('verifyBookingPayment').call<Map<Object?, Object?>>({
+      final res = await _functions.httpsCallable('verifyBookingPayment').call<Map<Object?, Object?>>({
         'kind': _kind?.name,
         'bookingId': _bookingId,
         'orderId': r.orderId,
         'paymentId': r.paymentId,
         'signature': r.signature,
       });
+      // The slot was lost while paying: the server cancelled and refunded
+      // instead of double-booking the pro. Not a verification failure.
+      if (res.data['confirmed'] == false && res.data['reason'] == 'slot-taken') {
+        _finishError(razorpay, PaymentException(
+            PaymentErrorType.slotTakenRefunded, 'slot-taken', paymentId: paymentId));
+        return;
+      }
       _finish(razorpay,
           result: PaymentResult(paymentId: paymentId, orderId: r.orderId ?? ''));
     } catch (_) {

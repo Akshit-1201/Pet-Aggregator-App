@@ -46,8 +46,8 @@ void main() {
     // which pushes "About Pawgo" below the fold on the test's phone-sized
     // surface.
     await tester.dragUntilVisible(
-        find.text('About Pawgo'), find.byType(Scrollable), const Offset(0, -200));
+        find.text('About Pawgo Pets'), find.byType(Scrollable), const Offset(0, -200));
     await tester.pumpAndSettle();
-    expect(find.text('About Pawgo'), findsOneWidget);
+    expect(find.text('About Pawgo Pets'), findsOneWidget);
   });
 }

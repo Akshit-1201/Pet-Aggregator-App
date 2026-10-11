@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_typography.dart';
 import '../../data/repositories/providers.dart';
+import '../auth/onboarding_arg.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -34,7 +35,27 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     final user =
         await ref.read(authRepositoryProvider).authStateChanges().first.catchError((_) => null);
     if (!mounted) return;
-    context.go(user != null ? Routes.home : Routes.onboarding);
+    if (user == null) {
+      context.go(Routes.onboarding);
+      return;
+    }
+    // A Google/Apple account that quit before finishing setup has no profile
+    // (and, unlike an email signup, no verify-email step to catch it). Send it
+    // back to finish rather than into a Home with no name, role or area.
+    if (!user.hasPassword) {
+      final profile = await ref
+          .read(userRepositoryProvider)
+          .watchUser(user.uid)
+          .first
+          .timeout(const Duration(seconds: 6), onTimeout: () => null)
+          .catchError((_) => null);
+      if (!mounted) return;
+      if (profile == null) {
+        context.go(Routes.signup, extra: SocialSignupArg(name: '', email: user.email ?? ''));
+        return;
+      }
+    }
+    context.go(Routes.home);
   }
 
   @override

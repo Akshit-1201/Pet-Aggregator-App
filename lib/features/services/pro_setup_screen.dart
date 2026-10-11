@@ -8,11 +8,13 @@ import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_app_bar.dart';
 import '../../core/widgets/pg_buttons.dart';
 import '../../core/widgets/pg_text_field.dart';
+import '../../data/models/availability.dart';
 import '../../data/models/pro.dart';
 import '../../data/models/verification_request.dart';
 import '../../data/repositories/providers.dart';
 import '../verification/verification_card.dart';
 import '../payouts/earnings_card.dart';
+import 'availability_editor.dart';
 
 class ProSetupScreen extends ConsumerStatefulWidget {
   final bool fromOnboarding;
@@ -26,6 +28,7 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
   final _exp = TextEditingController();
   final _bio = TextEditingController();
   ServiceType _type = ServiceType.walker;
+  Availability _availability = Availability.defaults;
   double _rating = 0;
   int _reviewCount = 0;
   bool _seeded = false;
@@ -45,6 +48,7 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
     _rate.text = p.rate.toString();
     _exp.text = p.experienceYears.toString();
     _bio.text = p.bio;
+    _availability = p.availability;
     _rating = p.rating;
     _reviewCount = p.reviewCount;
   }
@@ -55,6 +59,11 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
       setState(() => _error = 'Enter a rate greater than 0.');
       return;
     }
+    final hoursError = AvailabilityEditor.validate(_availability);
+    if (hoursError != null) {
+      setState(() => _error = hoursError);
+      return;
+    }
     final uid = ref.read(authRepositoryProvider).currentUser?.uid;
     if (uid == null) return;
     setState(() { _saving = true; _error = null; });
@@ -63,7 +72,7 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
           uid: uid, name: profile?.name ?? '', area: profile?.area ?? '',
           bio: _bio.text.trim(), serviceType: _type, rate: rate,
           experienceYears: int.tryParse(_exp.text.trim()) ?? 0,
-          rating: _rating, reviewCount: _reviewCount));
+          rating: _rating, reviewCount: _reviewCount, availability: _availability));
     if (mounted) _exit();
   }
 
@@ -139,6 +148,11 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
                         keyboardType: TextInputType.number, hint: '4'),
                     const SizedBox(height: 14),
                     PgTextField(label: 'About you', controller: _bio, hint: 'Tell parents about yourself'),
+                    const SizedBox(height: 18),
+                    AvailabilityEditor(
+                      value: _availability,
+                      onChanged: (a) => setState(() => _availability = a),
+                    ),
                     const SizedBox(height: 18),
                     // Optional — an unverified pro can still list, they just don't
                     // get the badge. Kept below the listing fields so it never

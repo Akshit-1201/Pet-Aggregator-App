@@ -39,17 +39,27 @@ void main() {
 
   // The Received tab only exists for someone who actually has a listing
   // (MyBookingsScreen forces tab 0 otherwise), so this seeds a host.
-  testWidgets('the Profile "My homestays" row opens the Received tab for a host',
+  testWidgets('the Profile "Bookings received" row opens the Received tab for a host',
       (tester) async {
     await _pumpProfile(tester, homestays: [
       const Homestay(uid: 'uid_me@x.com', homeName: 'My Home', hostName: 'Me',
           area: 'Khar', about: 'x', homeType: HomeType.apartment, ratePerNight: 900),
     ]);
 
-    await tester.tap(find.text('My homestays'));
+    await tester.tap(find.text('Bookings received'));
     await tester.pumpAndSettle();
     // Received's empty state is distinct from tab 0's, so it pins the right tab.
     expect(find.text('No bookings for your listing yet.'), findsOneWidget);
+  });
+
+  // Reported by the client: for a pet parent "My bookings" and "My homestays"
+  // opened the same list. Without a listing there is nothing "received", so
+  // the second row must not appear at all.
+  testWidgets('a pet parent sees one bookings row, not a duplicate', (tester) async {
+    await _pumpProfile(tester);
+    expect(find.text('My bookings'), findsOneWidget);
+    expect(find.text('Bookings received'), findsNothing);
+    expect(find.text('My homestays'), findsNothing);
   });
 }
 

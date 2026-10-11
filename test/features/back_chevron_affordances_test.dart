@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 // Slice 23 — every screen gains a visible on-screen back chevron, on top of
 // the Slice 22 PgBackScope resolver that already governs hardware/gesture
 // back. These pin two things per screen: the chevron is actually there, and
@@ -169,10 +170,24 @@ void main() {
         ],
       );
       await t.pumpWidget(
-        ProviderScope(child: MaterialApp.router(routerConfig: router)),
+        ProviderScope(
+          // Welcome's Google/Apple buttons read the auth repository.
+          overrides: [authRepositoryProvider.overrideWithValue(FakeAuthRepository())],
+          child: MaterialApp.router(routerConfig: router),
+        ),
       );
       await t.pumpAndSettle();
     }
+
+    // iOS cannot exit an app programmatically, so an exit-only chevron there
+    // is a button that does nothing (the client hit exactly that on Home).
+    testWidgets('on iOS there is no exit-only chevron', (t) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      await pumpWelcome(t);
+      expect(find.byIcon(Icons.chevron_left), findsNothing);
+      debugDefaultTargetPlatformOverride = null;
+    });
 
     // Welcome is the auth root — nowhere up. Both paths must show the
     // confirm-exit toast on a first press and leave the screen exactly where
@@ -411,41 +426,24 @@ void main() {
     );
   });
 
-  group('Home chevron shares the exit-confirm window with hardware back', () {
-    testWidgets('first tap shows the toast and does not exit', (t) async {
+  // Home is the app's root, so it has no on-screen back chevron any more. The
+  // old one ran the "press again to exit" flow, but iOS has no programmatic
+  // exit (SystemNavigator.pop is a no-op), so on iPhone testers found a back
+  // button that did nothing. Hardware back on Android keeps the confirmation.
+  group('Home has no dead back button; hardware back still confirms exit', () {
+    testWidgets('Home shows no back chevron', (t) async {
       final auth = await _signedIn();
-      await pumpPgApp(
-        t,
-        overrides: _fullOverrides(auth),
-        initialLocation: Routes.home,
-      );
+      await pumpPgApp(t, overrides: _fullOverrides(auth), initialLocation: Routes.home);
       await t.pumpAndSettle();
-
-      await t.tap(
-        find.descendant(
-          of: find.byType(HomeScreen),
-          matching: find.byIcon(Icons.chevron_left),
-        ),
+      expect(
+        find.descendant(of: find.byType(HomeScreen), matching: find.byIcon(Icons.chevron_left)),
+        findsNothing,
       );
-      await t.pumpAndSettle();
-
-      expect(find.text('Press back again to exit'), findsOneWidget);
     });
 
-    // The defect this whole slice exists to prevent: if the chevron ran its
-    // own PgExitConfirm-alike instead of calling the shared
-    // HomeShell.confirmExit, a hardware press followed by a chevron tap
-    // would show the toast twice instead of completing the exit on the
-    // second press.
-    testWidgets('hardware back once, then the chevron completes the exit', (
-      t,
-    ) async {
+    testWidgets('hardware back twice exits, with the toast in between', (t) async {
       final auth = await _signedIn();
-      await pumpPgApp(
-        t,
-        overrides: _fullOverrides(auth),
-        initialLocation: Routes.home,
-      );
+      await pumpPgApp(t, overrides: _fullOverrides(auth), initialLocation: Routes.home);
       await t.pumpAndSettle();
 
       final calls = <MethodCall>[];
@@ -456,32 +454,15 @@ void main() {
           return null;
         },
       );
-      addTearDown(
-        () => t.binding.defaultBinaryMessenger.setMockMethodCallHandler(
-          SystemChannels.platform,
-          null,
-        ),
-      );
+      addTearDown(() => t.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(SystemChannels.platform, null));
 
       await _systemBack(t);
       expect(find.text('Press back again to exit'), findsOneWidget);
-      expect(calls, isEmpty);
+      expect(calls.where((c) => c.method == 'SystemNavigator.pop'), isEmpty);
 
-      await t.tap(
-        find.descendant(
-          of: find.byType(HomeScreen),
-          matching: find.byIcon(Icons.chevron_left),
-        ),
-      );
-      await t.pumpAndSettle();
-
-      expect(
-        calls.any((c) => c.method == 'SystemNavigator.pop'),
-        isTrue,
-        reason:
-            'the chevron must share PgExitConfirm\'s window with hardware '
-            'back, not run an independent timer',
-      );
+      await _systemBack(t);
+      expect(calls.where((c) => c.method == 'SystemNavigator.pop'), isNotEmpty);
     });
   });
 

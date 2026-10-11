@@ -72,14 +72,14 @@ void main() {
     ], initialLocation: Routes.home);
     await t.pumpAndSettle();
 
-    expect(find.text('Hey Radhika 👋'), findsOneWidget);
+    expect(find.text('Hey Radhika'), findsOneWidget);
     await t.tap(find.text('See map →'));
     await t.pumpAndSettle();
     expect(find.textContaining('pets nearby'), findsOneWidget); // the map's sheet
 
     await _systemBack(t);
 
-    expect(find.text('Hey Radhika 👋'), findsOneWidget);
+    expect(find.text('Hey Radhika'), findsOneWidget);
     expect(find.textContaining('pets nearby'), findsNothing);
   });
 

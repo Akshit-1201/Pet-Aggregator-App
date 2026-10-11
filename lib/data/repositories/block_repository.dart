@@ -15,7 +15,7 @@ abstract interface class BlockRepository {
   ///
   /// [name] is stored at block time rather than looked up later: `users/{uid}`
   /// is owner-read-only, so the list could never resolve a name and showed
-  /// "Pawgo user" for everyone.
+  /// "Pawgo Pets user" for everyone.
   Stream<List<({String uid, String name})>> watchBlocked(String uid);
 
   Future<void> block(String uid, String blockedUid, {String name = ''});

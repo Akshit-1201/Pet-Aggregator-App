@@ -6,6 +6,11 @@ class Booking {
   final int rate, fee, total, createdAt, updatedAt;
   final String dateLabel, timeSlot, status, date, paymentId; // date: ISO yyyy-MM-dd ('' = legacy booking)
 
+  /// Start of the booked slot in minutes after midnight (Mumbai), and its
+  /// length. -1 / 0 on bookings made before time slots existed, which only
+  /// carry the [timeSlot] label; the server skips slot checks for those.
+  final int startMin, durationMin;
+
   const Booking({
     this.id = '',
     required this.parentId, required this.proId, required this.proName,
@@ -13,7 +18,10 @@ class Booking {
     required this.rate, required this.fee, required this.total,
     required this.dateLabel, required this.timeSlot, this.status = 'confirmed',
     this.date = '', this.paymentId = '', this.createdAt = 0, this.updatedAt = 0,
+    this.startMin = -1, this.durationMin = 0,
   });
+
+  bool get hasSlot => startMin >= 0 && durationMin > 0;
 
   static int feeFor(int rate) => (rate * 0.1).round();
 
@@ -39,6 +47,10 @@ class Booking {
         'paymentId': paymentId,
         'updatedAt': updatedAt,
         'createdAt': createdAt,
+        // Omitted, not written as -1: the server treats a present startMin as
+        // a slot booking and would reject -1.
+        if (hasSlot) 'startMin': startMin,
+        if (hasSlot) 'durationMin': durationMin,
       };
 
   factory Booking.fromMap(String id, Map<String, dynamic> m) => Booking(
@@ -59,5 +71,7 @@ class Booking {
         paymentId: (m['paymentId'] ?? '') as String,
         updatedAt: (m['updatedAt'] is int) ? m['updatedAt'] as int : 0,
         createdAt: (m['createdAt'] is int) ? m['createdAt'] as int : 0, // stale serverTimestamp -> 0
+        startMin: (m['startMin'] is int) ? m['startMin'] as int : -1,
+        durationMin: (m['durationMin'] is int) ? m['durationMin'] as int : 0,
       );
 }

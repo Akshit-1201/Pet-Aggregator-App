@@ -1,5 +1,5 @@
 import {onCall, HttpsError} from "firebase-functions/v2/https";
-import {onDocumentCreated} from "firebase-functions/v2/firestore";
+import {onDocumentCreated, onDocumentUpdated} from "firebase-functions/v2/firestore";
 import {onSchedule} from "firebase-functions/v2/scheduler";
 import {defineSecret} from "firebase-functions/params";
 import * as logger from "firebase-functions/logger";
@@ -13,6 +13,7 @@ import {bookingKey, scenarioKey} from "./notify/keys";
 import {maskContactDetails} from "./notify/mask";
 import {MAIL_FROM} from "./notify/email";
 import {fmtDay} from "./notify/dates";
+import {type Entry, findConflict, holdSlot, prune, releaseSlot, scheduleId, slotOf} from "./slots";
 export {maskContactDetails};
 
 admin.initializeApp();
@@ -118,7 +119,11 @@ export const createBookingOrder = onCall(
     if (!request.auth) throw new HttpsError("unauthenticated", "sign-in-required");
     const {kind, bookingId} = readArgs(request.data);
     const uid = request.auth.uid;
-    const {amounts} = await loadPayable(kind, bookingId, uid);
+    const {amounts, booking} = await loadPayable(kind, bookingId, uid);
+    // (Re-)hold the time slot before any money is asked for. Covers the
+    // "Pay to confirm" resume path too, where the original hold has lapsed.
+    // Throws already-exists/slot-taken if someone else now has that time.
+    if (kind === "service") await holdSlot(admin.firestore(), bookingId, booking);
     const rzp = new Razorpay({
       key_id: razorpayKeyId.value(),
       key_secret: razorpayKeySecret.value(),
@@ -181,22 +186,63 @@ export const verifyBookingPayment = onCall(
     }
 
     // 3. Re-validate (state may have changed since the order) and write.
-    const {ref, amounts} = await loadPayable(kind, bookingId, uid);
+    const {ref, amounts, booking} = await loadPayable(kind, bookingId, uid);
     const payableStatus = kind === "service" ? "pending" : "accepted";
     const paidStatus = kind === "service" ? "confirmed" : "paid";
-    await admin.firestore().runTransaction(async (tx) => {
+    const slot = kind === "service" ? slotOf(booking) : null;
+    const db = admin.firestore();
+    const schedRef = slot ?
+      db.collection("proSchedule").doc(scheduleId(String(booking.proId ?? ""), slot.date)) : null;
+    // Confirming the booking and turning its slot hold into a permanent booking
+    // happen in ONE transaction, so a confirmed booking can never overlap
+    // another. If the hold lapsed and someone else booked that time in the
+    // meantime, the slot is not ours any more: cancel and refund in full below
+    // rather than double-book the pro.
+    const slotTaken = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
+      const sched = schedRef ? await tx.get(schedRef) : null; // all reads before writes
       if (!snap.exists) throw new HttpsError("not-found", "no-booking");
       if (snap.data()?.status !== payableStatus) {
         throw new HttpsError("failed-precondition", "not-payable");
+      }
+      const now = Date.now();
+      if (slot && schedRef) {
+        const slots = prune((sched?.data()?.slots ?? {}) as Record<string, Entry>, now);
+        if (findConflict(slots, bookingId, slot.startMin, slot.durationMin, now)) {
+          tx.update(ref, {
+            ...amounts.parts, status: "cancelled", cancelReason: "slot-taken",
+            paymentId, refundAmount: amounts.total, updatedAt: now,
+          });
+          return true;
+        }
+        slots[bookingId] = {startMin: slot.startMin, durationMin: slot.durationMin,
+          status: "booked", heldUntil: 0};
+        tx.set(schedRef, {proId: String(booking.proId ?? ""), date: slot.date, slots, updatedAt: now});
       }
       tx.update(ref, {
         ...amounts.parts, // server-authoritative amounts
         status: paidStatus,
         paymentId,
-        updatedAt: Date.now(),
+        updatedAt: now,
       });
+      return false;
     });
+
+    if (slotTaken) {
+      // The customer has paid for a time that is no longer free. Refund the
+      // whole amount (fee included — this is our failure, not theirs).
+      let refundId = "";
+      try {
+        const rzp = new Razorpay({key_id: razorpayKeyId.value(), key_secret: razorpayKeySecret.value()});
+        const r = await rzp.payments.refund(paymentId, {amount: amounts.total * 100, speed: "normal"});
+        refundId = r.id;
+        await ref.update({refundId});
+      } catch (e) {
+        logger.error("verifyBookingPayment: SLOT-TAKEN REFUND FAILED — reconcile by hand",
+          {bookingId, paymentId, error: e});
+      }
+      return {confirmed: false, reason: "slot-taken", paymentId, refundId};
+    }
 
     // What the partner is owed. Recorded here but NOT transferred here: every
     // Razorpay Route call happens later in processPayouts, so a disabled or
@@ -651,5 +697,48 @@ export const refundBookingPayment = onCall(
     return {refundAmount: claim.refundAmount, refundId};
   });
 
+/**
+ * Holds the chosen time for a just-created pending service booking, so the
+ * customer learns on the booking screen — not after paying — that someone else
+ * got there first. createBookingOrder re-holds anyway, so a client that skips
+ * this is still safe.
+ */
+export const holdServiceSlot = onCall(
+  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK},
+  async (request) => {
+    if (!request.auth) throw new HttpsError("unauthenticated", "sign-in-required");
+    const bookingId = request.data?.bookingId;
+    if (typeof bookingId !== "string" || bookingId === "") {
+      throw new HttpsError("invalid-argument", "bad-args");
+    }
+    const snap = await admin.firestore().collection("bookings").doc(bookingId).get();
+    if (!snap.exists) throw new HttpsError("not-found", "no-booking");
+    const b = snap.data() as FirebaseFirestore.DocumentData;
+    if (b.parentId !== request.auth.uid) throw new HttpsError("permission-denied", "not-your-booking");
+    if (b.status !== "pending") throw new HttpsError("failed-precondition", "not-payable");
+    await holdSlot(admin.firestore(), bookingId, b);
+    return {held: true};
+  });
+
+/** Frees a cancelled booking's time at once, rather than when a hold lapses
+ *  or — for a confirmed booking refunded via refundBookingPayment — never. */
+export const releaseCancelledServiceSlot = onDocumentUpdated(
+  {document: "bookings/{id}", region: REGION},
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after) return;
+    if (before.status === "cancelled" || after.status !== "cancelled") return;
+    // A slot-taken cancellation never owned the slot; leave the winner alone.
+    if (after.cancelReason === "slot-taken") return;
+    try {
+      await releaseSlot(admin.firestore(), event.params.id, after);
+    } catch (e) {
+      logger.error("releaseCancelledServiceSlot failed", {bookingId: event.params.id, error: e});
+    }
+  });
+
 export * from "./notify/triggers";
 export * from "./notify/reminders";
+export * from "./auth-email";
+export * from "./moderation";

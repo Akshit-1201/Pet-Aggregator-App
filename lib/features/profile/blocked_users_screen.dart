@@ -54,8 +54,8 @@ class _BlockedRow extends ConsumerWidget {
     final c = context.pg;
     // Name comes from the block record itself. Looking it up in users/{uid}
     // could never work — that doc is readable only by its owner — so this list
-    // used to show "Pawgo user" for everybody.
-    final display = name.trim().isEmpty ? 'Pawgo user' : name;
+    // used to show "Pawgo Pets user" for everybody.
+    final display = name.trim().isEmpty ? 'Pawgo Pets user' : name;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),

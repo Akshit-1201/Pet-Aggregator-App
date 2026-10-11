@@ -24,13 +24,18 @@ private let googleMapsApiKey = "AIzaSyDv7iqaGP7zIH4-SmlIW7UcjU7vmaw3E5w"
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    // A missing or wrong key makes the SDK render blank tiles with no error
-    // anywhere, which is a miserable thing to debug. Say so in the log instead.
+    // ALWAYS call provideAPIKey, before anything can create a map. The two
+    // failure modes are very different:
+    //   - a WRONG or unrestricted-mismatch key → blank tiles, app keeps running
+    //   - provideAPIKey NEVER CALLED → GMSServices throws an NSException the
+    //     moment the first GMSMapView is created, i.e. a hard crash on "See map"
+    // An earlier version skipped the call while the key was a placeholder, which
+    // turned "blank map" into "app crashes" on every TestFlight build made
+    // before the real key landed. Never gate this call again.
     if googleMapsApiKey.hasPrefix("REPLACE_WITH") {
       NSLog("[Pawgo Pets] Google Maps iOS API key is not set — map tiles will render blank. See ios/Runner/AppDelegate.swift.")
-    } else {
-      GMSServices.provideAPIKey(googleMapsApiKey)
     }
+    GMSServices.provideAPIKey(googleMapsApiKey)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 

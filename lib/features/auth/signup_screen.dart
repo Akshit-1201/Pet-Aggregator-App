@@ -13,17 +13,23 @@ import '../../data/models/role.dart';
 import '../../data/models/user_profile.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/providers.dart';
+import 'onboarding_arg.dart';
+import 'social_sign_in_buttons.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
-  const SignupScreen({super.key});
+  /// Set when finishing a first-time Google/Apple sign-in: the account already
+  /// exists, so only the name and role are collected.
+  final SocialSignupArg? social;
+  const SignupScreen({super.key, this.social});
   @override
   ConsumerState<SignupScreen> createState() => _SignupScreenState();
 }
 
 class _SignupScreenState extends ConsumerState<SignupScreen> {
-  final _name = TextEditingController();
-  final _email = TextEditingController();
+  late final _name = TextEditingController(text: widget.social?.name ?? '');
+  late final _email = TextEditingController(text: widget.social?.email ?? '');
   final _password = TextEditingController();
+  bool get _social => widget.social != null;
   Role _role = Role.petParent;
   bool _loading = false;
   String? _error;
@@ -45,7 +51,33 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     super.dispose();
   }
 
+  /// Completes a Google/Apple account: the auth user exists and the provider
+  /// has verified the email, so write the profile and go straight to Location.
+  Future<void> _finishSocial() async {
+    if (_name.text.trim().isEmpty) {
+      setState(() => _error = 'Please enter your name.');
+      return;
+    }
+    final user = ref.read(authRepositoryProvider).currentUser;
+    if (user == null) {
+      if (mounted) context.go(Routes.welcome);
+      return;
+    }
+    setState(() { _loading = true; _error = null; });
+    try {
+      await ref.read(userRepositoryProvider).createUser(UserProfile(
+            uid: user.uid, name: _name.text.trim(), email: user.email ?? _email.text.trim(),
+            area: '', role: _role));
+      if (mounted) context.go(Routes.location);
+    } catch (_) {
+      if (mounted) setState(() => _error = "Couldn't save your profile. Please try again.");
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   Future<void> _submit() async {
+    if (_social) return _finishSocial();
     if (_name.text.trim().isEmpty || _email.text.trim().isEmpty || _password.text.isEmpty) {
       setState(() => _error = 'Please fill in all fields.');
       return;
@@ -74,26 +106,39 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     // regardless of whatever else happens to be on the stack.
     return PgBackScope(
       upTo: Routes.welcome,
+      // Backing out of a half-finished Google/Apple signup must not leave a
+      // signed-in account with no profile behind.
+      onBeforeLeave: _social ? () => ref.read(authRepositoryProvider).signOut() : null,
       child: Scaffold(
         backgroundColor: c.surface,
         body: SafeArea(
           child: Column(children: [
-            Builder(builder: (ctx) =>
-              PgAppBar(title: 'Create account', onBack: () => PgBackScope.pop(ctx))),
+            Builder(builder: (ctx) => PgAppBar(
+                title: _social ? 'Finish setting up' : 'Create account',
+                onBack: () => PgBackScope.pop(ctx))),
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(24, 14, 24, 30),
                 children: [
-                  Text('Just a few details to get you and your pet started.',
+                  if (!_social) ...[
+                    const SocialSignInButtons(),
+                  ],
+                  Text(
+                      _social
+                          ? "You're signed in as ${widget.social!.email.isEmpty ? 'your account' : widget.social!.email}. "
+                              'Tell us your name and how you\'ll use Pawgo Pets.'
+                          : 'Just a few details to get you and your pet started.',
                       style: PgText.inter(14, FontWeight.w400, color: c.muted, height: 1.5)),
                   const SizedBox(height: 13),
                   PgTextField(label: 'Full name', controller: _name, hint: 'Radhika Nair'),
-                  const SizedBox(height: 13),
-                  PgTextField(label: 'Email', controller: _email,
-                      keyboardType: TextInputType.emailAddress, hint: 'you@example.com'),
-                  const SizedBox(height: 13),
-                  PgTextField(label: 'Password', controller: _password, obscure: true,
-                      hint: 'At least 6 characters'),
+                  if (!_social) ...[
+                    const SizedBox(height: 13),
+                    PgTextField(label: 'Email', controller: _email,
+                        keyboardType: TextInputType.emailAddress, hint: 'you@example.com'),
+                    const SizedBox(height: 13),
+                    PgTextField(label: 'Password', controller: _password, obscure: true,
+                        hint: 'At least 6 characters'),
+                  ],
                   const SizedBox(height: 16),
                   Text("I'M JOINING AS", style: PgText.inter(12.5, FontWeight.w700, color: c.muted)),
                   const SizedBox(height: 10),

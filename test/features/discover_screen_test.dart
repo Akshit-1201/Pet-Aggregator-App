@@ -104,12 +104,37 @@ void main() {
     expect(find.text('Bruno'), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('discover-woof')));
-    await tester.pump(); // network call still pending — must not block the deck
+    // Let the 240ms fly-out finish; the network call is still pending and
+    // must not block the deck.
+    await tester.pump(); // first frame starts the animation clock
+    await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('Bruno'), findsNothing);
     expect(find.text('Mochi'), findsOneWidget);
 
     gate.complete();
     await tester.pumpAndSettle();
+  });
+
+  // Reported as "the X button acts like undo": the buttons swapped the card
+  // instantly with no motion, so a pass looked like nothing happened. They
+  // now fly the card off the way a swipe does, then advance.
+  testWidgets('X flies the card off before advancing, and a double tap passes one pet',
+      (tester) async {
+    await _pump(tester);
+    expect(find.text('Bruno'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('discover-pass')));
+    await tester.pump(const Duration(milliseconds: 60));
+    // Mid-flight: still Bruno's card, but it has moved left.
+    expect(find.text('Bruno'), findsOneWidget);
+    final moved = tester.getCenter(find.text('Bruno')).dx;
+    await tester.tap(find.byKey(const Key('discover-pass')), warnIfMissed: false);
+    await tester.pump(const Duration(milliseconds: 60));
+    expect(tester.getCenter(find.text('Bruno')).dx, lessThan(moved));
+
+    await tester.pumpAndSettle();
+    expect(find.text('Bruno'), findsNothing);
+    expect(find.text('Mochi'), findsOneWidget); // the second tap did not skip Mochi
   });
 
   // The chip opened the map all along but was mislabelled "Filters".

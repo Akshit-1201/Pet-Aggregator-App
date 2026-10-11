@@ -50,7 +50,22 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen> {
         PaymentErrorType.failed => "Payment failed — you haven't been charged. Try again.",
         PaymentErrorType.unverified =>
           "Payment couldn't be verified — note payment id ${e.paymentId} and contact support.",
+        PaymentErrorType.slotTaken =>
+          "Someone just booked that time — you haven't been charged. Please pick another slot.",
+        PaymentErrorType.slotTakenRefunded =>
+          "That time was booked by someone else while you paid. We've refunded you in full "
+          "— it can take 5–7 days to show. Please pick another slot.",
       }));
+      // Back to the slot picker: this booking is dead (cancelled by the server
+      // or about to be), and the only useful next step is choosing a new time.
+      if (e.type == PaymentErrorType.slotTaken) {
+        await ref.read(bookingRepositoryProvider).cancelBooking(booking.id).catchError((_) {});
+      }
+      if ((e.type == PaymentErrorType.slotTaken ||
+              e.type == PaymentErrorType.slotTakenRefunded) &&
+          mounted && context.canPop()) {
+        context.pop();
+      }
       return;
     }
     if (mounted) context.go(Routes.bookingConfirmed, extra: booking);

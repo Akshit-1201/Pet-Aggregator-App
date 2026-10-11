@@ -33,8 +33,11 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
     super.dispose();
   }
 
+  /// Google/Apple accounts have no password; they confirm with the provider.
+  bool get _passwordless => !(ref.read(authRepositoryProvider).currentUser?.hasPassword ?? true);
+
   Future<void> _delete() async {
-    if (_password.text.isEmpty) {
+    if (!_passwordless && _password.text.isEmpty) {
       setState(() => _error = 'Enter your password to confirm.');
       return;
     }
@@ -46,7 +49,15 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
     try {
       // Re-auth first: Firebase requires a recent sign-in to delete, and it
       // stops a borrowed unlocked phone from wiping an account.
-      await auth.reauthenticate(_password.text);
+      if (_passwordless) {
+        // Re-runs the Google/Apple sheet. Cancelling it deletes nothing.
+        if (!await auth.reauthenticateWithProvider()) {
+          if (mounted) setState(() => _busy = false);
+          return;
+        }
+      } else {
+        await auth.reauthenticate(_password.text);
+      }
       await auth.deleteAccount();
       // deleteAccount signs out, which flips authStateChanges and lets the
       // router redirect — no manual navigation needed beyond closing this.
@@ -84,12 +95,16 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
           _line(c, 'Kept, anonymised', 'your reviews, posts and replies'),
           _line(c, 'Kept', 'past bookings — they are payment records'),
           const SizedBox(height: 14),
-          PgTextField(
-            label: '',
-            controller: _password,
-            hint: 'Confirm your password',
-            obscure: true,
-          ),
+          if (_passwordless)
+            Text("You'll be asked to confirm with your Google or Apple account.",
+                style: PgText.inter(12.5, FontWeight.w500, color: c.muted))
+          else
+            PgTextField(
+              label: '',
+              controller: _password,
+              hint: 'Confirm your password',
+              obscure: true,
+            ),
           if (_error != null) ...[
             const SizedBox(height: 8),
             Text(_error!, style: PgText.inter(12.5, FontWeight.w600, color: c.heart)),

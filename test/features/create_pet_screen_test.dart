@@ -48,7 +48,7 @@ void main() {
     await tester.enterText(find.byType(TextField).at(0), 'Bruno');   // Pet name
     await tester.enterText(find.byType(TextField).at(1), 'Labrador');// Breed
     await tester.enterText(find.byType(TextField).at(2), '2 yrs');   // Age
-    await tester.tap(find.text('Finish & explore Pawgo'));
+    await tester.tap(find.text('Finish & explore'));
     await tester.pumpAndSettle();
 
     final mine = await pets.watchMyPets(auth.currentUser!.uid).first;
@@ -89,7 +89,7 @@ void main() {
     await tester.enterText(find.byType(TextField).at(0), 'Bruno');
     await tester.enterText(find.byType(TextField).at(1), 'Labrador');
     await tester.enterText(find.byType(TextField).at(2), '2 yrs');
-    await tester.tap(find.text('Finish & explore Pawgo'));
+    await tester.tap(find.text('Finish & explore'));
     await tester.pumpAndSettle();
 
     final mine = await pets.watchMyPets(uid).first;

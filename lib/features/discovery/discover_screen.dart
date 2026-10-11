@@ -20,6 +20,22 @@ class DiscoverScreen extends ConsumerStatefulWidget {
 class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   List<PetProfile>? _deck;
   int _index = 0;
+  // One key per pet so the buttons can drive the current card's fly-out.
+  final _cardKeys = <String, GlobalKey<PgSwipeCardState>>{};
+
+  GlobalKey<PgSwipeCardState> _keyFor(PetProfile pet) =>
+      _cardKeys.putIfAbsent(pet.id, () => GlobalKey<PgSwipeCardState>());
+
+  /// Buttons animate the card off like a drag does, and the card's callback
+  /// then advances the deck — one path for both gestures.
+  void _swipeCurrent(PetProfile pet, {required bool woof}) {
+    final card = _keyFor(pet).currentState;
+    if (card != null) {
+      card.swipe(woof: woof);
+    } else {
+      woof ? _onWoof(pet) : _onPass(pet);
+    }
+  }
 
   Future<void> _onWoof(PetProfile pet) async {
     final me = ref.read(authRepositoryProvider).currentUser;
@@ -120,7 +136,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                   color: c.surface, borderRadius: BorderRadius.circular(28),
                   border: Border.all(color: c.border), boxShadow: c.shadowSm)))),
             Positioned.fill(
-              child: PgSwipeCard(key: ValueKey(pet.id), pet: pet,
+              child: PgSwipeCard(key: _keyFor(pet), pet: pet,
                 onWoof: () => _onWoof(pet), onPass: () => _onPass(pet))),
           ]),
         ),
@@ -129,13 +145,15 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
         padding: const EdgeInsets.fromLTRB(22, 12, 22, 6),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           _circleBtn(key: const Key('discover-pass'), c: c, size: 60,
-            child: Icon(Icons.close, color: c.faint, size: 26), onTap: () => _onPass(pet)),
+            child: Icon(Icons.close, color: c.faint, size: 26),
+            onTap: () => _swipeCurrent(pet, woof: false)),
           const SizedBox(width: 22),
           _circleBtn(key: const Key('discover-woof'), c: c, size: 78, gradient: true,
-            child: const Icon(Icons.pets, color: Colors.white, size: 32), onTap: () => _onWoof(pet)),
+            child: const Icon(Icons.pets, color: Colors.white, size: 32),
+            onTap: () => _swipeCurrent(pet, woof: true)),
           const SizedBox(width: 22),
           _circleBtn(c: c, size: 60, child: const Text('⭐', style: TextStyle(fontSize: 24)),
-            onTap: () => _onWoof(pet)),
+            onTap: () => _swipeCurrent(pet, woof: true)),
         ]),
       ),
       Padding(

@@ -38,7 +38,7 @@ Future<void> showModerationSheet(
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Report or block', style: PgText.poppins(18, FontWeight.w800, color: c.text)),
           const SizedBox(height: 4),
-          Text('Reports go to the Pawgo team. Blocking is instant and only affects you.',
+          Text('Reports go to the Pawgo Pets team. Blocking is instant and only affects you.',
               style: PgText.inter(13, FontWeight.w400, color: c.muted)),
           const SizedBox(height: 16),
           _sheetRow(sheetCtx, c, '🚩', 'Report this ${targetType.noun}',
@@ -52,7 +52,7 @@ Future<void> showModerationSheet(
             const SizedBox(height: 10),
             _sheetRow(sheetCtx, c, '🚫',
                 targetOwnerName.isEmpty ? 'Block this person' : 'Block $targetOwnerName',
-                'Hide them across Pawgo and stop their messages', () {
+                'Hide them across Pawgo Pets and stop their messages', () {
               Navigator.of(sheetCtx).pop();
               _confirmBlock(context, ref, targetOwnerId, targetOwnerName);
             }),
@@ -102,7 +102,7 @@ Future<void> _showReasonPicker(
                         createdAt: DateTime.now().millisecondsSinceEpoch,
                       ));
                   if (context.mounted) {
-                    showPgSnack(context, 'Thanks — the Pawgo team will take a look.');
+                    showPgSnack(context, 'Thanks — the Pawgo Pets team will take a look.');
                   }
                 } catch (_) {
                   if (context.mounted) {

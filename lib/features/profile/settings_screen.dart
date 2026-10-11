@@ -56,7 +56,7 @@ class SettingsScreen extends ConsumerWidget {
                   'Phone numbers, emails and links are hidden in chat',
                   border: true),
               _navRow(context, c, '🚫', 'Blocked users',
-                  'People you have hidden across Pawgo',
+                  'People you have hidden across Pawgo Pets',
                   () => context.push(Routes.blockedUsers), border: true),
               // Google Play requires an in-app deletion path for any app that
               // lets you create an account.
@@ -67,7 +67,7 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 18),
           _label(context, 'ABOUT'),
-          _staticRow(c, 'About Pawgo', 'v1.0.0'),
+          _staticRow(c, 'About Pawgo Pets', 'v1.0.0'),
         ])),
       ])),
     );

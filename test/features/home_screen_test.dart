@@ -28,7 +28,7 @@ void main() {
     ], initialLocation: Routes.home);
     await tester.pumpAndSettle();
 
-    expect(find.text('Hey Radhika 👋'), findsOneWidget);
+    expect(find.text('Hey Radhika'), findsOneWidget);
     expect(find.text('Bruno'), findsOneWidget);
     expect(find.text('Woof!'), findsWidgets);
   });

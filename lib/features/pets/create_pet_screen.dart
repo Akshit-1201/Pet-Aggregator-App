@@ -238,7 +238,7 @@ class _CreatePetScreenState extends ConsumerState<CreatePetScreen> {
                 padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
                   PgPrimaryButton(
-                    label: _saving ? 'Saving…' : 'Finish & explore Pawgo',
+                    label: _saving ? 'Saving…' : 'Finish & explore',
                     onPressed: _saving ? () {} : _finish),
                   if (widget.fromOnboarding) ...[
                     const SizedBox(height: 6),

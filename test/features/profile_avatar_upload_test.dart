@@ -39,6 +39,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(picker.calls, 1);
+    // Avatars upload at 512px, not the 1080px galleries use — the full-size
+    // upload was most of why profile icons were slow to appear.
+    expect(picker.lastMaxWidth, 512);
     expect(storage.uploads.keys.single, 'users/$uid/avatar.jpg');
     expect((await users.watchUser(uid).first)!.photoUrl,
         'https://fake.storage/users/$uid/avatar.jpg');

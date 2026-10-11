@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -170,6 +171,10 @@ class PgBackScope extends StatelessWidget {
     }
 
     if (confirmExit) {
+      // iOS has no programmatic exit — SystemNavigator.pop is a no-op — and no
+      // hardware back. "Press back again to exit" would promise something that
+      // can never happen, so say nothing.
+      if (defaultTargetPlatform == TargetPlatform.iOS) return;
       if (PgExitConfirm.press()) {
         await SystemNavigator.pop();
       } else {

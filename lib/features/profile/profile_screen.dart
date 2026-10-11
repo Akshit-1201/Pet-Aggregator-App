@@ -9,6 +9,7 @@ import '../../core/widgets/pg_image_slot.dart';
 import '../../data/models/booking.dart';
 import '../../data/models/pet_profile.dart';
 import '../../data/repositories/providers.dart';
+import '../../data/services/image_picker_service.dart';
 import '../home/home_shell.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
@@ -24,7 +25,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final uid = ref.read(authRepositoryProvider).currentUser?.uid;
     if (uid == null || _uploading) return;
     try {
-      final bytes = await ref.read(imagePickerServiceProvider).pickImage();
+      final bytes = await ref.read(imagePickerServiceProvider)
+          .pickImage(maxWidth: avatarMaxWidth);
       if (!mounted || bytes == null) return;
       setState(() => _uploading = true);
       final url = await ref.read(storageRepositoryProvider)
@@ -57,7 +59,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Start earning on Pawgo', style: PgText.poppins(18, FontWeight.w800, color: c.text)),
+            Text('Start earning on Pawgo Pets', style: PgText.poppins(18, FontWeight.w800, color: c.text)),
             const SizedBox(height: 4),
             Text('Pick how you want to help pets nearby.',
                 style: PgText.inter(13, FontWeight.w400, color: c.muted)),
@@ -99,6 +101,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final pets = ref.watch(myPetsProvider).value ?? const <PetProfile>[];
     final bookings = ref.watch(myBookingsProvider).value ?? const <Booking>[];
     final woofs = ref.watch(myWoofCountProvider).value ?? 0;
+    final isPro = ref.watch(currentProProvider).value != null;
+    final isHost = ref.watch(currentHomestayProvider).value != null;
     final name = profile?.name ?? '';
     final roleArea = profile == null ? '' : '${profile.role.label} · ${profile.area}';
 
@@ -195,8 +199,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           const SizedBox(height: 16),
           _menuGroup(c, [
             ('🗓️', 'My bookings', () => context.push(Routes.bookings)),
-            // Received (tab 1) is where a host sees the stays booked with them.
-            ('🏡', 'My homestays', () => context.push(Routes.bookings, extra: 1)),
+            // Only for someone with a listing. For a pet parent the old
+            // "My homestays" row opened the very same screen as "My bookings"
+            // (the Received tab doesn't exist without a listing), so the two
+            // rows read as a copy-paste. Now it names what it actually opens.
+            if (isPro || isHost)
+              (isHost ? '🏡' : '🎒', 'Bookings received', () => context.push(Routes.bookings, extra: 1)),
             ('🧾', 'Payments', () => context.push(Routes.payments)),
             ('🎒', 'Become a pro or host', () => _showBecomeProOrHost(context)),
           ]),

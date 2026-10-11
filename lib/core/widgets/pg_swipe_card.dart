@@ -12,10 +12,11 @@ class PgSwipeCard extends StatefulWidget {
       {super.key, required this.pet, required this.onWoof, required this.onPass});
 
   @override
-  State<PgSwipeCard> createState() => _PgSwipeCardState();
+  State<PgSwipeCard> createState() => PgSwipeCardState();
 }
 
-class _PgSwipeCardState extends State<PgSwipeCard> with SingleTickerProviderStateMixin {
+/// Public so the Discover buttons can drive the same fly-out a drag does.
+class PgSwipeCardState extends State<PgSwipeCard> with SingleTickerProviderStateMixin {
   static const _threshold = 110.0;
   late final AnimationController _controller;
   Animation<Offset>? _anim;
@@ -49,6 +50,19 @@ class _PgSwipeCardState extends State<PgSwipeCard> with SingleTickerProviderStat
         .animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
     _pending = then;
     _controller.forward(from: 0);
+  }
+
+  /// Flies the card off-screen and THEN fires the callback — the same path a
+  /// drag past the threshold takes. The Pass/Woof buttons used to swap the
+  /// card instantly with no motion; with photo-less pets all showing the same
+  /// placeholder, a pass looked like the card had just reset (reported as "X
+  /// acts like undo"). Ignored while a fly-out is already running, so a double
+  /// tap can't skip a pet.
+  void swipe({required bool woof}) {
+    if (_controller.isAnimating || _pending != null) return;
+    final w = MediaQuery.of(context).size.width;
+    _animateTo(Offset(woof ? w * 1.5 : -w * 1.5, 0),
+        then: woof ? widget.onWoof : widget.onPass);
   }
 
   void _onPanUpdate(DragUpdateDetails d) {

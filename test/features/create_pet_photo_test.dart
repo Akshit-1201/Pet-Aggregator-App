@@ -65,7 +65,7 @@ void main() {
     expect(find.text('${PetProfile.minPhotos}/${PetProfile.maxPhotos}'), findsOneWidget);
 
     await tester.enterText(find.byType(TextField).first, 'Bruno');
-    await tester.tap(find.text('Finish & explore Pawgo'));
+    await tester.tap(find.text('Finish & explore'));
     await tester.pumpAndSettle();
 
     final saved = (await h.pets.watchMyPets(h.uid).first).single;
@@ -83,7 +83,7 @@ void main() {
 
     await _addPhotos(tester, 1); // short of the minimum
     await tester.enterText(find.byType(TextField).first, 'Bruno');
-    await tester.tap(find.text('Finish & explore Pawgo'));
+    await tester.tap(find.text('Finish & explore'));
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Add at least ${PetProfile.minPhotos} photos'), findsOneWidget);

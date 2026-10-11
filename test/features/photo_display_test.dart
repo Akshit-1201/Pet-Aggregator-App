@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pet_aggregator_app/core/router/routes.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
@@ -36,16 +36,10 @@ void main() {
     ], initialLocation: Routes.home);
     await tester.pumpAndSettle();
 
-    // Images now carry a decode hint, so the provider is a ResizeImage wrapping
-    // the NetworkImage rather than a bare one — unwrap before comparing.
-    String? urlOf(ImageProvider p) => switch (p) {
-          ResizeImage(imageProvider: final inner) => urlOf(inner),
-          NetworkImage(url: final u) => u,
-          _ => null,
-        };
-
+    // Every network image goes through PgNetworkImage, which is a disk-cached
+    // CachedNetworkImage carrying a decode hint.
     bool hasNetworkImage(String url) => find
-        .byWidgetPredicate((w) => w is Image && urlOf(w.image) == url)
+        .byWidgetPredicate((w) => w is CachedNetworkImage && w.imageUrl == url)
         .evaluate()
         .isNotEmpty;
 

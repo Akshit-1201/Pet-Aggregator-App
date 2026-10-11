@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,7 @@ import '../../core/widgets/pg_buttons.dart';
 import '../../core/widgets/pg_text_field.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/providers.dart';
+import 'social_sign_in_buttons.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
   const WelcomeScreen({super.key});
@@ -77,7 +79,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
               const SizedBox(height: 18),
               Text('Welcome back 👋', style: PgText.poppins(30, FontWeight.w800, color: Colors.white, ls: -0.5)),
               const SizedBox(height: 5),
-              Text('Log in to your Pawgo account',
+              Text('Log in to your Pawgo Pets account',
                 style: PgText.inter(14, FontWeight.w500, color: const Color(0xFFFFF5E8))),
             ])))),
             Container(
@@ -86,6 +88,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(32))),
               padding: const EdgeInsets.fromLTRB(26, 30, 26, 28),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
+                const SocialSignInButtons(),
                 PgTextField(label: 'Email', controller: _email, icon: Icons.mail_outline,
                   keyboardType: TextInputType.emailAddress, hint: 'you@example.com'),
                 const SizedBox(height: 14),
@@ -99,7 +102,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                 const SizedBox(height: 14),
                 GestureDetector(
                   onTap: () => context.go(Routes.signup),
-                  child: Text.rich(TextSpan(text: 'New to Pawgo? ',
+                  child: Text.rich(TextSpan(text: 'New to Pawgo Pets? ',
                     style: PgText.inter(13.5, FontWeight.w400, color: c.muted),
                     children: [TextSpan(text: 'Create account',
                       style: PgText.inter(13.5, FontWeight.w700, color: c.brand))]))),
@@ -112,6 +115,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
           // `context` above is this widget's own, an ancestor of the
           // PgBackScope this build() returns, so PgBackScope.pop(context)
           // would silently degrade to a plain pop instead of confirmExit.
+          //
+          // Not on iOS: its only action is "exit the app", which iOS doesn't
+          // allow (SystemNavigator.pop is a no-op there) — the same dead
+          // button testers found on Home.
+          if (defaultTargetPlatform != TargetPlatform.iOS)
           Positioned(
             top: 0, left: 0,
             child: SafeArea(

@@ -1,10 +1,35 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import '../../models/availability.dart';
 import '../../models/booking.dart';
 import '../booking_repository.dart';
 
 class FirestoreBookingRepository implements BookingRepository {
   final FirebaseFirestore _db;
-  FirestoreBookingRepository([FirebaseFirestore? db]) : _db = db ?? FirebaseFirestore.instance;
+  final FirebaseFunctions? _fns;
+  FirestoreBookingRepository([FirebaseFirestore? db, FirebaseFunctions? functions])
+      : _db = db ?? FirebaseFirestore.instance,
+        _fns = functions;
+
+  FirebaseFunctions get _functions =>
+      _fns ?? FirebaseFunctions.instanceFor(region: 'asia-south1');
+
+  @override
+  Stream<List<BusySlot>> watchBusySlots(String proId, String isoDate) => _db
+      .collection('proSchedule')
+      .doc('${proId}_$isoDate')
+      .snapshots()
+      .map((s) => busySlotsFrom(s.data(), nowMs: DateTime.now().millisecondsSinceEpoch));
+
+  @override
+  Future<void> holdSlot(String bookingId) async {
+    try {
+      await _functions.httpsCallable('holdServiceSlot').call<Object?>({'bookingId': bookingId});
+    } on FirebaseFunctionsException catch (e) {
+      if (e.code == 'already-exists') throw const SlotTakenException();
+      rethrow;
+    }
+  }
 
   CollectionReference<Map<String, dynamic>> get _col => _db.collection('bookings');
 

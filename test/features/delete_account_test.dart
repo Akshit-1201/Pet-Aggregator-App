@@ -10,13 +10,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:pet_aggregator_app/core/router/routes.dart';
 import 'package:pet_aggregator_app/data/models/role.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
+import 'package:pet_aggregator_app/data/repositories/auth_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/providers.dart';
 import '../support/fakes.dart';
 import '../support/pump.dart';
 
-Future<FakeAuthRepository> _openDialog(WidgetTester tester) async {
+Future<FakeAuthRepository> _openDialog(WidgetTester tester, {bool google = false}) async {
   final auth = FakeAuthRepository();
-  await auth.signUp(email: 'me@x.com', password: 'secret1');
+  if (google) {
+    auth.nextSocialAccount = (email: 'me@x.com', name: 'Radhika');
+    await auth.signInWithProvider(SocialProvider.google);
+  } else {
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+  }
   final users = InMemoryUserRepository();
   await users.createUser(UserProfile(
       uid: auth.currentUser!.uid, name: 'Radhika', email: 'me@x.com',
@@ -98,5 +104,27 @@ void main() {
 
     expect(auth.deleted, isTrue);
     expect(auth.currentUser, isNull);
+  });
+
+  // Google/Apple accounts have no password, so the old password-only dialog
+  // left them unable to delete their account at all.
+  testWidgets('a Google account confirms with Google instead of a password', (tester) async {
+    final auth = await _openDialog(tester, google: true);
+    expect(find.text('Confirm your password'), findsNothing);
+    expect(find.textContaining('confirm with your Google or Apple account'), findsOneWidget);
+
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    expect(auth.socialReauths, 1);
+    expect(auth.deleted, isTrue);
+  });
+
+  testWidgets('cancelling the Google check deletes nothing', (tester) async {
+    final auth = await _openDialog(tester, google: true);
+    auth.socialReauthResult = false;
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+    expect(auth.deleted, isFalse);
+    expect(find.text('Delete your account?'), findsOneWidget);
   });
 }

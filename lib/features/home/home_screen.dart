@@ -3,13 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_spacing.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_chip.dart';
 import '../../core/widgets/pg_image_slot.dart';
+import '../../core/widgets/pg_snackbar.dart';
+import '../../data/models/pet_profile.dart';
 import '../../data/models/post.dart';
+import '../../data/models/swipe.dart';
 import '../../data/repositories/providers.dart';
-import 'home_shell.dart';
 import 'widgets/pet_row.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -34,21 +35,12 @@ class HomeScreen extends ConsumerWidget {
             padding: const EdgeInsets.fromLTRB(22, 12, 22, 14),
             decoration: BoxDecoration(color: c.surface, border: Border(bottom: BorderSide(color: c.border))),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              // Home is a tab root — there is nowhere up, so the chevron only
-              // offers a confirmed exit (HomeShell.confirmExit, the same path
-              // hardware back takes via HomeShell._onBack — never a duplicate
-              // timer). It's the least essential control on this header, so it
-              // gets its own line instead of competing with the greeting for
-              // width on a single crowded row (see commit 6eba058).
-              GestureDetector(
-                onTap: () => HomeShell.confirmExit(context),
-                child: Container(
-                  width: 42, height: 42, alignment: Alignment.center,
-                  decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
-                    borderRadius: BorderRadius.circular(PgRadius.iconBtn)),
-                  child: Icon(Icons.chevron_left, color: c.text)),
-              ),
-              const SizedBox(height: 10),
+              // No back chevron: Home is the root of the app, so there is
+              // nowhere for it to go. It used to run the "press again to exit"
+              // flow, but iOS has no programmatic app exit (SystemNavigator.pop
+              // is a no-op there), so on iPhone it was a button that did
+              // nothing. Android's hardware back still gets the exit
+              // confirmation via HomeShell._onBack.
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
@@ -59,7 +51,7 @@ class HomeScreen extends ConsumerWidget {
                         style: PgText.inter(12.5, FontWeight.w600, color: c.muted))),
                   ]),
                   const SizedBox(height: 5),
-                  Text('Hey $greetName 👋', maxLines: 1, overflow: TextOverflow.ellipsis,
+                  Text('Hey $greetName', maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: PgText.poppins(24, FontWeight.w800, color: c.text, ls: -0.5)),
                   const SizedBox(height: 2),
                   Text('Pets near you today', maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -88,7 +80,27 @@ class HomeScreen extends ConsumerWidget {
                     decoration: BoxDecoration(color: c.surface2, borderRadius: BorderRadius.circular(13)),
                     child: Icon(Icons.chat_bubble_outline_rounded, size: 20, color: c.text)),
                 ),
-                PgImageSlot(size: 46, circle: true, imageUrl: profile?.photoUrl),
+                // The user's own avatar. Without a photo it used to fall back to
+                // the 🐾 placeholder and wasn't tappable — testers read it as a
+                // mystery "two paws" button. Now: their initial, opening Profile.
+                Semantics(
+                  button: true,
+                  label: 'Your profile',
+                  child: GestureDetector(
+                    key: const Key('home-avatar'),
+                    onTap: () => context.go(Routes.profile),
+                    child: (profile?.photoUrl ?? '').isNotEmpty
+                        ? PgImageSlot(size: 46, circle: true, imageUrl: profile!.photoUrl)
+                        : Container(
+                            width: 46, height: 46, alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(colors: [c.brand, c.brand2])),
+                            child: Text(
+                              greetName == 'there' ? '?' : greetName.characters.first.toUpperCase(),
+                              style: PgText.poppins(18, FontWeight.w700, color: Colors.white))),
+                  ),
+                ),
               ]),
             ]),
           ),
@@ -132,7 +144,7 @@ class HomeScreen extends ConsumerWidget {
                       ? _EmptyPets(c: c)
                       : Column(children: [
                           for (final p in pets) ...[
-                            PetRow(pet: p, onWoof: () {},
+                            PetRow(pet: p, onWoof: () => _woof(context, ref, p),
                               onTap: () => context.push(Routes.petProfile, extra: p)),
                             const SizedBox(height: 11),
                           ],
@@ -186,6 +198,20 @@ class HomeScreen extends ConsumerWidget {
         ]),
       ),
     );
+  }
+}
+
+/// The Woof button on Home's pet rows was wired to an empty callback — it
+/// looked live and did nothing. Same write Discover makes.
+Future<void> _woof(BuildContext context, WidgetRef ref, PetProfile pet) async {
+  final me = ref.read(authRepositoryProvider).currentUser;
+  if (me == null) return;
+  try {
+    await ref.read(swipeRepositoryProvider).recordSwipe(Swipe(
+        fromUid: me.uid, petId: pet.id, ownerId: pet.ownerId, direction: SwipeDirection.woof));
+    if (context.mounted) showPgSnack(context, 'Woof sent to ${pet.displayName} 🐾');
+  } catch (_) {
+    if (context.mounted) showPgSnack(context, "Couldn't send that Woof — try again.");
   }
 }
 

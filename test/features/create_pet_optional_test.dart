@@ -19,7 +19,7 @@ void main() {
       storageRepositoryProvider.overrideWithValue(InMemoryStorageRepository()),
     ], initialLocation: Routes.createPet, extra: const OnboardingArg(fromOnboarding: true));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Finish & explore Pawgo'));
+    await tester.tap(find.text('Finish & explore'));
     await tester.pumpAndSettle();
     expect(find.text("Please enter your pet's name."), findsOneWidget);
     expect(await pets.watchMyPets('uid_me@x.com').first, isEmpty);

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
@@ -22,6 +23,9 @@ class HomeShell extends StatelessWidget {
   /// The "press back again to exit" path, shared by hardware back on the
   /// Home tab and Home's own on-screen chevron so the two can never diverge.
   static Future<void> confirmExit(BuildContext context) async {
+    // iOS can't exit programmatically (SystemNavigator.pop is a no-op), so the
+    // "press again" toast would promise something that never happens.
+    if (defaultTargetPlatform == TargetPlatform.iOS) return;
     if (PgExitConfirm.press()) {
       await SystemNavigator.pop();
     } else {
