@@ -49,9 +49,14 @@ Details and exact values are in `docs/client-feedback-2026-10-setup.md`.
 - [ ] 👤 **Account-deletion web page.** Play requires a URL where someone can
   ask for deletion *without* the app installed. It can be a simple page with a
   support email; in-app deletion already exists (Settings → Delete account).
-- [ ] 💻 **Link the privacy policy in the app** (Settings → ABOUT row, and
-  under the sign-up form). Apple requires it in-app; Play recommends it.
-  Blocked only on the URL — a ~20-line change once it exists.
+- [x] ✅ **In-app links built (2026-10-23):** Settings → ABOUT has "Privacy
+  policy" and "Terms & conditions"; sign-up shows "By continuing, you agree to
+  our Terms & Conditions and Privacy Policy." Both open an in-app viewer with
+  working back (button, gesture and chevron; steps back through links first).
+- [ ] 👤 **Paste the two hosted URLs** into `lib/core/legal/legal_links.dart`
+  (`privacyPolicyUrl`, `termsUrl`) and ship a build. Until then the viewer
+  says the document "will be published here soon". A Google Doc published to
+  the web works.
 - [ ] 👤 Support email address for the store listings.
 
 ## 4. Build and upload to Play (internal testing)

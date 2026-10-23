@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:pet_aggregator_app/data/models/app_user.dart';
+import 'package:pet_aggregator_app/features/legal/document_view.dart';
 import 'package:pet_aggregator_app/data/models/pet_profile.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
 import 'package:pet_aggregator_app/data/models/availability.dart';
@@ -1036,5 +1037,44 @@ class FakePaymentService implements PaymentService {
     refundedKinds.add(kind);
     if (refundError != null) throw refundError!;
     return refundResult ?? const RefundResult(refundAmount: 0, refundId: '');
+  }
+}
+
+/// A [DocumentView] with scriptable history: [followLink] is the person
+/// tapping a link inside the document, [failLoad] a page that couldn't load.
+class FakeDocumentView implements DocumentView {
+  final String url;
+  final DocumentViewEvents events;
+  final List<String> pages;
+  int retries = 0;
+
+  /// Like a real WebView, the first page reports finishing on its own.
+  FakeDocumentView(this.url, this.events) : pages = [url] {
+    scheduleMicrotask(events.onPageFinished);
+  }
+
+  void followLink(String to) {
+    pages.add(to);
+    events.onPageFinished();
+  }
+
+  void failLoad() => events.onError();
+
+  @override
+  Widget build(BuildContext context) => Text('PAGE ${pages.last}');
+
+  @override
+  Future<bool> canGoBack() async => pages.length > 1;
+
+  @override
+  Future<void> goBack() async {
+    if (pages.length > 1) pages.removeLast();
+    events.onPageFinished();
+  }
+
+  @override
+  Future<void> retry() async {
+    retries++;
+    events.onPageFinished();
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/navigation/pg_back_scope.dart';
 import '../../core/router/routes.dart';
+import '../legal/legal_consent_line.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_app_bar.dart';
@@ -155,10 +156,16 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             ),
             Container(
               decoration: BoxDecoration(color: c.surface, border: Border(top: BorderSide(color: c.border))),
-              padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
-              child: PgPrimaryButton(
-                label: _loading ? 'Creating…' : 'Continue',
-                onPressed: _loading ? () {} : _submit),
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                // Right above the button that creates the account, in both
+                // the email form and the Google/Apple/phone "finish" mode.
+                const LegalConsentLine(),
+                const SizedBox(height: 10),
+                PgPrimaryButton(
+                  label: _loading ? 'Creating…' : 'Continue',
+                  onPressed: _loading ? () {} : _submit),
+              ]),
             ),
           ]),
         ),

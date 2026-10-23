@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/navigation/pg_back_scope.dart';
+import '../../core/legal/legal_links.dart';
 import '../../core/router/routes.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -67,6 +68,22 @@ class SettingsScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 18),
           _label(context, 'ABOUT'),
+          Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(color: c.surface, border: Border.all(color: c.border),
+                borderRadius: BorderRadius.circular(16)),
+            child: Column(children: [
+              // App Store guideline 5.1.1 wants the privacy policy reachable
+              // in-app; both open in the in-app viewer.
+              _navRow(context, c, '🔒', LegalDoc.privacy.title,
+                  'How Pawgo Pets uses your data',
+                  () => context.push(Routes.privacyPolicy), border: true),
+              _navRow(context, c, '📜', LegalDoc.terms.title,
+                  'The rules for using Pawgo Pets',
+                  () => context.push(Routes.terms)),
+            ]),
+          ),
+          const SizedBox(height: 10),
           _staticRow(c, 'About Pawgo Pets', 'v1.0.0'),
         ])),
       ])),

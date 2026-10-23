@@ -12,6 +12,10 @@ void main() {
       userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
     ], initialLocation: Routes.signup);
     expect(find.text('Pet Parent'), findsOneWidget);
+    // The form scrolls (social buttons + the pinned consent line above
+    // Continue), so the last role may start below the fold.
+    await tester.dragUntilVisible(
+        find.text('Homestay Host'), find.byType(Scrollable).first, const Offset(0, -150));
     expect(find.text('Homestay Host'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
   });
