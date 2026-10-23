@@ -86,6 +86,22 @@
       },
       "oauth_client": [
         {
+          "client_id": "280616341211-91hjlo0s5opac200eu19u49qlp3rln1v.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pawgopets.app",
+            "certificate_hash": "4831e513aaedb24f2ebbf23005bd38055320969b"
+          }
+        },
+        {
+          "client_id": "280616341211-ui4i3r68epkskt2eoavfm88md4l1gv29.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.pawgopets.app",
+            "certificate_hash": "6ed8efeb70319a95989ccc0de80b61e3e47a60d5"
+          }
+        },
+        {
           "client_id": "280616341211-hhutv7vco4ase5s7qm1vmlk50j449aq4.apps.googleusercontent.com",
           "client_type": 3
         }
