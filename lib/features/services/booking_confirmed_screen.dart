@@ -92,7 +92,7 @@ class BookingConfirmedScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '$proFirst will ${b.serviceType.label.toLowerCase()} ${b.petName} on '
+                  '$proFirst will ${b.serviceType.verb} ${b.petName} on '
                   '${b.dateLabel}, ${b.timeSlot}. You\'ll get a reminder.',
                   textAlign: TextAlign.center,
                   style: PgText.inter(

@@ -1,13 +1,14 @@
 import 'availability.dart';
 
 enum ServiceType {
-  walker('walker', 'Dog Walker', '🦮', 'walk'),
-  sitter('sitter', 'Pet Sitter', '🏠', 'visit'),
-  groomer('groomer', 'Groomer', '✂️', 'session'),
-  trainer('trainer', 'Trainer', '🎾', 'session');
+  walker('walker', 'Dog Walker', '🦮', 'walk', 'walk'),
+  sitter('sitter', 'Pet Sitter', '🏠', 'visit', 'look after'),
+  groomer('groomer', 'Groomer', '✂️', 'session', 'groom'),
+  trainer('trainer', 'Trainer', '🎾', 'session', 'train');
 
-  final String storageKey, label, emoji, unit;
-  const ServiceType(this.storageKey, this.label, this.emoji, this.unit);
+  /// [verb] is what the pro does to the pet: "Aarav will **walk** Bruno".
+  final String storageKey, label, emoji, unit, verb;
+  const ServiceType(this.storageKey, this.label, this.emoji, this.unit, this.verb);
 
   static ServiceType fromStorage(String key) =>
       ServiceType.values.firstWhere((s) => s.storageKey == key, orElse: () => ServiceType.walker);
