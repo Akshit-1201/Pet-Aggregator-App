@@ -1,6 +1,14 @@
 # Plan — Pawgo Pets website, legal pages, and going live on Razorpay
 
-_Written 2026-10-24. Parked for later — nothing here is started._
+_Written 2026-10-24._
+
+> **Status (2026-10-24): the website is built** — `website/` (see
+> `website/README.md`), Firebase Hosting config in `firebase.json`, target
+> `https://pawgo-pets.web.app` (free Firebase subdomain; custom domain later).
+> **Not deployed.** Remaining: fill the 6 `[[PLACEHOLDERS]]` (business name,
+> address, email, phone, hours, grievance officer), legal review, access to
+> `pawgo-pets` + Hosting "Get started", then `firebase deploy --only hosting
+> --project pawgo-pets`, then sections 4.1–4.8 below.
 
 ## Why this is blocking
 
