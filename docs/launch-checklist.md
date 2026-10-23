@@ -30,17 +30,27 @@ Legend: 👤 owner (console / account / store) · 💻 code change · ✅ alread
 
 Details and exact values are in `docs/client-feedback-2026-10-setup.md`.
 
-- [ ] 👤 **Authentication → Sign-in method:** enable **Google**, **Apple**,
-  **Phone**. Then **Settings → SMS region policy → allow only India**.
-- [ ] 👤 **Firebase → Android app → fingerprints:** release SHA-1 + SHA-256,
-  each dev machine's debug SHA-1 + SHA-256 (values in the setup doc §2, §7).
-  Re-download `android/app/google-services.json` and commit it.
-- [ ] 👤 **Cloud Console → enable APIs:** Cloud Vision (image moderation),
-  Play Integrity (phone auth + App Check).
-- [ ] 👤 **"Pawgo Android Maps" key:** allow package `com.pawgopets.app`
-  (it still names `com.pawgo.app` → blank map tiles).
-- [ ] 👤 **Phone numbers for testing** (Auth → Phone): add one or two so QA
-  never spends real SMS.
+**All done 2026-10-23 and verified on a release build (emulator):** phone
+sign-in with the test number → "Finish setting up" → area → Home, no email
+detour, Play Integrity verified silently (no reCAPTCHA page); the map renders
+tiles + pins; Settings → Privacy policy opens and back returns; deleting the
+phone account via a fresh SMS code removed it from production (checked).
+
+- [x] ✅ Sign-in methods: Email/password, **Google**, **Apple**, **Phone** enabled;
+  SMS region policy → India only; test number `+91 99999 00001` / `123456`.
+- [x] ✅ Fingerprints on Firebase app `…5a31a2…` (`com.pawgopets.app`): release +
+  Windows-debug SHA-1/SHA-256; `google-services.json` re-downloaded and
+  committed (adds the Android OAuth clients).
+- [x] ✅ Cloud Vision + Play Integrity APIs enabled.
+- [x] ✅ "Pawgo Android Maps" key allows `com.pawgopets.app` + release SHA-1.
+  Optional: add the debug SHA-1 `6E:D8:EF:…:60:D5` so `flutter run` builds
+  show tiles too.
+- [ ] 👤 **Google sign-in end-to-end** still needs one run with a real Google
+  account (the emulator has none — the button correctly hands off to Google's
+  account screen). Easiest on your phone with the next build.
+- [ ] 👤 **Apple** (later): App ID capability + Sign in with Apple key → Firebase
+  "OAuth code flow configuration" (Team ID, Key ID, .p8), then the in-app
+  Apple token revocation on account deletion (App Store guideline 5.1.1(v)).
 
 ## 3. Content the stores require (nothing in the repo yet)
 
