@@ -54,6 +54,10 @@ phone account via a fresh SMS code removed it from production (checked).
 
 ## 3. Content the stores require (nothing in the repo yet)
 
+> **Plan:** `docs/website-and-razorpay-live-plan.md` — one small website
+> (privacy, terms, refunds, contact, delete-account) unblocks Razorpay live
+> keys, both store listings and the in-app links at once.
+
 - [ ] 👤 **Privacy policy**, hosted at a public URL. Section 8 below lists
   every piece of data the app handles — hand it to whoever writes the policy.
 - [ ] 👤 **Account-deletion web page.** Play requires a URL where someone can
@@ -125,7 +129,8 @@ real money paths if done earlier.
   with App Attest), watch the App Check metrics until nearly all requests are
   verified, then set `ENFORCE_APP_CHECK = true` in `functions/src/index.ts`
   and redeploy Functions. Rollout order is documented above that constant.
-- [ ] 👤 **Razorpay live keys:** `firebase functions:secrets:set
+- [ ] 👤 **Razorpay live keys** (blocked until Razorpay approves a live website —
+  see `docs/website-and-razorpay-live-plan.md`): `firebase functions:secrets:set
   RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET`, redeploy Functions. Nothing in the
   app changes — the key id arrives per order.
 - [ ] 👤 **Razorpay Route** activation for partner payouts. Until then payouts
