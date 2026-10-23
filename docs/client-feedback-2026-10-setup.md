@@ -1,6 +1,6 @@
 # Client feedback round (Oct 2026) — what shipped, and what you must switch on
 
-The code for every item is in the repo and tested (480 Flutter tests, 105
+The code for every item is in the repo and tested (480 Flutter tests, 110
 Functions tests). Several items only go **live** after the console steps
 below. Do them in order.
 
@@ -94,7 +94,7 @@ Functions gets "unverified" when booking a service.
 3. **Android** — Project settings → Your apps → Android (`com.pawgopets.app`)
    → add the **SHA-256** fingerprints (phone auth needs SHA-256; Google
    sign-in only needed SHA-1):
-   - release: `RELEASE_SHA256_PLACEHOLDER`
+   - release: `B7:18:E7:E6:2E:8F:BD:B4:7B:96:06:80:AD:BB:43:BE:6E:74:3B:D1:01:2E:23:F2:35:A3:FD:61:43:3B:E5:2F`
    - this Windows machine's debug key:
      `A5:76:9D:54:B3:78:8B:4D:F9:07:83:8A:3A:42:FB:E2:72:A7:EC:44:13:9B:92:12:56:17:B3:7F:7E:67:F2:C0`
    - once on Play: the **Play App Signing** SHA-256 from Play Console.
