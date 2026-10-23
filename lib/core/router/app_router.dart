@@ -44,6 +44,8 @@ import '../../features/profile/settings_screen.dart';
 import '../../features/profile/blocked_users_screen.dart';
 import '../../features/auth/onboarding_arg.dart';
 import '../../features/auth/phone_sign_in_screen.dart';
+import '../../features/legal/legal_document_screen.dart';
+import '../legal/legal_links.dart';
 import '../../features/bookings/my_bookings_screen.dart';
 import '../../features/reviews/rate_review_screen.dart';
 import '../../features/services/booking_confirmed_screen.dart';
@@ -102,6 +104,10 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
           SignupScreen(social: state.extra is SocialSignupArg ? state.extra as SocialSignupArg : null)),
       GoRoute(path: Routes.verifyEmail, builder: (_, _) => const VerifyEmailScreen()),
       GoRoute(path: Routes.phoneSignIn, builder: (_, _) => const PhoneSignInScreen()),
+      GoRoute(path: Routes.privacyPolicy,
+          builder: (_, _) => const LegalDocumentScreen(doc: LegalDoc.privacy)),
+      GoRoute(path: Routes.terms,
+          builder: (_, _) => const LegalDocumentScreen(doc: LegalDoc.terms)),
       GoRoute(path: Routes.location, builder: (_, _) => const LocationScreen()),
       GoRoute(path: Routes.createPet, builder: (_, state) =>
           CreatePetScreen(fromOnboarding: (state.extra as OnboardingArg?)?.fromOnboarding ?? false)),

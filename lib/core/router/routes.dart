@@ -5,6 +5,9 @@ class Routes {
   static const signup = '/signup';
   static const verifyEmail = '/verify-email';
   static const phoneSignIn = '/phone-sign-in';
+  // Public on purpose: reachable signed out (sign-up) and signed in (Settings).
+  static const privacyPolicy = '/privacy-policy';
+  static const terms = '/terms';
   static const location = '/location';
   static const createPet = '/create-pet';
   static const home = '/home';
