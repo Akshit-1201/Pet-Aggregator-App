@@ -10,8 +10,8 @@ typedef BackPredicate = bool Function();
 /// Declares what back does on one screen — for the hardware/gesture back AND
 /// the on-screen chevron, which route through the same resolver here.
 ///
-/// Resolution order is **block → confirm → onBeforeLeave → confirmExit →
-/// upTo → pop → upToIfEmpty → exit**. Omit every option and this is an
+/// Resolution order is **block → stepBack → confirm → onBeforeLeave →
+/// confirmExit → upTo → pop → upToIfEmpty → exit**. Omit every option and this is an
 /// ordinary pop, so wrapping a screen costs nothing.
 ///
 /// Wrap the widget your screen's `build` returns, not something above the
@@ -68,6 +68,14 @@ class PgBackScope extends StatelessWidget {
   /// await, same as everything else in [_resolve].
   final Future<void> Function()? onBeforeLeave;
 
+  /// In-screen history: while this is true, back runs [onStepBack] instead of
+  /// leaving — e.g. a document viewer that followed a link goes back one page.
+  /// Once it turns false back leaves as usual. Must be pure and synchronous
+  /// (same rule as [blockWhen]); keep async state such as
+  /// `WebViewController.canGoBack()` in a field and read the field here.
+  final BackPredicate? stepBackWhen;
+  final Future<void> Function()? onStepBack;
+
   const PgBackScope({
     super.key,
     required this.child,
@@ -79,6 +87,8 @@ class PgBackScope extends StatelessWidget {
     this.blockWhen,
     this.blockMessage = 'Please wait — this is still in progress.',
     this.onBeforeLeave,
+    this.stepBackWhen,
+    this.onStepBack,
   });
 
   /// Runs the nearest scope's resolver — the same path the OS back takes.
@@ -123,12 +133,22 @@ class PgBackScope extends StatelessWidget {
       upTo == null &&
       onBeforeLeave == null &&
       !_safe(blockWhen) &&
+      !_safe(stepBackWhen) &&
       !_safe(confirmWhen) &&
       context.canPop();
 
   Future<void> _resolve(BuildContext context) async {
     if (_safe(blockWhen)) {
       if (blockMessage.isNotEmpty) showPgSnack(context, blockMessage);
+      return;
+    }
+
+    if (_safe(stepBackWhen) && onStepBack != null) {
+      try {
+        await onStepBack!();
+      } catch (e) {
+        debugPrint('PgBackScope.onStepBack threw: $e');
+      }
       return;
     }
 

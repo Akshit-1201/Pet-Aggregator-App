@@ -35,6 +35,7 @@ Future<void> _systemBack(WidgetTester t) async {
 }
 
 void main() {
+  _stepBack();
   testWidgets('with no options and a stack, back pops natively', (t) async {
     final r = _router(
       detail: () => const PgBackScope(child: Scaffold(body: Text('DETAIL'))),
@@ -495,5 +496,89 @@ void main() {
 
     expect(calls, 0);
     expect(find.text('DETAIL'), findsOneWidget); // never left
+  });
+}
+
+// In-screen history (a document viewer that followed a link): back steps back
+// inside the screen first, and only leaves once there is nothing to step back.
+void _stepBack() {
+  testWidgets('stepBackWhen true: system back steps back in-screen and stays', (t) async {
+    var steps = 0;
+    final r = _router(
+      initial: '/',
+      detail: () => PgBackScope(
+        stepBackWhen: () => true,
+        onStepBack: () async => steps++,
+        child: const Scaffold(body: Text('DETAIL')),
+      ),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+
+    await _systemBack(t);
+    expect(steps, 1);
+    expect(find.text('DETAIL'), findsOneWidget);
+    final scope = t.widget<PopScope>(find.byWidgetPredicate((w) => w is PopScope).last);
+    expect(scope.canPop, isFalse); // intercepted, so the engine routes back to us
+  });
+
+  testWidgets('stepBackWhen true: the on-screen chevron path steps back too', (t) async {
+    var steps = 0;
+    final r = _router(
+      initial: '/',
+      detail: () => PgBackScope(
+        stepBackWhen: () => true,
+        onStepBack: () async => steps++,
+        child: Scaffold(body: Builder(builder: (ctx) => TextButton(
+            onPressed: () => PgBackScope.pop(ctx), child: const Text('CHEVRON')))),
+      ),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+
+    await t.tap(find.text('CHEVRON'));
+    await t.pumpAndSettle();
+    expect(steps, 1);
+    expect(find.text('CHEVRON'), findsOneWidget);
+  });
+
+  testWidgets('stepBackWhen false: an ordinary native pop, onStepBack untouched', (t) async {
+    var steps = 0;
+    final r = _router(
+      initial: '/',
+      detail: () => PgBackScope(
+        stepBackWhen: () => false,
+        onStepBack: () async => steps++,
+        child: const Scaffold(body: Text('DETAIL')),
+      ),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+    final scope = t.widget<PopScope>(find.byWidgetPredicate((w) => w is PopScope).last);
+    expect(scope.canPop, isTrue); // predictive-back animation stays native
+
+    await _systemBack(t);
+    expect(steps, 0);
+    expect(find.text('ROOT'), findsOneWidget);
+  });
+
+  testWidgets('a throwing stepBackWhen counts as false — never traps', (t) async {
+    final r = _router(
+      initial: '/',
+      detail: () => PgBackScope(
+        stepBackWhen: () => throw StateError('broken'),
+        onStepBack: () async {},
+        child: const Scaffold(body: Text('DETAIL')),
+      ),
+    );
+    await _pump(t, r);
+    r.push('/detail');
+    await t.pumpAndSettle();
+
+    await _systemBack(t);
+    expect(find.text('ROOT'), findsOneWidget);
   });
 }
