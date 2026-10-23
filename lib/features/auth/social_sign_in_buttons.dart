@@ -10,6 +10,24 @@ import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/providers.dart';
 import 'onboarding_arg.dart';
 
+/// Where a Google, Apple or phone sign-in lands: straight Home for an account
+/// that already has a profile, otherwise the short "finish setting up" step.
+Future<void> routeAfterSignIn(BuildContext context, WidgetRef ref, SocialSignIn result) async {
+  final profile = await ref
+      .read(userRepositoryProvider)
+      .watchUser(result.user.uid)
+      .first
+      .timeout(const Duration(seconds: 10), onTimeout: () => null);
+  if (!context.mounted) return;
+  if (profile != null) {
+    context.go(Routes.home);
+  } else {
+    context.go(Routes.signup, extra: SocialSignupArg(
+        name: result.displayName, email: result.user.email ?? '',
+        phone: result.user.phoneNumber ?? ''));
+  }
+}
+
 /// "Continue with Google" (everywhere) and "Sign in with Apple" (iOS), with
 /// the "or" divider above the email form.
 ///
@@ -32,18 +50,7 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
     try {
       final result = await ref.read(authRepositoryProvider).signInWithProvider(provider);
       if (result == null || !mounted) return; // cancelled the sheet
-      final profile = await ref
-          .read(userRepositoryProvider)
-          .watchUser(result.user.uid)
-          .first
-          .timeout(const Duration(seconds: 10), onTimeout: () => null);
-      if (!mounted) return;
-      if (profile != null) {
-        context.go(Routes.home);
-      } else {
-        context.go(Routes.signup,
-            extra: SocialSignupArg(name: result.displayName, email: result.user.email ?? ''));
-      }
+      await routeAfterSignIn(context, ref, result);
     } on AuthFailure catch (e) {
       if (mounted) showPgSnack(context, e.message);
     } catch (_) {
@@ -57,7 +64,6 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
   Widget build(BuildContext context) {
     final c = context.pg;
     final providers = ref.watch(authRepositoryProvider).availableProviders;
-    if (providers.isEmpty) return const SizedBox.shrink();
     return Column(mainAxisSize: MainAxisSize.min, children: [
       if (providers.contains(SocialProvider.apple)) ...[
         // Apple's own button: App Review checks the styling (HIG).
@@ -73,6 +79,25 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
         ),
         const SizedBox(height: 10),
       ],
+      GestureDetector(
+        key: const Key('social-phone'),
+        onTap: _busy != null ? null : () => context.push(Routes.phoneSignIn),
+        child: Container(
+          height: 52,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: c.surface,
+            border: Border.all(color: c.border, width: 1.5),
+            borderRadius: BorderRadius.circular(16)),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(Icons.phone_iphone_rounded, size: 20, color: c.text),
+            const SizedBox(width: 10),
+            Flexible(child: Text('Continue with phone', maxLines: 1, overflow: TextOverflow.ellipsis,
+                style: PgText.inter(15, FontWeight.w600, color: c.text))),
+          ]),
+        ),
+      ),
+      const SizedBox(height: 10),
       if (providers.contains(SocialProvider.google))
         GestureDetector(
           key: const Key('social-google'),
@@ -87,8 +112,9 @@ class _SocialSignInButtonsState extends ConsumerState<SocialSignInButtons> {
             child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               const _GoogleG(),
               const SizedBox(width: 10),
-              Text(_busy == SocialProvider.google ? 'Signing in…' : 'Continue with Google',
-                  style: PgText.inter(15, FontWeight.w600, color: c.text)),
+              Flexible(child: Text(_busy == SocialProvider.google ? 'Signing in…' : 'Continue with Google',
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                  style: PgText.inter(15, FontWeight.w600, color: c.text))),
             ]),
           ),
         ),

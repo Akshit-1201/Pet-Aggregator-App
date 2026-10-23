@@ -143,7 +143,7 @@ export type HolderDoc = {bookingId: string; proId: string; date: string};
  * Abuse limits (security review of the slot feature): without them any
  * signed-in user could create a pending booking per slot and re-hold them all
  * every 19 minutes, blocking a pro's whole calendar for free.
- * - Only a verified account may hold ([emailVerified]); the app's verify gate
+ * - Only a verified account may hold ([verified]: email OR phone); the app's verify gate
  *   is client-side navigation only, so the server has to check.
  * - ONE live hold per customer: holding a new slot releases that customer's
  *   previous hold (if still just a hold), so a re-pick works but a script can
@@ -151,10 +151,10 @@ export type HolderDoc = {bookingId: string; proId: string; date: string};
  */
 export async function holdSlot(db: FirebaseFirestore.Firestore,
   bookingId: string, b: FirebaseFirestore.DocumentData,
-  opts: {emailVerified: boolean}, now = Date.now()): Promise<void> {
+  opts: {verified: boolean}, now = Date.now()): Promise<void> {
   const slot = slotOf(b);
   if (!slot) return;
-  if (!opts.emailVerified) throw new HttpsError("permission-denied", "email-unverified");
+  if (!opts.verified) throw new HttpsError("permission-denied", "unverified");
   const proId = String(b.proId ?? "");
   const parentId = String(b.parentId ?? "");
   if (!parentId) throw new HttpsError("failed-precondition", "no-parent");
@@ -218,4 +218,11 @@ export async function releaseSlot(db: FirebaseFirestore.Firestore,
     // deleted key would survive and keep blocking the time.
     tx.update(ref, {slots, updatedAt: now});
   });
+}
+
+/** A caller has proven ownership of an email (clicked the link) or a phone
+ *  number (entered the SMS code — Firebase only sets phone_number then). */
+export function isVerifiedCaller(token: {email_verified?: boolean; phone_number?: string}): boolean {
+  return token.email_verified === true ||
+    (typeof token.phone_number === "string" && token.phone_number !== "");
 }

@@ -26,7 +26,7 @@ export default async function UsersPage({
           <input
             name="q"
             defaultValue={q}
-            placeholder="Email address or uid"
+            placeholder="Email, phone number or uid"
             className="min-w-64 flex-1 rounded-xl border border-neutral-200 px-3 py-2 text-sm"
           />
           <button className="rounded-xl bg-[#F0871E] px-4 py-2 text-sm font-bold text-white hover:bg-[#e0770f]">

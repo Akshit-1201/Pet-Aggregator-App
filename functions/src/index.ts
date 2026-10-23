@@ -13,7 +13,8 @@ import {bookingKey, scenarioKey} from "./notify/keys";
 import {maskContactDetails} from "./notify/mask";
 import {MAIL_FROM} from "./notify/email";
 import {fmtDay} from "./notify/dates";
-import {type Entry, findConflict, holdSlot, prune, releaseSlot, scheduleId, slotOf} from "./slots";
+import {type Entry, findConflict, holdSlot, isVerifiedCaller, prune, releaseSlot, scheduleId, slotOf} from "./slots";
+import {PERSONAL_SUBCOLLECTIONS, personalStoragePrefixes} from "./account-deletion";
 export {maskContactDetails};
 
 admin.initializeApp();
@@ -125,7 +126,7 @@ export const createBookingOrder = onCall(
     // Throws already-exists/slot-taken if someone else now has that time.
     if (kind === "service") {
       await holdSlot(admin.firestore(), bookingId, booking,
-        {emailVerified: request.auth.token.email_verified === true});
+        {verified: isVerifiedCaller(request.auth.token)});
     }
     const rzp = new Razorpay({
       key_id: razorpayKeyId.value(),
@@ -509,8 +510,10 @@ async function anonymizeAll(
  *    paymentId. The deleted user's name is replaced, so nothing personal
  *    survives beyond the transaction itself.
  *
- *  Storage objects under users/{uid}/ go too. Pet and homestay photos live under
- *  their own prefixes and are removed with their listings.
+ *  Storage goes too: avatar, pet and homestay photos and KYC ID documents —
+ *  every prefix in personalStoragePrefixes (account-deletion.ts). Deleting a
+ *  Firestore doc does not reach the files its URLs point at, so each prefix is
+ *  removed explicitly. Post photos stay with their anonymised posts.
  *
  *  Runs last: auth deletion is the irreversible step, so a Firestore failure
  *  earlier leaves the account intact and the user can retry. */
@@ -527,6 +530,9 @@ export const deleteMyAccount = onCall(
     await deleteAll(db.collection("notifications").doc(uid).collection("items"), db);
     await db.collection("pros").doc(uid).delete();
     await db.collection("homestays").doc(uid).delete();
+    // The KYC request goes with the ID documents it points at (deleted below);
+    // the admin audit log keeps the record of any decision made on it.
+    await db.collection("verificationRequests").doc(uid).delete();
 
     // Authored content -> kept, de-identified.
     await anonymizeAll(db.collection("reviews").where("authorId", "==", uid), db,
@@ -554,13 +560,21 @@ export const deleteMyAccount = onCall(
     // Reviews the user RECEIVED stay put and keep counting — they describe the
     // listing's history, and the listing itself is already gone.
 
+    // Deleting a doc leaves its subcollections behind (push tokens, block list).
+    for (const sub of PERSONAL_SUBCOLLECTIONS) {
+      await deleteAll(db.collection("users").doc(uid).collection(sub), db);
+    }
     await db.collection("users").doc(uid).delete();
 
-    try {
-      await admin.storage().bucket().deleteFiles({prefix: `users/${uid}/`});
-    } catch (e) {
-      // Never block deletion of the account on an orphaned file.
-      logger.error("deleteMyAccount: storage cleanup failed", {uid, error: e});
+    // Avatar, pet and listing photos, and KYC ID documents. Each prefix is
+    // attempted independently so one failure can't leave the rest behind.
+    for (const prefix of personalStoragePrefixes(uid)) {
+      try {
+        await admin.storage().bucket().deleteFiles({prefix});
+      } catch (e) {
+        // Never block deletion of the account on an orphaned file.
+        logger.error("deleteMyAccount: storage cleanup failed", {uid, prefix, error: e});
+      }
     }
 
     await admin.auth().deleteUser(uid);
@@ -720,7 +734,7 @@ export const holdServiceSlot = onCall(
     if (b.parentId !== request.auth.uid) throw new HttpsError("permission-denied", "not-your-booking");
     if (b.status !== "pending") throw new HttpsError("failed-precondition", "not-payable");
     await holdSlot(admin.firestore(), bookingId, b,
-      {emailVerified: request.auth.token.email_verified === true});
+      {verified: isVerifiedCaller(request.auth.token)});
     return {held: true};
   });
 

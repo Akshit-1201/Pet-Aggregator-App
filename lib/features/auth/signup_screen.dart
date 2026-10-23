@@ -125,7 +125,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   ],
                   Text(
                       _social
-                          ? "You're signed in as ${widget.social!.email.isEmpty ? 'your account' : widget.social!.email}. "
+                          ? "You're signed in as ${widget.social!.email.isNotEmpty ? widget.social!.email : widget.social!.phone.isNotEmpty ? widget.social!.phone : 'your account'}. "
                               'Tell us your name and how you\'ll use Pawgo Pets.'
                           : 'Just a few details to get you and your pet started.',
                       style: PgText.inter(14, FontWeight.w400, color: c.muted, height: 1.5)),

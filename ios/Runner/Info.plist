@@ -35,6 +35,9 @@
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>com.googleusercontent.apps.280616341211-9o3gfnd1kjrb2g94jf48smnj05n8f837</string>
+				<!-- Phone sign-in's reCAPTCHA fallback returns through Firebase's
+				     "encoded app ID" (GOOGLE_APP_ID with ':' as '-', prefixed app-). -->
+				<string>app-1-280616341211-ios-492010fe17ad16958a46fe</string>
 			</array>
 		</dict>
 	</array>

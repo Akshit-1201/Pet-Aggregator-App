@@ -1,11 +1,32 @@
 # Pawgo — Full Project Build Plan
 
+> ## Status — 2026-10-23
+>
+> **Every build phase below is done; what remains is launch work (Phase 11) and owner-side console/account steps.** The phase bodies further down are the *original* plan, kept for history — where they say "static" or "mock-only", read "built on the live backend" (see the 2026-07-08 note in Context).
+>
+> | Phase | Status | Where |
+> |---|---|---|
+> | 0–2 Scaffold, design system, onboarding | ✅ | Slice 1 |
+> | 2R Real Firebase Auth + Firestore | ✅ | Slice 2 |
+> | 3 Discovery "Woof" | ✅ | Slice 3 |
+> | 4 Services | ✅ | Slices 4a/4b, dynamic time slots (Oct 2026) |
+> | 5 Homestay | ✅ | Slices 5a/5b, pay-to-confirm (13), refunds (14) |
+> | 6 Community | ✅ | Slice 6, post photos |
+> | 7 Chat, reviews, notifications, profile, settings | ✅ | Slices 7a–7d |
+> | 8 Remaining backend | ✅ | Storage (Slice 8), push + email engine (Slice 21), email verification, Google/Apple sign-in, **phone OTP sign-in (2026-10-23)**; App Check wired, **not yet enforced** |
+> | 9 Maps | ✅ | Slice 9 — area-centroid geo by design (no GPS, no stored coordinates) |
+> | 10 Payments + Functions | ✅ test mode | Server-owned Razorpay (Slices 11, 15), refunds, Route payouts (built, awaiting Route activation), server-side chat masking |
+> | 11 Launch prep | 🟡 in progress | Done: release signing, `com.pawgopets.app`, account deletion, report/block, R8 shrinking, iOS TestFlight CI (Codemagic). Open: privacy policy, data-safety form, store listings, App Check enforcement, live Razorpay keys — see `docs/launch-checklist.md` |
+> | 12 Admin panel | 🟡 built, not hosted | `/admin` (Next.js): verification, reports, users, payouts, admins, audit log. Uses an `adminRoles` allowlist rather than custom claims |
+>
+> Beyond the original plan: app-wide back navigation (Slices 22–23), image moderation (Cloud Vision), the October 2026 client-feedback round (`docs/client-feedback-2026-10-setup.md`).
+
 ## Context
 
 **Pawgo** is a Flutter + Firebase "pet aggregator" app (Android-only, Mumbai market) bundling four products behind one account: Discovery/Matching ("Woof"), a Services marketplace, Homestay boarding, and a Community forum.
 
 The complete UI already exists as a **30-screen prototype** the owner designed in claude.ai/design
-(<https://claude.ai/design/p/4d0931d4-afa6-488d-b794-580e0c63474f?file=Pawgo+Prototype.dc.html>), imported into the repo at **`design/Pawgo Prototype.dc.html`**. **We are porting that prototype into Flutter — not designing anything new.** The prototype is the single source of truth for every colour, font, radius, and layout.
+(<https://claude.ai/design/p/4d0931d4-afa6-488d-b794-580e0c63474f?file=Pawgo+Prototype.dc.html>), imported into the repo at **`Design/Pawgo Prototype.dc.html`**. **We are porting that prototype into Flutter — not designing anything new.** The prototype is the single source of truth for every colour, font, radius, and layout.
 
 **Build strategy (updated 2026-07-08):** we build one slice at a time so the app is always runnable and reviewable against the prototype. Slice 1 (Phases 1–2 below) built the design system + onboarding/auth/Home UI against **mock data behind a repository seam**. **From Slice 2 on, the app goes real** — per the owner's directive it must be a *live* app, not a demo/mock, so we wire the actual Firebase backend now and build each remaining pillar directly against **live data** (no separate static/mock stage). The repository-interface seam means Firebase implementations slot in at the provider layer without rewriting screens. Maps and payments still arrive in their own later slices. **This supersedes the earlier "all 30 screens static first, wire Firebase at Phase 8" ordering:** backend wiring (auth + Firestore + profiles) moves up to now, and the pillar phases below (3–7), though written as "static", are now built on the real backend.
 
@@ -13,7 +34,7 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 
 ## Design fidelity — how we keep it "same to same"
 
-1. **Source of truth:** `design/Pawgo Prototype.dc.html`. Its top `<style>` block holds the exact design tokens (`--brand:#F59E2E`, cream `--bg:#FBF1E8`, Poppins + Inter, full **light and dark** themes). Each screen's exact markup lives in a labelled `<!-- SCREEN -->` block.
+1. **Source of truth:** `Design/Pawgo Prototype.dc.html`. Its top `<style>` block holds the exact design tokens (`--brand:#F59E2E`, cream `--bg:#FBF1E8`, Poppins + Inter, full **light and dark** themes). Each screen's exact markup lives in a labelled `<!-- SCREEN -->` block.
 2. **Tokens copied verbatim** into a Flutter theme layer (`PgColors`, `PgText`, `PgRadius`) — screens never re-guess the palette.
 3. **Per-screen porting:** for each screen we read its exact block in the design file, reproduce structure with shared widgets, and match spacing/colour **by eye** against the prototype's rendered output.
 4. **Honest caveat:** this is a faithful Flutter *re-implementation* (HTML/CSS → real widgets), matched visually — not a pixel-identical export. Intentional deviations: the prototype's browser **phone-frame bezel** and **fake status bar** are dropped (the real device fills the screen); CSS animations are reproduced with cheap Flutter equivalents.
@@ -59,7 +80,7 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 **Detailed task breakdown already exists:** same plan file (Tasks 10–17, incl. static Home feed + manual verification).
 **Verify:** widget test per screen; manually walk Splash → Onboarding → Welcome → Sign-up → Location → Create Pet → Home on the emulator; eyeball against the prototype.
 
-## Phase 2R — Go Real: Firebase Auth + Firestore data layer ⬅ CURRENT (Slice 2)
+## Phase 2R — Go Real: Firebase Auth + Firestore data layer ✅ DONE (Slice 2, 2026-07-08)
 
 **Goal:** turn Slice 1's mock app into a **live, Firebase-backed app** — real accounts and real profiles/pets — by swapping implementations behind the existing repository seam. This pulls the auth + Firestore + profiles portion of the old Phase 8 forward, because a real-time Discover (Phase 3) needs a real signed-in user and real pet data.
 **What we need:** Firebase Console for `pet-aggregator-app` — enable **Email/Password** auth and **create the Firestore database**; `firebase login` to deploy rules. (Phone OTP, Storage uploads, Maps, Functions, App Check stay deferred.)
@@ -83,7 +104,7 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 **How we'll do it:** build `SwipeDeck` reproducing the drag/threshold + rotation and the WOOF/PASS stamps; Woof Match celebration screen (confetti/animation); Nearby as the prototype's stylised static map + bottom sheet list; Pet Profile detail. All fed by `nearbyPetsProvider` mock data.
 **Verify:** widget tests (deck renders card, buttons Woof/pass, match screen shows); manual swipe on emulator; compare to prototype.
 
-## Phase 4 — Services marketplace (on live data) — split into 4a + 4b
+## Phase 4 — Services marketplace (on live data) ✅ DONE — split into 4a + 4b
 
 > **Slice 4a (supply & browse) ✅ DONE (2026-07-12):** `pros/{uid}` collection + `Pro`/`ServiceType` models + `ProRepository` seam; Pro-setup screen (servicePro writes a listing), Services list (live pros, category filter, setup banner), Pro profile. "Book" → coming-soon snackbar. 50 tests + emulator integration (pros) green; `pros` rules deployed. Spec/plan: `docs/superpowers/*/2026-07-11-pawgo-services-4a-supply-browse*.md`.
 > **Slice 4b (booking & payment) ✅ DONE (2026-07-12):** `bookings` collection + `Booking` model + `BookingRepository` + `myPetsProvider`; Booking (date/time/pet) → Payment (UI-only, Razorpay deferred to Phase 10) → Confirmed; "Book" buttons wired. 59 tests + emulator integration (bookings) green; `bookings` rules deployed. **Services pillar (Phase 4) is now complete.** Spec/plan: `docs/superpowers/*/2026-07-12-pawgo-services-4b-booking-payment*.md`.
@@ -94,7 +115,7 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 **How we'll do it:** compose list/detail screens over shared widgets; booking flow updates local state; the Payment screen is a faithful static reproduction (Razorpay wiring is Phase 10).
 **Verify:** widget tests for list/detail/booking; manual flow Category → Pro → Book → Pay (mock) → Confirmed; compare to prototype.
 
-## Phase 5 — Homestay (static)
+## Phase 5 — Homestay ✅ DONE (Slices 5a/5b, 13, 14)
 
 **Goal:** the Airbnb-style boarding UI, mock-only.
 **Screens:** Homestay List, Host Profile (home/household/pets/photos/price/reviews), Homestay Request (dates), Host Accepted.
@@ -102,7 +123,7 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 **How we'll do it:** reuse the Services booking spine where the prototype does; add host-specific detail sections.
 **Verify:** widget tests; manual flow Search → Host → Request dates → Accepted; compare to prototype.
 
-## Phase 6 — Community (static)
+## Phase 6 — Community ✅ DONE (Slice 6, 2026-07-14)
 
 **Goal:** the forum UI, mock-only.
 **Screens:** Community Feed (categories: Health/Training/Lost & Found), New Post, Thread Detail (threaded replies), Post Live.
@@ -110,7 +131,7 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 **How we'll do it:** feed list with category chips, post composer, threaded detail view; report affordance (visual).
 **Verify:** widget tests; manual browse/post/reply flow; compare to prototype.
 
-## Phase 7 — Shared & cross-cutting screens (static)
+## Phase 7 — Shared & cross-cutting screens ✅ DONE (Slices 7a–7d)
 
 **Goal:** finish the remaining prototype screens.
 **Screens:** Chat List, Chat Conversation (request-and-accept model), Notifications, Profile, Settings, Rate & Review — plus persistent-nav polish, toasts, and confetti.
@@ -119,7 +140,7 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 
 > End of Phase 7 = the **entire prototype reproduced as a runnable static app** (all 30 screens), which is the "same to same" milestone.
 
-## Phase 8 — Backend wiring (Firebase) — remaining integrations
+## Phase 8 — Backend wiring (Firebase) — remaining integrations ✅ DONE (App Check enforcement pending)
 
 > **Core backend now lands earlier (Phase 2R / Slice 2):** email/password auth, the `users`/`pets` Firestore collections + rules, real onboarding writes, auth-state routing, and live Home data. This phase covers what's left once the other pillars exist.
 
@@ -133,14 +154,14 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 - Security rules + App Check before any real data flows.
 **Verify:** sign in with a real OTP; create a pet that persists in Firestore; upload a photo; receive a test push; run against the Firebase emulator suite where possible.
 
-## Phase 9 — Maps & geo (Nearby)
+## Phase 9 — Maps & geo (Nearby) ✅ DONE (Slice 9)
 
 **Goal:** the real "pets near you, within 2 km, closest first" map.
 **What we need:** Google Cloud project with **Maps SDK for Android** enabled, an **API key** (restricted to the app package + SHA-1), billing + a budget alert; key added to `AndroidManifest.xml`.
 **How we'll do it:** replace the Phase-3 static map with `google_maps_flutter` (pins/clustering); store each pet's location as a **geohash** and query with `geoflutterfire_plus` for radius/"closest first"; approximate-area privacy (never exact address).
 **Verify:** map renders with real pins on the emulator; radius filter returns correct nearby pets.
 
-## Phase 10 — Payments & Cloud Functions
+## Phase 10 — Payments & Cloud Functions ✅ DONE in test mode (Slices 11, 14, 15)
 
 **Goal:** real in-app payments and the server-only logic.
 **What we need:** a **Razorpay** account (test then live/KYC); Firebase **Cloud Functions** (Blaze).
@@ -150,7 +171,7 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 - Cloud Functions also host the **sensitive-info message filter** (block/mask phone/address in chat) and booking transactions.
 **Verify:** test-mode payment completes and the booking flips to paid only via the verified webhook; a chat message containing a phone number is masked/blocked.
 
-## Phase 11 — Launch prep (Google Play)
+## Phase 11 — Launch prep (Google Play) 🟡 IN PROGRESS — see `docs/launch-checklist.md`
 
 **Goal:** ship to the Play Store.
 **What we need:** release **signing key**; Play Console listing (name, description, screenshots, category); **privacy policy**, **data-safety** form, in-app **account deletion**, **age rating**; App Check enforced.
@@ -159,7 +180,7 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 
 ---
 
-## Phase 12 — Admin & Moderation Panel (separate web app)
+## Phase 12 — Admin & Moderation Panel (separate web app) 🟡 BUILT, not hosted
 
 **Goal:** an internal web dashboard for staff/engineers to run the platform — verification, moderation, users, bookings/disputes, payments oversight — on the **same Firebase backend** as the mobile app. This is **not** part of the Flutter app.
 
@@ -198,7 +219,7 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 ## Global verification & workflow
 
 - Per task: `flutter analyze` clean + `flutter test` green, then commit.
-- Per phase: run on the Android emulator (`flutter run -d emulator-5554`) and **compare each screen against `design/Pawgo Prototype.dc.html`** (open in a browser) — note drift as polish items, don't block on pixels.
+- Per phase: run on the Android emulator (`flutter run -d emulator-5554`) and **compare each screen against `Design/Pawgo Prototype.dc.html`** (open in a browser) — note drift as polish items, don't block on pixels.
 - Firebase-backed work (Phase 2R onward): unit/widget tests use in-memory fakes behind the repository interfaces (no network); use the Firebase Local Emulator Suite where integration testing is useful.
 - Each pillar phase (3–7) gets its own detailed `docs/superpowers/plans/` task file, following the Slice-1 plan's pattern, before implementation.
 

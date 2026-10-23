@@ -35,8 +35,14 @@ export function UserCard({user, canSuspend}: {user: UserRow; canSuspend: boolean
       <dl className="mt-3 grid gap-x-6 gap-y-1 text-sm sm:grid-cols-2">
         <div>
           <dt className="inline text-neutral-500">Email: </dt>
-          <dd className="inline">{user.email}</dd>
+          <dd className="inline">{user.email || "—"}</dd>
         </div>
+        {user.phone && (
+          <div>
+            <dt className="inline text-neutral-500">Phone: </dt>
+            <dd className="inline">{user.phone}</dd>
+          </div>
+        )}
         <div>
           <dt className="inline text-neutral-500">Area: </dt>
           <dd className="inline">{user.area || "—"}</dd>

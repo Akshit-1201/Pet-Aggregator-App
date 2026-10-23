@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-**Pawgo** — a Flutter + Firebase "pet aggregator" app (Android-only, Mumbai market). It bundles four products behind one account: Discovery/Matching ("Woof"), a Services marketplace, Homestay boarding, and a Community forum.
+**Pawgo Pets** — a Flutter + Firebase "pet aggregator" app (Android + iOS, Mumbai market). It bundles four products behind one account: Discovery/Matching ("Woof"), a Services marketplace, Homestay boarding, and a Community forum.
 
 The entire UI already exists as a 30-screen prototype the owner designed in claude.ai/design. **We are porting that prototype into Flutter, not designing from scratch.** The prototype is the source of truth for every colour, font, radius and layout:
 
-- `design/Pawgo Prototype.dc.html` — the full prototype (self-contained HTML; open in a browser to see the target). Design tokens live in its top `<style>` block (`--brand:#F59E2E`, cream `--bg:#FBF1E8`, Poppins + Inter, full light **and** dark themes).
+- `Design/Pawgo Prototype.dc.html` — the full prototype (note the capital D — it matters on macOS/Linux) (self-contained HTML; open in a browser to see the target). Design tokens live in its top `<style>` block (`--brand:#F59E2E`, cream `--bg:#FBF1E8`, Poppins + Inter, full light **and** dark themes).
 
 ## Working method (important)
 
@@ -17,9 +17,15 @@ This repo is built with the Superpowers spec → plan → execute workflow. Befo
 - Specs: `docs/superpowers/specs/`
 - Plans: `docs/superpowers/plans/` (bite-sized TDD tasks)
 
-**Build strategy:** the app is ported one slice at a time; each slice is its own spec+plan. Slice 1 built the design system + onboarding/auth/Home UI against **mock data behind a repository seam**. **From Slice 2 on the app goes real** (owner's directive — it must be a live app, not a demo/mock): we wire the actual Firebase backend (Auth + Firestore) and build every feature against live data, with **no new mock stages**. Screens still depend only on repository interfaces (see architecture); we swap the mock implementations for Firebase-backed ones at the provider layer without touching UI. Maps and payments remain deferred to their own later slices.
+**Build strategy:** the app was ported one slice at a time; each slice is its own spec+plan. Slice 1 built the design system against mock data behind a repository seam; **from Slice 2 on everything is built against the live Firebase backend** (owner's directive — a live app, not a demo). There are no mocks in `lib/`; in-memory fakes in `test/support/fakes.dart` stand in for the repository interfaces in tests. New work follows the same pattern: spec in `docs/superpowers/specs/`, TDD plan in `docs/superpowers/plans/`, then build.
 
-Current state: **Slice 1 is built** (design system, `Pg*` widgets, models + mock repositories behind Riverpod, `go_router` shell + bottom nav, and all seven flow screens Splash→…→static Home — 20 widget tests, `flutter analyze` clean, runs on the emulator). **Slice 2 (in progress) makes the app real** — Firebase Auth (email/password) + a Firestore data layer replacing the mocks. Spec: `docs/superpowers/specs/2026-07-08-pawgo-real-backend-auth-firestore-design.md`. Slice 1 plan: `docs/superpowers/plans/2026-07-07-pawgo-foundation-onboarding.md`.
+Current state (2026-10-23): **feature-complete; in launch prep.** All 33 prototype screens plus extras are built on live Firebase — Discover, Services (dynamic time slots), Homestay, Community, chat, reviews, notifications (push + email engine), photos, maps, server-owned Razorpay payments/refunds/payouts (test mode), moderation, account deletion, back navigation, and email / Google / Apple / phone sign-in. Remaining work is launch work, mostly owner-side console and store steps: **`docs/launch-checklist.md`** is the single list. `plan.md` holds the phase-by-phase history; `docs/client-feedback-2026-10-setup.md` the console steps for the October round.
+
+### Other workspaces
+
+- `functions/` — Cloud Functions (TypeScript, Functions v2, region `asia-south1`). Payments, refunds, payouts, slot holds, account deletion, notification engine (`src/notify/`), moderation. Secrets live in Secret Manager. `npm --prefix functions test` (vitest), `npm --prefix functions run build` (tsc). Deploy: `firebase deploy --only functions,firestore:rules`. **Deploy Functions before shipping an app build that calls new/changed callables.**
+- `admin/` — internal Next.js admin panel (Google SSO + `adminRoles` allowlist, audit log). `cd admin && npm run dev`; needs a service-account key in `admin/.env.local` (see `.env.local.example`). Not hosted yet.
+- `codemagic.yaml` — iOS build → TestFlight, triggered by hand.
 
 ## Commands
 
@@ -64,7 +70,7 @@ The intended structure (from the Slice 1 plan) — feature-first under `lib/`:
 - `core/widgets/` — shared `Pg*` widgets (`PgPrimaryButton`, `PgChoiceCard`, `PgToggle`, `PgPageDots`, `PgChip`, `PgAppBar`, `PgImageSlot`, `PgBottomNav`, `PgScreenScaffold`). These encapsulate all styling, so screens are thin composition. Build/extend these before building screens.
 - `core/router/` — `go_router`. Onboarding/auth are full-screen routes; Home + the four other tabs live inside a `StatefulShellRoute.indexedStack` that renders the persistent `PgBottomNav`. Route paths are constants in `routes.dart`.
 - `features/<pillar>/` — one folder per pillar (onboarding, auth, pets, home, …). Screens compose `core/widgets` + read data from providers.
-- `data/` — `models/` (plain Dart: `PetProfile`, `UserProfile`, `Role`, `Species`, with Firestore `fromMap`/`toMap`), and `repositories/` (**abstract interfaces** — `AuthRepository`, `UserRepository`, `PetRepository` — with Firebase-backed implementations under `repositories/firebase/`, exposed via Riverpod providers in `providers.dart`). In-memory fakes stand in for these interfaces in tests; the Slice 1 `mock/` data now serves only as a test fixture.
+- `data/` — `models/` (plain Dart with Firestore `fromMap`/`toMap`: users, pets, pros, homestays, bookings, chats, posts, reviews, payments, notifications…), `repositories/` (**abstract interfaces**, ~18 of them, with Firebase-backed implementations under `repositories/firebase/`, all exposed via Riverpod providers in `providers.dart`), and `services/` (seams over SDKs: `PaymentService`/Razorpay, `PushService`, `ImagePickerService`). Each SDK is imported only by its one implementation file. In-memory fakes for every interface live in `test/support/fakes.dart`; `test/support/pump.dart` pumps the app with overrides.
 
 **The key seam:** UI reads data only through repository interfaces provided by Riverpod. Slice 2 swaps the Slice 1 `Mock*` implementations for Firebase-backed ones at the provider layer — the backend is wired without changing any screen. Preserve this boundary; features depend on the interfaces, never on Firebase SDKs directly.
 
@@ -72,4 +78,4 @@ The intended structure (from the Slice 1 plan) — feature-first under `lib/`:
 
 ## Fidelity expectations
 
-"Match the prototype" means a faithful re-implementation checked by eye against `design/Pawgo Prototype.dc.html` (and the `screens/`-style renders), not a pixel-exact export. Intentional deviations: the prototype's browser phone-frame bezel and fake status bar are dropped (the real device fills the screen). Reproduce CSS animations with cheap Flutter equivalents; don't block a slice on pixel-perfection.
+"Match the prototype" means a faithful re-implementation checked by eye against `Design/Pawgo Prototype.dc.html` (and the `screens/`-style renders), not a pixel-exact export. Intentional deviations: the prototype's browser phone-frame bezel and fake status bar are dropped (the real device fills the screen). Reproduce CSS animations with cheap Flutter equivalents; don't block a slice on pixel-perfection.

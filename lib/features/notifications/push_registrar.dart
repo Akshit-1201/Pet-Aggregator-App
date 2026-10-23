@@ -132,7 +132,7 @@ class _PushRegistrarState extends ConsumerState<PushRegistrar> {
   @override
   Widget build(BuildContext context) {
     final user = ref.watch(authStateProvider).value;
-    final uid = (user != null && user.emailVerified) ? user.uid : null;
+    final uid = (user != null && user.isVerified) ? user.uid : null;
     // Fire-and-forget: registration must not gate the first frame.
     scheduleMicrotask(() => _syncRegistration(uid));
     return widget.child;

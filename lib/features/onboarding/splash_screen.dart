@@ -51,7 +51,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
           .catchError((_) => null);
       if (!mounted) return;
       if (profile == null) {
-        context.go(Routes.signup, extra: SocialSignupArg(name: '', email: user.email ?? ''));
+        context.go(Routes.signup, extra: SocialSignupArg(
+            name: '', email: user.email ?? '', phone: user.phoneNumber ?? ''));
         return;
       }
     }

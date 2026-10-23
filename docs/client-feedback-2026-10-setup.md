@@ -1,6 +1,6 @@
 # Client feedback round (Oct 2026) — what shipped, and what you must switch on
 
-The code for every item is in the repo and tested (471 Flutter tests, 101
+The code for every item is in the repo and tested (480 Flutter tests, 110
 Functions tests). Several items only go **live** after the console steps
 below. Do them in order.
 
@@ -76,6 +76,51 @@ configured and `MAIL_FROM`'s domain is verified there.
 The "Pawgo Android Maps" key in Cloud Console must allow package
 `com.pawgopets.app` (it still names the old package). Not a crash — blank tiles.
 
+## 7. Phone number sign-in
+
+"Continue with phone" (Welcome + Create account) signs in or signs up with an
+Indian mobile number and a 6-digit SMS code. Until step 1 below it shows
+*"Phone sign-in isn't available yet. Please use email instead."*
+
+**Deploy the Functions first** (step 1 of this doc covers it). Slot holds and
+booking orders used to accept only a verified *email*; they now accept a
+verified email **or** phone. A phone user on the new app talking to the old
+Functions gets "unverified" when booking a service.
+
+1. Firebase Console → Authentication → Sign-in method → **enable Phone**.
+2. Authentication → Settings → **SMS region policy → Allow only India**. Every
+   SMS costs money; without this, bots can pump premium-rate numbers abroad
+   through your project ("SMS toll fraud").
+3. **Android** — Project settings → Your apps → Android (`com.pawgopets.app`)
+   → add the **SHA-256** fingerprints (phone auth needs SHA-256; Google
+   sign-in only needed SHA-1):
+   - release: `B7:18:E7:E6:2E:8F:BD:B4:7B:96:06:80:AD:BB:43:BE:6E:74:3B:D1:01:2E:23:F2:35:A3:FD:61:43:3B:E5:2F`
+   - this Windows machine's debug key:
+     `A5:76:9D:54:B3:78:8B:4D:F9:07:83:8A:3A:42:FB:E2:72:A7:EC:44:13:9B:92:12:56:17:B3:7F:7E:67:F2:C0`
+   - once on Play: the **Play App Signing** SHA-256 from Play Console.
+
+   Then Google Cloud Console → APIs & Services → enable **Play Integrity
+   API**. With it, Android verifies silently; without it, Firebase falls back
+   to a reCAPTCHA browser page (works, but clunky).
+4. **iOS** — no extra step if the APNs key is uploaded (see
+   `docs/pawgo-pets-rename-and-ios-setup.md` step 3): Firebase verifies via a
+   silent push. Without APNs it falls back to reCAPTCHA, whose return URL
+   scheme is already in `Info.plist`.
+5. **Testing without spending SMS:** Authentication → Sign-in method → Phone →
+   *Phone numbers for testing* → e.g. `+91 99999 00001` / `123456`. Test
+   numbers never send a real SMS.
+
+**Behaviour worth knowing:**
+
+- A phone account is **verified by the code itself** — no email step.
+- **Phone-only accounts get no emails** (invoices, refund confirmations,
+  reminders by email): there is no address on file. Push and the in-app feed
+  still reach them.
+- Email and phone are **separate accounts**. Someone who signed up with email
+  and later taps "Continue with phone" gets a second, empty account.
+- Deleting a phone account re-confirms with a fresh SMS code.
+- Admin panel → Users finds people by **email, phone number or uid**.
+
 ---
 
 ## Item-by-item
@@ -83,6 +128,7 @@ The "Pawgo Android Maps" key in Cloud Console must allow package
 | Feedback | Root cause | Fix |
 |---|---|---|
 | Gmail / routed logins | Not built | Google (Android + iOS) and Apple (iOS) sign-in; new users finish setup with name prefilled, no password, no email step. Passwordless accounts can still delete themselves (re-confirm via Google/Apple). |
+| Log in with email **or phone number** | Only email/password existed | SMS-code sign-in for Indian mobiles (`PhoneSignInScreen`); a confirmed phone counts as verified on the client and in the Functions (`isVerifiedCaller`). See §7. |
 | Verification link is text | Firebase's locked template shows the raw URL and often lands in spam (Gmail disables links there) | Branded HTML email with a real button via `sendVerificationEmail` (falls back to Firebase's); spam-folder hint on the confirm screen |
 | Image moderation | Not built | Cloud Vision SafeSearch on every public upload |
 | My bookings / My homestays identical | For a parent both rows opened the same list | Second row is now "Bookings received", shown only to pros/hosts |

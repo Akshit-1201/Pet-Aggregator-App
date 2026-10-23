@@ -43,6 +43,7 @@ import '../../features/profile/profile_screen.dart';
 import '../../features/profile/settings_screen.dart';
 import '../../features/profile/blocked_users_screen.dart';
 import '../../features/auth/onboarding_arg.dart';
+import '../../features/auth/phone_sign_in_screen.dart';
 import '../../features/bookings/my_bookings_screen.dart';
 import '../../features/reviews/rate_review_screen.dart';
 import '../../features/services/booking_confirmed_screen.dart';
@@ -84,11 +85,11 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       // Signed in but unproven: Firebase Auth only validates an address's shape,
       // never that the mailbox exists or belongs to whoever typed it. Until the
       // link is clicked the account is inert — no browsing, booking or posting.
-      if (loggedIn && !user.emailVerified && _protected.contains(state.matchedLocation)) {
+      if (loggedIn && !user.isVerified && _protected.contains(state.matchedLocation)) {
         return Routes.verifyEmail;
       }
       // Verified users have no reason to sit on the verify screen.
-      if (loggedIn && user.emailVerified && state.matchedLocation == Routes.verifyEmail) {
+      if (loggedIn && user.isVerified && state.matchedLocation == Routes.verifyEmail) {
         return Routes.home;
       }
       return null;
@@ -100,6 +101,7 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.signup, builder: (_, state) =>
           SignupScreen(social: state.extra is SocialSignupArg ? state.extra as SocialSignupArg : null)),
       GoRoute(path: Routes.verifyEmail, builder: (_, _) => const VerifyEmailScreen()),
+      GoRoute(path: Routes.phoneSignIn, builder: (_, _) => const PhoneSignInScreen()),
       GoRoute(path: Routes.location, builder: (_, _) => const LocationScreen()),
       GoRoute(path: Routes.createPet, builder: (_, state) =>
           CreatePetScreen(fromOnboarding: (state.extra as OnboardingArg?)?.fromOnboarding ?? false)),

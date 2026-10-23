@@ -11,6 +11,17 @@ enum AuthFailureType {
 
 enum SocialProvider { google, apple }
 
+/// An SMS code is on its way to [phoneNumber]; pass this back with the code.
+/// [autoVerified] means Android read the SMS itself and the account is
+/// already signed in — there is nothing for the person to type.
+class PhoneVerification {
+  final String verificationId, phoneNumber;
+  final int? resendToken;
+  final bool autoVerified;
+  const PhoneVerification({required this.verificationId, required this.phoneNumber,
+      this.resendToken, this.autoVerified = false});
+}
+
 /// A successful Google/Apple sign-in. [displayName] is what the provider told
 /// us (Apple only shares it on the very first sign-in), used to prefill the
 /// profile of a brand-new user.
@@ -37,6 +48,20 @@ class AuthFailure implements Exception {
         return const AuthFailure(AuthFailureType.weakPassword, 'Password is too weak (min 6 characters).');
       case 'invalid-email':
         return const AuthFailure(AuthFailureType.invalidEmail, 'That email address looks invalid.');
+      case 'invalid-phone-number':
+        return const AuthFailure(AuthFailureType.invalidEmail, "That phone number doesn't look right.");
+      case 'invalid-verification-code':
+        return const AuthFailure(AuthFailureType.invalidCredentials, "That code isn't right. Check the SMS and try again.");
+      case 'session-expired':
+      case 'code-expired':
+        return const AuthFailure(AuthFailureType.invalidCredentials, 'That code has expired. Send a new one.');
+      case 'too-many-requests':
+      case 'quota-exceeded':
+        return const AuthFailure(AuthFailureType.network, 'Too many attempts. Please wait a while and try again.');
+      case 'missing-client-identifier':
+      case 'app-not-authorized':
+        return const AuthFailure(AuthFailureType.providerNotConfigured,
+            "Phone sign-in isn't available yet. Please use email instead.");
       case 'account-exists-with-different-credential':
         return const AuthFailure(AuthFailureType.accountExistsWithDifferentMethod,
             'This email already has an account. Log in with your password instead.');
@@ -71,6 +96,21 @@ abstract interface class AuthRepository {
   /// would need a web redirect flow, and the App Store rule that requires it
   /// (guideline 4.8) applies to iOS.
   List<SocialProvider> get availableProviders;
+
+  /// Texts a one-time code to [phoneE164] (e.g. +919812345678) to sign in —
+  /// creating the account on first use. Pass the previous [resendToken] to
+  /// resend. Throws [AuthFailure].
+  Future<PhoneVerification> sendPhoneCode(String phoneE164, {int? resendToken});
+
+  /// Signs in with the code from the SMS. A phone account has no email or
+  /// password; the confirmed number is what verifies it.
+  Future<SocialSignIn> confirmPhoneCode(PhoneVerification v, String code);
+
+  /// Account deletion for a phone account: texts a code to its own number…
+  Future<PhoneVerification> sendReauthPhoneCode();
+
+  /// …and checks it. Throws [AuthFailure] on a wrong or expired code.
+  Future<void> confirmReauthPhoneCode(PhoneVerification v, String code);
 
   /// Emails the account a verification link. Safe to call repeatedly; Firebase
   /// rate-limits on its side.
