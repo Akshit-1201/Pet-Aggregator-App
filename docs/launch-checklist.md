@@ -84,11 +84,15 @@ Run on a real phone with the internal-testing install, not a sideload.
 
 - [ ] Sign up with email → verification link → lands in the app.
 - [ ] Continue with Google; Continue with phone (use a test number).
-- [ ] **Razorpay test payment end-to-end on the release build** — services
-  book → pay → "Upcoming". This is the one R8-sensitive path not yet run on a
-  release build (static checks pass: no Razorpay class renamed, payment
-  callbacks kept). Domestic test card `5267 3181 8797 5449`, `12/30`, any CVV,
-  OTP `1111` — the generic `4111…` card is rejected on this account.
+- [x] ✅ **Razorpay on the R8 release build — passed 2026-10-23** (emulator,
+  release-signed APK, live Functions, test keys): services book → 10:00 slot
+  held → checkout → domestic test card + 3DS OTP → "Payment received" →
+  server wrote `confirmed` with the payment id, ₹110 matching the server's
+  price, the pro's ₹100 payout queued `owed` → "Booking confirmed!". Repeat
+  once on the Play-installed build. Test card: `5267 3181 8797 5449`, `12/30`,
+  any CVV, OTP `1111` (the generic `4111…` card is rejected on this account).
+  When driving checkout by script, don't send an Escape/back key to close the
+  keyboard on the OTP step — it cancels the payment.
 - [ ] Homestay request → host accepts → guest pays → cancel ≥24h → refund.
 - [ ] Map shows tiles (proves the Maps key change).
 - [ ] Push arrives for a chat message (proves FCM tokens register).
