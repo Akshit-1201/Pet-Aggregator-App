@@ -138,25 +138,43 @@ export type UserRow = {
   uid: string;
   name: string;
   email: string;
+  phone: string;
   area: string;
   role: string;
   disabled: boolean;
 };
 
-/** Looks a user up by email or uid. Firestore has no substring search, so this
- *  is exact-match by design rather than a half-working "search". */
+/** A typed phone number as E.164, or "" if it isn't one. Bare 10-digit Indian
+ *  mobiles get +91, matching how the app signs people in. */
+function asPhone(q: string): string {
+  if (q.includes("@")) return "";
+  const digits = q.replace(/[\s()-]/g, "");
+  if (/^\+\d{8,15}$/.test(digits)) return digits;
+  if (/^[6-9]\d{9}$/.test(digits)) return `+91${digits}`;
+  return "";
+}
+
+/** Looks a user up by email, phone number or uid. Firestore has no substring
+ *  search, so this is exact-match by design rather than a half-working "search". */
 export async function findUser(query: string): Promise<UserRow | null> {
   const q = query.trim();
   if (!q) return null;
 
   let uid = "";
   let disabled = false;
+  let authEmail = "";
+  let phone = "";
   try {
+    const asNumber = asPhone(q);
     const record = q.includes("@")
       ? await adminAuth().getUserByEmail(q)
-      : await adminAuth().getUser(q);
+      : asNumber
+        ? await adminAuth().getUserByPhoneNumber(asNumber)
+        : await adminAuth().getUser(q);
     uid = record.uid;
     disabled = record.disabled;
+    authEmail = record.email ?? "";
+    phone = record.phoneNumber ?? "";
   } catch {
     return null;
   }
@@ -166,7 +184,8 @@ export async function findUser(query: string): Promise<UserRow | null> {
   return {
     uid,
     name: str(x.name),
-    email: str(x.email) || q,
+    email: str(x.email) || authEmail,
+    phone,
     area: str(x.area),
     role: str(x.role),
     disabled,

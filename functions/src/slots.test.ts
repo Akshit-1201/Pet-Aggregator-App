@@ -1,6 +1,6 @@
 import {describe, expect, it} from "vitest";
 import {
-  DEFAULT_AVAILABILITY, HOLD_MS, assertBookable, findConflict, isoWeekday, isActive,
+  DEFAULT_AVAILABILITY, HOLD_MS, assertBookable, findConflict, isoWeekday, isActive, isVerifiedCaller,
   overlaps, parseAvailability, prune, slotOf, slotStartEpoch, type Entry,
 } from "./slots";
 
@@ -94,5 +94,15 @@ describe("slotOf", () => {
     expect(slotOf({date: "2026-10-12", timeSlot: "5:00 PM"})).toBeNull();
     expect(slotOf({date: "2026-10-12", startMin: 540, durationMin: 60}))
       .toEqual({date: "2026-10-12", startMin: 540, durationMin: 60});
+  });
+});
+
+describe("isVerifiedCaller", () => {
+  it("accepts a confirmed email or a confirmed phone, nothing else", () => {
+    expect(isVerifiedCaller({email_verified: true})).toBe(true);
+    expect(isVerifiedCaller({phone_number: "+919812345678"})).toBe(true);
+    expect(isVerifiedCaller({email_verified: false})).toBe(false);
+    expect(isVerifiedCaller({phone_number: ""})).toBe(false);
+    expect(isVerifiedCaller({})).toBe(false);
   });
 });

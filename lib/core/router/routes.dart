@@ -4,6 +4,7 @@ class Routes {
   static const welcome = '/welcome';
   static const signup = '/signup';
   static const verifyEmail = '/verify-email';
+  static const phoneSignIn = '/phone-sign-in';
   static const location = '/location';
   static const createPet = '/create-pet';
   static const home = '/home';

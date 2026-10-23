@@ -13,7 +13,7 @@ import {bookingKey, scenarioKey} from "./notify/keys";
 import {maskContactDetails} from "./notify/mask";
 import {MAIL_FROM} from "./notify/email";
 import {fmtDay} from "./notify/dates";
-import {type Entry, findConflict, holdSlot, prune, releaseSlot, scheduleId, slotOf} from "./slots";
+import {type Entry, findConflict, holdSlot, isVerifiedCaller, prune, releaseSlot, scheduleId, slotOf} from "./slots";
 export {maskContactDetails};
 
 admin.initializeApp();
@@ -125,7 +125,7 @@ export const createBookingOrder = onCall(
     // Throws already-exists/slot-taken if someone else now has that time.
     if (kind === "service") {
       await holdSlot(admin.firestore(), bookingId, booking,
-        {emailVerified: request.auth.token.email_verified === true});
+        {verified: isVerifiedCaller(request.auth.token)});
     }
     const rzp = new Razorpay({
       key_id: razorpayKeyId.value(),
@@ -720,7 +720,7 @@ export const holdServiceSlot = onCall(
     if (b.parentId !== request.auth.uid) throw new HttpsError("permission-denied", "not-your-booking");
     if (b.status !== "pending") throw new HttpsError("failed-precondition", "not-payable");
     await holdSlot(admin.firestore(), bookingId, b,
-      {emailVerified: request.auth.token.email_verified === true});
+      {verified: isVerifiedCaller(request.auth.token)});
     return {held: true};
   });
 

@@ -92,25 +92,25 @@ describe("slot holds: one live hold per customer", () => {
   });
 
   it("an unverified account can't hold a slot", async () => {
-    await expect(holdSlot(db(), "b1", booking("A", 540), {emailVerified: false}, now))
-      .rejects.toThrow("email-unverified");
+    await expect(holdSlot(db(), "b1", booking("A", 540), {verified: false}, now))
+      .rejects.toThrow("unverified");
     expect(await slots()).toEqual({});
   });
 
   it("holding a second slot releases the first — a script can't hoard slots", async () => {
-    await holdSlot(db(), "a1", booking("A", 540), {emailVerified: true}, now);
-    await holdSlot(db(), "a2", booking("A", 600), {emailVerified: true}, now);
-    await holdSlot(db(), "a3", booking("A", 660), {emailVerified: true}, now);
+    await holdSlot(db(), "a1", booking("A", 540), {verified: true}, now);
+    await holdSlot(db(), "a2", booking("A", 600), {verified: true}, now);
+    await holdSlot(db(), "a3", booking("A", 660), {verified: true}, now);
     expect(Object.keys(await slots())).toEqual(["a3"]);
 
     // So another customer can now take the time A held first.
-    await holdSlot(db(), "b1", booking("B", 540), {emailVerified: true}, now);
+    await holdSlot(db(), "b1", booking("B", 540), {verified: true}, now);
     expect(Object.keys(await slots()).sort()).toEqual(["a3", "b1"]);
   });
 
   it("re-holding the same booking keeps it (resume after a lapsed payment)", async () => {
-    await holdSlot(db(), "a1", booking("A", 540), {emailVerified: true}, now);
-    await holdSlot(db(), "a1", booking("A", 540), {emailVerified: true}, now + 60_000);
+    await holdSlot(db(), "a1", booking("A", 540), {verified: true}, now);
+    await holdSlot(db(), "a1", booking("A", 540), {verified: true}, now + 60_000);
     expect(Object.keys(await slots())).toEqual(["a1"]);
   });
 
@@ -119,13 +119,13 @@ describe("slot holds: one live hold per customer", () => {
       slots: {a1: {startMin: 540, durationMin: 60, status: "booked", heldUntil: 0}},
     });
     await db().collection("slotHolds").doc("A").set({bookingId: "a1", proId: "pro1", date});
-    await holdSlot(db(), "a2", booking("A", 600), {emailVerified: true}, now);
+    await holdSlot(db(), "a2", booking("A", 600), {verified: true}, now);
     expect(Object.keys(await slots()).sort()).toEqual(["a1", "a2"]);
   });
 
   it("a slot held by someone else is still refused", async () => {
-    await holdSlot(db(), "a1", booking("A", 540), {emailVerified: true}, now);
-    await expect(holdSlot(db(), "b1", booking("B", 540), {emailVerified: true}, now))
+    await holdSlot(db(), "a1", booking("A", 540), {verified: true}, now);
+    await expect(holdSlot(db(), "b1", booking("B", 540), {verified: true}, now))
       .rejects.toThrow("slot-taken");
   });
 });

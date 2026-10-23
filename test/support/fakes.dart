@@ -172,6 +172,56 @@ class FakeAuthRepository implements AuthRepository {
     socialReauths++;
     return socialReauthResult;
   }
+
+  /// The SMS code the fake "sends". Anything else is rejected.
+  static const smsCode = '123456';
+  final List<String> textedNumbers = [];
+  int phoneReauths = 0;
+
+  /// A non-[AuthFailure] error (platform/plugin) thrown by the next send.
+  Object? nextPhoneError;
+
+  @override
+  Future<PhoneVerification> sendPhoneCode(String phoneE164, {int? resendToken}) async {
+    if (nextPhoneError != null) {
+      final e = nextPhoneError!;
+      nextPhoneError = null;
+      throw e;
+    }
+    if (nextError != null) {
+      final e = nextError!;
+      nextError = null;
+      throw e;
+    }
+    textedNumbers.add(phoneE164);
+    return PhoneVerification(verificationId: 'v_$phoneE164', phoneNumber: phoneE164, resendToken: 1);
+  }
+
+  @override
+  Future<SocialSignIn> confirmPhoneCode(PhoneVerification v, String code) async {
+    if (code.trim() != smsCode) {
+      throw const AuthFailure(AuthFailureType.invalidCredentials, "That code isn't right. Check the SMS and try again.");
+    }
+    final u = AppUser(uid: 'uid_${v.phoneNumber}', phoneNumber: v.phoneNumber,
+        hasPassword: false, method: AuthMethod.phone);
+    _set(u);
+    return SocialSignIn(user: u, displayName: '');
+  }
+
+  @override
+  Future<PhoneVerification> sendReauthPhoneCode() async {
+    final phone = _current?.phoneNumber ?? '';
+    textedNumbers.add(phone);
+    return PhoneVerification(verificationId: 'reauth', phoneNumber: phone);
+  }
+
+  @override
+  Future<void> confirmReauthPhoneCode(PhoneVerification v, String code) async {
+    if (code.trim() != smsCode) {
+      throw const AuthFailure(AuthFailureType.invalidCredentials, "That code isn't right. Check the SMS and try again.");
+    }
+    phoneReauths++;
+  }
 }
 
 class InMemoryBlockRepository implements BlockRepository {

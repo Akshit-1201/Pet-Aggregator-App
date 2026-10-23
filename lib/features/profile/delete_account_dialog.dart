@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
 import '../../core/widgets/pg_text_field.dart';
+import '../../data/models/app_user.dart';
 import '../../data/repositories/auth_repository.dart';
 import '../../data/repositories/providers.dart';
 
@@ -24,19 +25,26 @@ class _DeleteAccountDialog extends ConsumerStatefulWidget {
 
 class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
   final _password = TextEditingController();
+  final _code = TextEditingController();
+  PhoneVerification? _codeSent;
   bool _busy = false;
   String? _error;
 
   @override
   void dispose() {
     _password.dispose();
+    _code.dispose();
     super.dispose();
   }
 
   /// Google/Apple accounts have no password; they confirm with the provider.
   bool get _passwordless => !(ref.read(authRepositoryProvider).currentUser?.hasPassword ?? true);
 
+  /// Phone accounts confirm with a fresh SMS code to their own number.
+  bool get _phone => ref.read(authRepositoryProvider).currentUser?.method == AuthMethod.phone;
+
   Future<void> _delete() async {
+    if (_phone) return _deletePhone();
     if (!_passwordless && _password.text.isEmpty) {
       setState(() => _error = 'Enter your password to confirm.');
       return;
@@ -74,6 +82,39 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
     }
   }
 
+  /// Two taps: the first texts a code, the second checks it and deletes.
+  Future<void> _deletePhone() async {
+    final auth = ref.read(authRepositoryProvider);
+    setState(() { _busy = true; _error = null; });
+    try {
+      final sent = _codeSent;
+      if (sent == null) {
+        final v = await auth.sendReauthPhoneCode();
+        // Android may have read the SMS and re-checked already; then go
+        // straight on to deleting, still showing busy.
+        if (mounted) setState(() { _codeSent = v; _busy = v.autoVerified; });
+        if (!v.autoVerified) return; // wait for the code to be typed
+      } else {
+        if (!RegExp(r'^\d{6}$').hasMatch(_code.text.trim())) {
+          setState(() { _busy = false; _error = 'Enter the 6-digit code from the SMS.'; });
+          return;
+        }
+        await auth.confirmReauthPhoneCode(sent, _code.text);
+      }
+      await auth.deleteAccount();
+      if (mounted) Navigator.of(context).pop();
+    } on AuthFailure catch (e) {
+      if (mounted) setState(() { _busy = false; _error = e.message; });
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _busy = false;
+          _error = "Couldn't delete your account. Please try again.";
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.pg;
@@ -95,7 +136,13 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
           _line(c, 'Kept, anonymised', 'your reviews, posts and replies'),
           _line(c, 'Kept', 'past bookings — they are payment records'),
           const SizedBox(height: 14),
-          if (_passwordless)
+          if (_phone && _codeSent == null)
+            Text("We'll text a code to your phone number to confirm it's you.",
+                style: PgText.inter(12.5, FontWeight.w500, color: c.muted))
+          else if (_phone)
+            PgTextField(label: '', controller: _code, hint: '6-digit code from the SMS',
+                keyboardType: TextInputType.number)
+          else if (_passwordless)
             Text("You'll be asked to confirm with your Google or Apple account.",
                 style: PgText.inter(12.5, FontWeight.w500, color: c.muted))
           else
@@ -117,7 +164,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
             child: Text('Cancel', style: PgText.inter(14, FontWeight.w600, color: c.muted))),
         TextButton(
             onPressed: _busy ? null : _delete,
-            child: Text(_busy ? 'Deleting…' : 'Delete',
+            child: Text(_busy ? 'Deleting…' : (_phone && _codeSent == null ? 'Send code' : 'Delete'),
                 style: PgText.inter(14, FontWeight.w700, color: c.heart))),
       ],
     );

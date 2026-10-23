@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io' show Platform;
 import 'dart:math';
@@ -19,11 +20,113 @@ class FirebaseAuthRepository implements AuthRepository {
         _functions = functions ??
             FirebaseFunctions.instanceFor(region: 'asia-south1');
 
-  AppUser? _map(User? u) => u == null
-      ? null
-      : AppUser(
-          uid: u.uid, email: u.email, emailVerified: u.emailVerified,
-          hasPassword: u.providerData.any((p) => p.providerId == 'password'));
+  AppUser? _map(User? u) {
+    if (u == null) return null;
+    final ids = u.providerData.map((p) => p.providerId).toSet();
+    return AppUser(
+      uid: u.uid, email: u.email, phoneNumber: u.phoneNumber,
+      emailVerified: u.emailVerified,
+      hasPassword: ids.contains('password'),
+      method: ids.contains('password')
+          ? AuthMethod.password
+          : ids.contains('apple.com')
+              ? AuthMethod.apple
+              : ids.contains('google.com') ? AuthMethod.google : AuthMethod.phone,
+    );
+  }
+
+  /// Wraps FirebaseAuth.verifyPhoneNumber's four callbacks in one future.
+  /// [onAuto] runs when Android reads the SMS itself (or verifies instantly
+  /// without one), handing over a ready credential.
+  Future<PhoneVerification> _verifyPhone(String phone,
+      {int? resendToken, required Future<void> Function(PhoneAuthCredential) onAuto}) {
+    final done = Completer<PhoneVerification>();
+    _auth.verifyPhoneNumber(
+      phoneNumber: phone,
+      forceResendingToken: resendToken,
+      timeout: const Duration(seconds: 60),
+      verificationCompleted: (cred) async {
+        try {
+          await onAuto(cred);
+          // Instant verification can arrive with no codeSent at all; without
+          // this the caller would wait forever.
+          if (!done.isCompleted) {
+            done.complete(PhoneVerification(
+                verificationId: cred.verificationId ?? '', phoneNumber: phone, autoVerified: true));
+          }
+        } catch (e) {
+          debugPrint('Phone auto-verification failed: $e');
+          // If no code was sent either, this was the only callback coming —
+          // fail the send rather than leave the caller spinning.
+          if (!done.isCompleted) {
+            done.completeError(e is FirebaseAuthException
+                ? AuthFailure.fromCode(e.code)
+                : const AuthFailure(AuthFailureType.unknown, "Couldn't verify your number. Please try again."));
+          }
+        }
+      },
+      verificationFailed: (e) {
+        debugPrint('Phone verification failed: ${e.code} ${e.message}');
+        if (!done.isCompleted) {
+          done.completeError(e.code == 'operation-not-allowed'
+              ? const AuthFailure(AuthFailureType.providerNotConfigured,
+                  "Phone sign-in isn't available yet. Please use email instead.")
+              : AuthFailure.fromCode(e.code));
+        }
+      },
+      codeSent: (id, token) {
+        if (!done.isCompleted) {
+          done.complete(PhoneVerification(verificationId: id, phoneNumber: phone, resendToken: token));
+        }
+      },
+      codeAutoRetrievalTimeout: (_) {},
+    );
+    // Firebase normally answers within seconds via one of the callbacks; this
+    // only bounds a lost network or a reCAPTCHA page the person abandoned.
+    return done.future.timeout(const Duration(seconds: 90), onTimeout: () =>
+        throw const AuthFailure(AuthFailureType.network,
+            "Couldn't send the code. Check your connection and try again."));
+  }
+
+  @override
+  Future<PhoneVerification> sendPhoneCode(String phoneE164, {int? resendToken}) =>
+      _verifyPhone(phoneE164, resendToken: resendToken,
+          onAuto: (cred) => _auth.signInWithCredential(cred));
+
+  @override
+  Future<SocialSignIn> confirmPhoneCode(PhoneVerification v, String code) async {
+    try {
+      final cred = await _auth.signInWithCredential(PhoneAuthProvider.credential(
+          verificationId: v.verificationId, smsCode: code.trim()));
+      final user = cred.user!;
+      return SocialSignIn(user: _map(user)!, displayName: user.displayName ?? '');
+    } on FirebaseAuthException catch (e) {
+      throw AuthFailure.fromCode(e.code);
+    }
+  }
+
+  @override
+  Future<PhoneVerification> sendReauthPhoneCode() {
+    final user = _auth.currentUser;
+    final phone = user?.phoneNumber;
+    if (user == null || phone == null || phone.isEmpty) {
+      throw const AuthFailure(AuthFailureType.invalidCredentials, 'Please sign in again.');
+    }
+    return _verifyPhone(phone, onAuto: (cred) => user.reauthenticateWithCredential(cred));
+  }
+
+  @override
+  Future<void> confirmReauthPhoneCode(PhoneVerification v, String code) async {
+    final user = _auth.currentUser;
+    if (user == null) throw const AuthFailure(AuthFailureType.invalidCredentials, 'Please sign in again.');
+    if (v.autoVerified) return; // already re-checked by the auto-verification
+    try {
+      await user.reauthenticateWithCredential(PhoneAuthProvider.credential(
+          verificationId: v.verificationId, smsCode: code.trim()));
+    } on FirebaseAuthException catch (e) {
+      throw AuthFailure.fromCode(e.code);
+    }
+  }
 
   /// The project's Web OAuth client (client_type 3 in google-services.json).
   /// Android's Credential Manager needs it to mint an ID token Firebase will

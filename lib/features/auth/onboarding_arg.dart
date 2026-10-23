@@ -11,5 +11,7 @@ class OnboardingArg {
 /// and there is no password, so signup only collects the name and role.
 class SocialSignupArg {
   final String name, email;
-  const SocialSignupArg({required this.name, required this.email});
+  /// Set for a phone-number sign-in (which has no email).
+  final String phone;
+  const SocialSignupArg({required this.name, required this.email, this.phone = ''});
 }
