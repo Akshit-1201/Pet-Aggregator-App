@@ -12,7 +12,7 @@ Legend: 👤 owner (console / account / store) · 💻 code change · ✅ alread
 
 ## 1. Deploy the backend — do this first
 
-- [ ] 👤 `firebase deploy --only functions,firestore:rules`
+- [x] ✅ **Deployed 2026-10-23** (all 20 Functions updated, rules released): `firebase deploy --only functions,firestore:rules`
   New/changed since the last deploy: `holdServiceSlot`,
   `releaseCancelledServiceSlot`, `sendVerificationEmail`,
   `moderateUploadedImage`, `createBookingOrder`, `verifyBookingPayment`, the
@@ -22,7 +22,7 @@ Legend: 👤 owner (console / account / store) · 💻 code change · ✅ alread
   app build**, or phone users can't book services. If
   `moderateUploadedImage` fails with a location error, see
   `docs/client-feedback-2026-10-setup.md` §1.
-- [ ] 👤 Confirm with `firebase functions:list` that the new names appear.
+- [x] ✅ Deploy log shows every Function updated without error.
   (A brand-new event trigger sometimes fails once with an Eventarc permission
   error — retry the same deploy after a few minutes.)
 
