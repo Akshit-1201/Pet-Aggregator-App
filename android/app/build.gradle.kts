@@ -60,6 +60,16 @@ android {
             } else {
                 signingConfigs.getByName("debug")
             }
+            // R8: strips unused code and resources from the store build
+            // (smaller download, harder to reverse-engineer). The SDKs that
+            // use reflection — Razorpay above all — need the keep rules in
+            // proguard-rules.pro, or checkout crashes only in release builds.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 }
