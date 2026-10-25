@@ -44,6 +44,9 @@ Future<void> pumpPgApp(
   /// Set when [overrides] already contains a `notificationRepositoryProvider`.
   /// See [providesPostRepository] for why this flag exists.
   bool providesNotificationRepository = false,
+  /// Set when [overrides] already contains a `brandRepositoryProvider`.
+  /// See [providesPostRepository] for why this flag exists.
+  bool providesBrandRepository = false,
 }) async {
   tester.view.physicalSize = const Size(420, 920);
   tester.view.devicePixelRatio = 1.0;
@@ -68,6 +71,9 @@ Future<void> pumpPgApp(
       postRepositoryProvider.overrideWithValue(InMemoryPostRepository()),
     if (!providesNotificationRepository)
       notificationRepositoryProvider.overrideWithValue(FakeNotificationRepository()),
+    // Profile and Services watch the signed-in user's own brand listing.
+    if (!providesBrandRepository)
+      brandRepositoryProvider.overrideWithValue(InMemoryBrandRepository()),
     ...overrides,
   ]);
   addTearDown(container.dispose);

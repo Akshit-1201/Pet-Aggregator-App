@@ -22,7 +22,8 @@ describe("moderationVerdict", () => {
 
 describe("paths", () => {
   it("moderates every public photo path", () => {
-    for (const p of ["users/u1/avatar.jpg", "homestays/u1/a.jpg", "pets/u1_123.jpg", "posts/u1_9.jpg"]) {
+    for (const p of ["users/u1/avatar.jpg", "homestays/u1/a.jpg", "pets/u1_123.jpg", "posts/u1_9.jpg",
+      "brands/u1/logo_1.jpg", "brands/u1/p_2.jpg"]) {
       expect(isModeratedPath(p)).toBe(true);
     }
   });
@@ -34,6 +35,7 @@ describe("paths", () => {
     expect(uploaderOf("homestays/u2/x.jpg")).toBe("u2");
     expect(uploaderOf("pets/u3_1700.jpg")).toBe("u3");
     expect(uploaderOf("posts/u4_1700.jpg")).toBe("u4");
+    expect(uploaderOf("brands/u5/p_1700.jpg")).toBe("u5");
     expect(uploaderOf("random/file.jpg")).toBeNull();
   });
 });

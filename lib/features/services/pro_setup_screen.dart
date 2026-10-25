@@ -28,6 +28,7 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
   final _exp = TextEditingController();
   final _bio = TextEditingController();
   ServiceType _type = ServiceType.walker;
+  final Set<Specialty> _specialties = {};
   Availability _availability = Availability.defaults;
   double _rating = 0;
   int _reviewCount = 0;
@@ -49,6 +50,9 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
     _exp.text = p.experienceYears.toString();
     _bio.text = p.bio;
     _availability = p.availability;
+    _specialties
+      ..clear()
+      ..addAll(p.specialties);
     _rating = p.rating;
     _reviewCount = p.reviewCount;
   }
@@ -72,7 +76,9 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
           uid: uid, name: profile?.name ?? '', area: profile?.area ?? '',
           bio: _bio.text.trim(), serviceType: _type, rate: rate,
           experienceYears: int.tryParse(_exp.text.trim()) ?? 0,
-          rating: _rating, reviewCount: _reviewCount, availability: _availability));
+          rating: _rating, reviewCount: _reviewCount, availability: _availability,
+          // Pro.toMap keeps these only for a behaviourist.
+          specialties: Specialty.values.where(_specialties.contains).toList()));
     if (mounted) _exit();
   }
 
@@ -140,6 +146,31 @@ class _ProSetupScreenState extends ConsumerState<ProSetupScreen> {
                           ),
                         ),
                     ]),
+                    if (_type == ServiceType.behaviourist) ...[
+                      const SizedBox(height: 16),
+                      Text('Specialties', style: PgText.label(context)),
+                      const SizedBox(height: 4),
+                      Text('Pick what you help with. Shown on your listing.',
+                          style: PgText.inter(12.5, FontWeight.w400, color: c.muted)),
+                      const SizedBox(height: 8),
+                      Wrap(spacing: 8, runSpacing: 8, children: [
+                        for (final s in Specialty.values)
+                          GestureDetector(
+                            onTap: () => setState(() =>
+                                _specialties.contains(s) ? _specialties.remove(s) : _specialties.add(s)),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: _specialties.contains(s) ? c.brandSoft : c.surface,
+                                border: Border.all(color: _specialties.contains(s) ? c.brand : c.border,
+                                    width: _specialties.contains(s) ? 2 : 1),
+                                borderRadius: BorderRadius.circular(12)),
+                              child: Text(s.label, style: PgText.inter(12.5, FontWeight.w600,
+                                  color: _specialties.contains(s) ? c.brand : c.text)),
+                            ),
+                          ),
+                      ]),
+                    ],
                     const SizedBox(height: 16),
                     PgTextField(label: 'Rate (₹ per ${_type.unit})', controller: _rate,
                         keyboardType: TextInputType.number, hint: '250'),

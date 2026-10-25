@@ -11,6 +11,7 @@ import '../../data/models/pro.dart';
 import '../../data/models/report.dart';
 import '../chat/chat_actions.dart';
 import '../reviews/reviews_section.dart';
+import 'specialty_tags.dart';
 
 class ProProfileScreen extends ConsumerWidget {
   final Pro? pro;
@@ -128,6 +129,12 @@ class ProProfileScreen extends ConsumerWidget {
                     const SizedBox(height: 7),
                     Text(p.bio.isEmpty ? 'No description yet.' : p.bio,
                       style: PgText.inter(13.5, FontWeight.w400, color: c.muted, height: 1.6)),
+                    if (p.shownSpecialties.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      Text('Specialties', style: PgText.sectionHeader(context)),
+                      const SizedBox(height: 9),
+                      SpecialtyTags(specialties: p.shownSpecialties, fontSize: 12),
+                    ],
                     const SizedBox(height: 18),
                     // Mirrors the host-profile treatment: say plainly when a pro
                     // has not been vetted rather than implying they have.

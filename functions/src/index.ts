@@ -530,6 +530,7 @@ export const deleteMyAccount = onCall(
     await deleteAll(db.collection("notifications").doc(uid).collection("items"), db);
     await db.collection("pros").doc(uid).delete();
     await db.collection("homestays").doc(uid).delete();
+    await db.collection("brands").doc(uid).delete();
     // The KYC request goes with the ID documents it points at (deleted below);
     // the admin audit log keeps the record of any decision made on it.
     await db.collection("verificationRequests").doc(uid).delete();

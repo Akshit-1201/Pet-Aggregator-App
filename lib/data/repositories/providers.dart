@@ -7,6 +7,7 @@ import '../models/pet_profile.dart';
 import '../models/user_profile.dart';
 import '../models/pro.dart';
 import '../models/homestay.dart';
+import '../models/brand.dart';
 import '../models/homestay_booking.dart';
 import '../models/post.dart';
 import '../models/chat.dart';
@@ -18,6 +19,7 @@ import 'user_repository.dart';
 import 'pet_repository.dart';
 import 'pro_repository.dart';
 import 'homestay_repository.dart';
+import 'brand_repository.dart';
 import 'homestay_booking_repository.dart';
 import 'swipe_repository.dart';
 import 'post_repository.dart';
@@ -42,6 +44,7 @@ import 'firebase/firestore_user_repository.dart';
 import 'firebase/firestore_pet_repository.dart';
 import 'firebase/firestore_pro_repository.dart';
 import 'firebase/firestore_homestay_repository.dart';
+import 'firebase/firestore_brand_repository.dart';
 import 'firebase/firestore_homestay_booking_repository.dart';
 import 'firebase/firestore_swipe_repository.dart';
 import 'firebase/firestore_booking_repository.dart';
@@ -200,6 +203,20 @@ final currentHomestayProvider = StreamProvider<Homestay?>((ref) {
   final user = ref.watch(authStateProvider).value;
   if (user == null) return Stream.value(null);
   return ref.watch(homestayRepositoryProvider).watchHomestay(user.uid);
+});
+
+final brandRepositoryProvider = Provider<BrandRepository>((ref) => FirestoreBrandRepository());
+
+final brandsProvider = StreamProvider<List<Brand>>((ref) {
+  final blocked = ref.watch(blockedUidsProvider).value ?? const <String>{};
+  return ref.watch(brandRepositoryProvider).watchBrands()
+      .map((brands) => brands.where((b) => !blocked.contains(b.uid)).toList());
+});
+
+final currentBrandProvider = StreamProvider<Brand?>((ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(null);
+  return ref.watch(brandRepositoryProvider).watchBrand(user.uid);
 });
 
 final homestayBookingRepositoryProvider =

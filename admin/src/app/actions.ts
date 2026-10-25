@@ -33,7 +33,7 @@ async function guarded(
 
 export async function approveVerification(uid: string, kind: string): Promise<ActionResult> {
   return guarded("reviewVerification", async (session) => {
-    const collection = kind === "homestay" ? "homestays" : "pros";
+    const collection = kind === "homestay" ? "homestays" : kind === "brand" ? "brands" : "pros";
     const db = adminDb();
     const listing = db.collection(collection).doc(uid);
     if (!(await listing.get()).exists) {

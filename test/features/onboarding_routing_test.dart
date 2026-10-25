@@ -37,4 +37,8 @@ void main() {
     await _pumpLocationAs(tester, Role.homestayHost);
     expect(find.text('List your home'), findsOneWidget);
   });
+  testWidgets('home brand routes to Brand setup', (tester) async {
+    await _pumpLocationAs(tester, Role.brand);
+    expect(find.text('List your brand'), findsOneWidget);
+  });
 }

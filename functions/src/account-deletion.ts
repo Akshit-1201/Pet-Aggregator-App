@@ -11,6 +11,7 @@ export function personalStoragePrefixes(uid: string): string[] {
     `users/${uid}/`, // avatar
     `pets/${uid}_`, // pets/{uid}_{millis}.jpg
     `homestays/${uid}/`, // listing photos
+    `brands/${uid}/`, // brand logo + product photos
     `verification/${uid}/`, // KYC ID documents
   ];
 }

@@ -45,9 +45,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  // "Become a pro or host" — the two setup flows already exist; offer a choice
+  // "Become a pro, host or brand" — the setup flows already exist; offer a choice
   // and push into the right one (fromOnboarding:false, so Save/back returns the
   // user to the Services/Homestay list exactly as the in-app "set up" banners do).
+  // Saving a brand returns to Services, where Home Brands lives.
   void _showBecomeProOrHost(BuildContext context) {
     final c = context.pg;
     showModalBottomSheet<void>(
@@ -64,11 +65,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             Text('Pick how you want to help pets nearby.',
                 style: PgText.inter(13, FontWeight.w400, color: c.muted)),
             const SizedBox(height: 16),
-            _earnOption(sheetCtx, c, '🐾', 'Become a pro', 'Offer walking, sitting & grooming',
+            _earnOption(sheetCtx, c, '🐾', 'Become a pro', 'Offer walking, grooming, training & more',
                 () { Navigator.of(sheetCtx).pop(); context.push(Routes.proSetup); }),
             const SizedBox(height: 10),
             _earnOption(sheetCtx, c, '🏡', 'Become a host', 'Board pets at your place',
                 () { Navigator.of(sheetCtx).pop(); context.push(Routes.hostSetup); }),
+            const SizedBox(height: 10),
+            _earnOption(sheetCtx, c, '🛍️', 'List your brand', 'Sell homemade treats, food & more',
+                () { Navigator.of(sheetCtx).pop(); context.push(Routes.brandSetup); }),
           ]),
         ),
       ),
@@ -206,7 +210,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             if (isPro || isHost)
               (isHost ? '🏡' : '🎒', 'Bookings received', () => context.push(Routes.bookings, extra: 1)),
             ('🧾', 'Payments', () => context.push(Routes.payments)),
-            ('🎒', 'Become a pro or host', () => _showBecomeProOrHost(context)),
+            ('🎒', 'Become a pro, host or brand', () => _showBecomeProOrHost(context)),
           ]),
           const SizedBox(height: 14),
           Container(

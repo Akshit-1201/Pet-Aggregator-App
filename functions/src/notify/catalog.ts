@@ -58,7 +58,7 @@ const inr = (v: number) => `₹${Number(v || 0).toLocaleString("en-IN")}`;
 /** Human labels for the `serviceType` storage key that every producer forwards
  *  straight from Firestore — `lib/data/models/booking.dart` writes
  *  `serviceType.storageKey`, and `lib/data/models/pro.dart`'s `ServiceType`
- *  enum is the single source of truth for these four keys and their labels.
+ *  enum is the single source of truth for these keys and their labels.
  *  Without this, the raw key ("walker") reaches users as prose, e.g. "walker
  *  with Rahul was cancelled too late for a refund". */
 const SERVICE_LABEL: Record<string, string> = {
@@ -66,6 +66,7 @@ const SERVICE_LABEL: Record<string, string> = {
   sitter: "Pet Sitter",
   groomer: "Groomer",
   trainer: "Trainer",
+  behaviourist: "Pet Behaviourist",
 };
 
 /** Resolves `serviceType` to its human label. An unrecognised key falls back

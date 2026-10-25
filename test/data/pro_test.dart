@@ -41,4 +41,34 @@ void main() {
     expect(Pro.fromMap('u1', {'name': 'Aarav', 'verified': true}).verified, isTrue);
     expect(Pro.fromMap('u1', {'name': 'Aarav'}).verified, isFalse); // absent => not verified
   });
+
+  test('Pet Behaviourist is a pro type with consult as its unit', () {
+    expect(ServiceType.behaviourist.storageKey, 'behaviourist');
+    expect(ServiceType.behaviourist.label, 'Pet Behaviourist');
+    expect(ServiceType.behaviourist.unit, 'consult');
+    expect(ServiceType.behaviourist.verb, 'assess');
+    expect(ServiceType.fromStorage('behaviourist'), ServiceType.behaviourist);
+  });
+
+  test('specialties round-trip and unknown keys are dropped', () {
+    const p = Pro(uid: 'u1', name: 'Kavya', area: 'Bandra', bio: '',
+        serviceType: ServiceType.behaviourist, rate: 1500, experienceYears: 8,
+        specialties: [Specialty.anxiety, Specialty.puppies]);
+    final m = p.toMap();
+    expect(m['specialties'], ['anxiety', 'puppies']);
+    expect(Pro.fromMap('u1', m).specialties, [Specialty.anxiety, Specialty.puppies]);
+    expect(Pro.fromMap('u1', {'specialties': ['aggression', 'zzz']}).specialties,
+        [Specialty.aggression]);
+    expect(Pro.fromMap('u1', const {}).specialties, isEmpty);
+  });
+
+  test('only behaviourists carry specialties', () {
+    // A pro who switches from Behaviourist to Walker must not keep showing
+    // "Anxiety · Aggression" tags on a walking listing.
+    const p = Pro(uid: 'u1', name: 'A', area: 'B', bio: '',
+        serviceType: ServiceType.walker, rate: 250, experienceYears: 1,
+        specialties: [Specialty.anxiety]);
+    expect(p.toMap()['specialties'], isEmpty);
+    expect(p.shownSpecialties, isEmpty);
+  });
 }

@@ -53,6 +53,9 @@ import '../../features/services/booking_screen.dart';
 import '../../features/services/payment_screen.dart';
 import '../../features/services/pro_profile_screen.dart';
 import '../../features/services/pro_setup_screen.dart';
+import '../../features/brands/brand_profile_screen.dart';
+import '../../features/brands/brand_setup_screen.dart';
+import '../../data/models/brand.dart';
 import '../../features/services/services_list_screen.dart';
 import 'go_router_refresh_stream.dart';
 import 'routes.dart';
@@ -67,6 +70,7 @@ const _protected = {
   Routes.proSetup, Routes.servicePro,
   Routes.booking, Routes.payment, Routes.bookingConfirmed,
   Routes.homestay, Routes.host, Routes.hostSetup,
+  Routes.brand, Routes.brandSetup,
   Routes.hostRequest, Routes.hostAccepted, Routes.homestayPayment,
   Routes.newPost, Routes.thread, Routes.postLive,
   Routes.settings, Routes.blockedUsers, Routes.petProfile,
@@ -121,6 +125,9 @@ GoRouter buildRouter({required AuthRepository auth, String initialLocation = Rou
       GoRoute(path: Routes.bookingConfirmed, builder: (_, state) => BookingConfirmedScreen(booking: state.extra as Booking?)),
       GoRoute(path: Routes.hostSetup, builder: (_, state) =>
           HostSetupScreen(fromOnboarding: (state.extra as OnboardingArg?)?.fromOnboarding ?? false)),
+      GoRoute(path: Routes.brandSetup, builder: (_, state) =>
+          BrandSetupScreen(fromOnboarding: (state.extra as OnboardingArg?)?.fromOnboarding ?? false)),
+      GoRoute(path: Routes.brand, builder: (_, state) => BrandProfileScreen(brand: state.extra as Brand?)),
       GoRoute(path: Routes.homestay, builder: (_, _) => const HomestayListScreen()),
       GoRoute(path: Routes.host, builder: (_, state) => HostProfileScreen(homestay: state.extra as Homestay?)),
       GoRoute(path: Routes.hostRequest, builder: (_, state) => HomestayRequestScreen(homestay: state.extra as Homestay?)),

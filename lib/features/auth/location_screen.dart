@@ -51,6 +51,7 @@ class _LocationScreenState extends ConsumerState<LocationScreen> {
       Role.petParent => Routes.createPet,
       Role.servicePro => Routes.proSetup,
       Role.homestayHost => Routes.hostSetup,
+      Role.brand => Routes.brandSetup,
     };
     context.go(target, extra: const OnboardingArg(fromOnboarding: true));
   }

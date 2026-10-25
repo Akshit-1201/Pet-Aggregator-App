@@ -63,11 +63,11 @@ void main() {
     expect(find.text('No payments yet'), findsOneWidget); // Payments screen, empty
   });
 
-  testWidgets('Become a pro or host opens a chooser → Pro setup', (tester) async {
+  testWidgets('Become a pro, host or brand opens a chooser → Pro setup', (tester) async {
     final auth = FakeAuthRepository();
     await auth.signUp(email: 'me@x.com', password: 'secret1');
     await _pumpProfile(tester, auth);
-    await tester.tap(find.text('Become a pro or host'));
+    await tester.tap(find.text('Become a pro, host or brand'));
     await tester.pumpAndSettle();
     expect(find.text('Become a pro'), findsOneWidget);
     expect(find.text('Become a host'), findsOneWidget);

@@ -3,7 +3,7 @@ import {adminAuth, adminDb, adminStorage} from "./firebase-admin";
 
 export type VerificationRow = {
   uid: string;
-  kind: "pro" | "homestay";
+  kind: "pro" | "homestay" | "brand";
   status: "pending" | "approved" | "rejected";
   applicantName: string;
   area: string;
@@ -55,7 +55,7 @@ export async function listVerificationRequests(
       const x = d.data();
       return {
         uid: d.id,
-        kind: x.kind === "homestay" ? "homestay" : "pro",
+        kind: x.kind === "homestay" || x.kind === "brand" ? x.kind : "pro",
         status: (x.status ?? "pending") as VerificationRow["status"],
         applicantName: str(x.applicantName),
         area: str(x.area),

@@ -6,7 +6,7 @@ import '../support/fakes.dart';
 import '../support/pump.dart';
 
 void main() {
-  testWidgets('shows the three roles and Continue', (tester) async {
+  testWidgets('shows the four roles and Continue', (tester) async {
     await pumpPgApp(tester, overrides: [
       authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
       userRepositoryProvider.overrideWithValue(InMemoryUserRepository()),
@@ -17,6 +17,9 @@ void main() {
     await tester.dragUntilVisible(
         find.text('Homestay Host'), find.byType(Scrollable).first, const Offset(0, -150));
     expect(find.text('Homestay Host'), findsOneWidget);
+    await tester.dragUntilVisible(
+        find.text('Home Brand'), find.byType(Scrollable).first, const Offset(0, -150));
+    expect(find.text('Home Brand'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
   });
 

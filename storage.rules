@@ -14,6 +14,13 @@ service firebase.storage {
         && request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
+    // Home Brand logo + product photos, written only by the brand's owner.
+    match /brands/{uid}/{file} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
     // KYC documents. `read: if false` is deliberate and the one place in this
     // file that differs from every other path — the others allow any signed-in
     // user to read, which is fine for a pet photo and unacceptable for someone's

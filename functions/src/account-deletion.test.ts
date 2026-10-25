@@ -7,6 +7,7 @@ describe("personalStoragePrefixes", () => {
   it("covers every upload path a user owns that dies with the account", () => {
     expect(personalStoragePrefixes(uid).sort()).toEqual([
       `homestays/${uid}/`, // listing photos — the listing is deleted
+      `brands/${uid}/`, // brand logo + product photos — the brand is deleted
       `pets/${uid}_`, // pet photos — the pets are deleted
       `users/${uid}/`, // avatar
       `verification/${uid}/`, // KYC ID documents — the most sensitive files
@@ -22,6 +23,7 @@ describe("personalStoragePrefixes", () => {
     for (const prefix of personalStoragePrefixes(uid)) {
       expect(`pets/${other}_1.jpg`.startsWith(prefix)).toBe(false);
       expect(`verification/${other}/0.jpg`.startsWith(prefix)).toBe(false);
+      expect(`brands/${other}/logo.jpg`.startsWith(prefix)).toBe(false);
     }
   });
 

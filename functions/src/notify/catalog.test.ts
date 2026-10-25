@@ -111,6 +111,7 @@ describe("catalog", () => {
   it("resolves serviceType to its human label everywhere it is rendered, for every storage key", () => {
     const LABELS: Record<string, string> = {
       walker: "Dog Walker", sitter: "Pet Sitter", groomer: "Groomer", trainer: "Trainer",
+      behaviourist: "Pet Behaviourist",
     };
     type Site = {id: ScenarioId; channel: "push" | "email"};
     const sites: Site[] = [

@@ -31,7 +31,7 @@ export function VerificationRowCard({
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <span className="text-base font-bold">{row.applicantName || "(no name)"}</span>
         <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-semibold text-neutral-600">
-          {row.kind === "homestay" ? "Homestay host" : "Service pro"}
+          {row.kind === "homestay" ? "Homestay host" : row.kind === "brand" ? "Home brand" : "Service pro"}
         </span>
         <span className="text-sm text-neutral-500">{row.area || "—"}</span>
         <span className="ml-auto text-sm text-neutral-400">

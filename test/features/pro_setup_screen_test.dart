@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pet_aggregator_app/core/router/routes.dart';
+import 'package:pet_aggregator_app/data/models/pro.dart';
 import 'package:pet_aggregator_app/data/models/role.dart';
 import 'package:pet_aggregator_app/data/models/user_profile.dart';
 import 'package:pet_aggregator_app/data/repositories/providers.dart';
@@ -90,5 +91,36 @@ void main() {
 
     expect(find.textContaining('at least one day'), findsOneWidget);
     expect(await pros.watchPro(auth.currentUser!.uid).first, isNull);
+  });
+
+  testWidgets('a behaviourist picks specialties; other types never show them', (tester) async {
+    final auth = FakeAuthRepository();
+    await auth.signUp(email: 'me@x.com', password: 'secret1');
+    final users = InMemoryUserRepository();
+    await users.createUser(UserProfile(uid: auth.currentUser!.uid, name: 'Kavya Rao',
+        email: 'me@x.com', area: 'Bandra West', role: Role.servicePro));
+    final pros = InMemoryProRepository();
+    await pumpPgApp(tester, overrides: [
+      authRepositoryProvider.overrideWithValue(auth),
+      userRepositoryProvider.overrideWithValue(users),
+      proRepositoryProvider.overrideWithValue(pros),
+    ], initialLocation: Routes.proSetup);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Specialties'), findsNothing); // Walker by default
+    await tester.tap(find.text('🧠 Pet Behaviourist'));
+    await tester.pumpAndSettle();
+    expect(find.text('Specialties'), findsOneWidget);
+    expect(find.text('Rate (₹ per consult)'), findsOneWidget);
+    await tester.tap(find.text('Anxiety'));
+    await tester.tap(find.text('Puppies'));
+    await tester.pump();
+    await tester.enterText(find.byType(TextField).at(0), '1500');
+    await tester.tap(find.text('Save listing'));
+    await tester.pumpAndSettle();
+
+    final mine = await pros.watchPro(auth.currentUser!.uid).first;
+    expect(mine!.serviceType, ServiceType.behaviourist);
+    expect(mine.specialties, [Specialty.anxiety, Specialty.puppies]);
   });
 }

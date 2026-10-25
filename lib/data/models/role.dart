@@ -1,7 +1,8 @@
 enum Role {
   petParent('Pet Parent', 'petParent'),
   servicePro('Service Professional', 'servicePro'),
-  homestayHost('Homestay Host', 'homestayHost');
+  homestayHost('Homestay Host', 'homestayHost'),
+  brand('Home Brand', 'brand');
 
   final String label;
   final String storageKey;

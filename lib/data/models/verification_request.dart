@@ -1,6 +1,7 @@
 enum VerificationKind {
   pro('pro', 'service pro'),
-  homestay('homestay', 'homestay host');
+  homestay('homestay', 'homestay host'),
+  brand('brand', 'home brand');
 
   final String storageKey, label;
   const VerificationKind(this.storageKey, this.label);

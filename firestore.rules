@@ -46,6 +46,29 @@ service cloud.firestore {
           && (!('photoUrls' in d) || isOurPhotoList(d.photoUrls));
     }
 
+    // A brand's products live in one array (Brand.maxProducts = 10 in the app)
+    // so each product photo can be checked here; rules can't loop.
+    function productOk(p) {
+      return p is map && isOurPhoto(p.get('photoUrl', ''));
+    }
+    function productsOk(l) {
+      return l is list && l.size() <= 10
+          && (l.size() < 1 || productOk(l[0]))
+          && (l.size() < 2 || productOk(l[1]))
+          && (l.size() < 3 || productOk(l[2]))
+          && (l.size() < 4 || productOk(l[3]))
+          && (l.size() < 5 || productOk(l[4]))
+          && (l.size() < 6 || productOk(l[5]))
+          && (l.size() < 7 || productOk(l[6]))
+          && (l.size() < 8 || productOk(l[7]))
+          && (l.size() < 9 || productOk(l[8]))
+          && (l.size() < 10 || productOk(l[9]));
+    }
+    function brandPhotosOk(d) {
+      return (!('logoUrl' in d) || isOurPhoto(d.logoUrl))
+          && (!('products' in d) || productsOk(d.products));
+    }
+
     match /users/{uid} {
       allow read, delete: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null && request.auth.uid == uid
@@ -204,6 +227,19 @@ service cloud.firestore {
                     && !request.resource.data.diff(resource.data).affectedKeys()
                          .hasAny(['verified', 'rating', 'reviewCount'])
                     && photosOk(request.resource.data);
+      allow delete: if false;
+    }
+    // Home Brands: a catalogue only — orders are arranged in chat, so there is
+    // no booking/payment collection behind it. `verified` is server-owned like
+    // on /pros (staff grant it through the admin panel's KYC review).
+    match /brands/{uid} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == uid
+                    && !request.resource.data.keys().hasAny(['verified'])
+                    && brandPhotosOk(request.resource.data);
+      allow update: if request.auth != null && request.auth.uid == uid
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['verified'])
+                    && brandPhotosOk(request.resource.data);
       allow delete: if false;
     }
     match /homestayBookings/{id} {

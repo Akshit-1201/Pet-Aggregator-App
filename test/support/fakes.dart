@@ -17,6 +17,8 @@ import 'package:pet_aggregator_app/data/repositories/pro_repository.dart';
 import 'package:pet_aggregator_app/data/repositories/swipe_repository.dart';
 import 'package:pet_aggregator_app/data/models/homestay.dart';
 import 'package:pet_aggregator_app/data/repositories/homestay_repository.dart';
+import 'package:pet_aggregator_app/data/models/brand.dart';
+import 'package:pet_aggregator_app/data/repositories/brand_repository.dart';
 import 'package:pet_aggregator_app/data/models/homestay_booking.dart';
 import 'package:pet_aggregator_app/data/repositories/homestay_booking_repository.dart';
 import 'package:pet_aggregator_app/data/models/post.dart';
@@ -686,6 +688,39 @@ class InMemoryHomestayRepository implements HomestayRepository {
 
   @override
   Stream<List<Homestay>> watchHomestays() async* {
+    yield _list();
+    yield* _controller.stream.map((_) => _list());
+  }
+}
+
+class InMemoryBrandRepository implements BrandRepository {
+  final Map<String, Brand> _brands = {};
+  final _controller = StreamController<List<Brand>>.broadcast();
+
+  InMemoryBrandRepository([List<Brand>? seed]) {
+    if (seed != null) {
+      for (final b in seed) {
+        _brands[b.uid] = b;
+      }
+    }
+  }
+
+  List<Brand> _list() => _brands.values.toList();
+
+  @override
+  Future<void> upsertBrand(Brand brand) async {
+    _brands[brand.uid] = brand;
+    _controller.add(_list());
+  }
+
+  @override
+  Stream<Brand?> watchBrand(String uid) async* {
+    yield _brands[uid];
+    yield* _controller.stream.map((_) => _brands[uid]);
+  }
+
+  @override
+  Stream<List<Brand>> watchBrands() async* {
     yield _list();
     yield* _controller.stream.map((_) => _list());
   }

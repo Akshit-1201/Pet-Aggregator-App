@@ -8,6 +8,7 @@ enum ReportTargetType {
   user('user', 'person'),
   pro('pro', 'listing'),
   homestay('homestay', 'listing'),
+  brand('brand', 'listing'),
   pet('pet', 'pet profile');
 
   final String storageKey, noun;

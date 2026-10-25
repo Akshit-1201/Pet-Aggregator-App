@@ -39,9 +39,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     Role.petParent: 'Discover, book, board & chat',
     Role.servicePro: 'Offer walks, grooming & sitting',
     Role.homestayHost: 'Board pets & earn (needs verification)',
+    Role.brand: 'Sell homemade treats, food & more',
   };
   static const _emojis = {
-    Role.petParent: '🐾', Role.servicePro: '🎒', Role.homestayHost: '🏡',
+    Role.petParent: '🐾', Role.servicePro: '🎒', Role.homestayHost: '🏡', Role.brand: '🛍️',
   };
 
   @override

@@ -30,7 +30,7 @@ export function moderationVerdict(s: SafeSearch): {blocked: boolean; reasons: st
 export function uploaderOf(path: string): string | null {
   let m = path.match(/^users\/([^/]+)\/avatar\.jpg$/);
   if (m) return m[1];
-  m = path.match(/^homestays\/([^/]+)\/[^/]+$/);
+  m = path.match(/^(?:homestays|brands)\/([^/]+)\/[^/]+$/);
   if (m) return m[1];
   m = path.match(/^(?:pets|posts)\/([^/_]+)_[^/]+$/);
   if (m) return m[1];
@@ -39,5 +39,5 @@ export function uploaderOf(path: string): string | null {
 
 /** Public photo paths. Anything else (KYC documents, unknown paths) is skipped. */
 export function isModeratedPath(path: string): boolean {
-  return /^(users\/[^/]+\/avatar\.jpg|homestays\/[^/]+\/[^/]+|pets\/[^/]+|posts\/[^/]+)$/.test(path);
+  return /^(users\/[^/]+\/avatar\.jpg|(?:homestays|brands)\/[^/]+\/[^/]+|pets\/[^/]+|posts\/[^/]+)$/.test(path);
 }

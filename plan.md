@@ -180,6 +180,16 @@ The complete UI already exists as a **30-screen prototype** the owner designed i
 
 ---
 
+## Phase 4c — Pet Behaviourist + Home Brands ✅ BUILT (2026-10-25, deploy pending)
+
+**What:** Pet Behaviourist as a fifth pro type (unit "consult", specialty tags);
+Home Brands as a new role + `brands/{uid}` catalogue (logo, up to 10 products),
+ordered by chat — no checkout in v1. Services categories are a 3 × 2 grid.
+Spec/plan: `docs/superpowers/{specs,plans}/2026-10-25-pawgo-behaviourist-home-brands*`.
+**Deploy:** functions + firestore rules + storage rules (launch checklist §1).
+
+---
+
 ## Phase 12 — Admin & Moderation Panel (separate web app) 🟡 BUILT, not hosted
 
 **Goal:** an internal web dashboard for staff/engineers to run the platform — verification, moderation, users, bookings/disputes, payments oversight — on the **same Firebase backend** as the mobile app. This is **not** part of the Flutter app.

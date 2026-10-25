@@ -12,6 +12,13 @@ Legend: 👤 owner (console / account / store) · 💻 code change · ✅ alread
 
 ## 1. Deploy the backend — do this first
 
+- [ ] 👤 **Behaviourist + Home Brands (2026-10-25) — deploy before the next app
+  build:** `firebase deploy --only functions,firestore:rules,storage --project pet-aggregator-app`.
+  New: `brands/{uid}` Firestore rules, `brands/{uid}/…` Storage rules (without
+  them brand setup can't save or upload), photo moderation + account deletion
+  for brand photos, "Pet Behaviourist" in notification copy. Then redeploy the
+  website (`firebase deploy --only hosting --project pawgo-pets`) once it is live
+  — terms/refunds/delivery/privacy now cover Home Brands.
 - [x] ✅ **Deployed 2026-10-23** (all 20 Functions updated, rules released): `firebase deploy --only functions,firestore:rules`
   New/changed since the last deploy: `holdServiceSlot`,
   `releaseCancelledServiceSlot`, `sendVerificationEmail`,
@@ -165,12 +172,13 @@ crash-reporting or advertising SDK** and never reads device location (the
 | Email address | Email or Google/Apple sign-in | Firebase Auth, `users` | Sign-in, receipts, notifications | Resend (email delivery) |
 | Phone number | Phone sign-in | Firebase Auth only | Sign-in | Google (SMS delivery) |
 | Pet details + photos | Create pet | Firestore `pets`, Cloud Storage | Discover, profiles | Public to app users; photos scanned by Google Cloud Vision |
-| Avatar, post, homestay photos | Upload | Cloud Storage | Display | Public to app users; scanned by Cloud Vision |
+| Avatar, post, homestay photos; brand logos + product photos | Upload | Cloud Storage | Display | Public to app users; scanned by Cloud Vision |
+| Home Brand listing (name, category, delivery area, products + prices) | Brand setup | Firestore `brands` | Catalogue | Public to app users |
 | Chat messages | Chat | Firestore `chats` | Messaging | The other participant. Phone numbers, emails and URLs are masked server-side |
 | Posts, comments, reviews | Community, reviews | Firestore | Forum, ratings | Public to app users; kept anonymised after account deletion |
 | Bookings + payment records | Booking flow | Firestore `bookings`, `homestayBookings`, `payments` | Fulfilment, refunds, accounting | The pro/host; Razorpay. **Card/UPI details go only to Razorpay** — the app stores payment ids and amounts |
 | Partner bank account + PAN | Earnings card | **Not stored** — passed straight to Razorpay; only account id, IFSC and masked last 4 kept | Payouts | Razorpay |
-| ID documents (KYC) | Pro/host setup | Cloud Storage `verification/` — unreadable by any client | Partner verification | Pawgo staff via the admin panel (15-minute signed links) |
+| ID documents (KYC) | Pro/host/brand setup | Cloud Storage `verification/` — unreadable by any client | Partner verification | Pawgo staff via the admin panel (15-minute signed links) |
 | Device push token | Automatic after sign-in | `users/{uid}/fcmTokens` | Push notifications | Google (FCM) |
 | Device integrity attestation | Automatic | Not stored | Abuse prevention (App Check) | Google (Play Integrity / App Attest) |
 | Reports and blocks | Report/block sheet | Firestore `reports`, `users/{uid}/blocked` | Moderation | Pawgo staff |
@@ -178,7 +186,7 @@ crash-reporting or advertising SDK** and never reads device location (the
 **Deletion:** in-app (Settings → Delete account) immediately deletes the
 sign-in account, profile, pets, listings, swipes, notifications, push tokens,
 block list, verification request, and the avatar, pet and homestay photos and
-KYC ID documents in Storage. Posts, comments and reviews are kept but
+KYC ID documents in Storage (brand listings and brand photos too). Posts, comments and reviews are kept but
 anonymised (post photos stay with their posts). Bookings, payment records and
 a partner's payout-account reference (Razorpay account id, IFSC, masked last 4)
 are retained as financial records — the payout record is what lets earnings
