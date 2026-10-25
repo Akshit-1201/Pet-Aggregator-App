@@ -37,7 +37,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   static const _subtitles = {
     Role.petParent: 'Discover, book, board & chat',
-    Role.servicePro: 'Offer walks, grooming & sitting',
+    Role.servicePro: 'Offer walks, grooming, training & more',
     Role.homestayHost: 'Board pets & earn (needs verification)',
     Role.brand: 'Sell homemade treats, food & more',
   };
